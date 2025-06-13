@@ -61,8 +61,8 @@ jobs:
 
       - name: Set Instances
         run: |
-          cp i/1 Optimage.pm2.json
-          rm -Rf i
+          cp pipeline/1 Optimage.pm2.json
+          rm -Rf pipeline
         shell: bash
 
       - name: Start Application 
