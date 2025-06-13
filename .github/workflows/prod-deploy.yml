@@ -1,0 +1,73 @@
+name: Deploy em Produção
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-on-OPT-134:
+    runs-on: OPT
+
+    environment:
+      name: Produção
+      #url: "https://subdomain.dominio.com.br/"
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven
+
+      - name: Set up production .env
+        run: echo "${{ secrets.PROD_ENV_FILE }}" > ./src/main/resources/.env
+
+      - name: Install Node.js LTS Version
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.16.0'
+
+      - name: Install PM2
+        run: |
+          npm install pm2@latest -g --registry=https://registry.npmmirror.com || npm install pm2@latest -g
+          pm2 update || true
+        shell: bash
+
+      - name: Compile
+        run: mvn clean package -Dmaven.test.skip=true
+
+      - name: Update Production
+        run: |
+          pm2 stop Optimage || true
+          pm2 flush Optimage || true
+          pm2 delete Optimage || true
+          mkdir -p ~/prod/Optimage/bak
+          mv ~/prod/Optimage/Optimanage-0.0.1-SNAPSHOT.jar ~/prod/Optimage/bak/Optimanage-0.0.1-SNAPSHOT_$(date +%d-%m-%Y_%H-%M-%S).jar || true
+          cp -Rf target/Optimanage-0.0.1-SNAPSHOT.jar ~/prod/Optimage/Optimanage-0.0.1-SNAPSHOT.jar || true
+          ls -t ~/prod/Optimage/bak/ | tail -n +9 | xargs -I {} rm ~/prod/Optimage/bak/{}
+          tree -h ~/prod/Optimage/
+          echo Sucesso! 😎😎😎
+        shell: bash
+
+      - name: Set Instances
+        run: |
+          cp i/1 Optimage.pm2.json
+          rm -Rf i
+        shell: bash
+
+      - name: Start Application 
+        run: |
+          pm2 start Optimage.pm2.json
+          pm2 save
+          pm2 list
+        shell: bash
