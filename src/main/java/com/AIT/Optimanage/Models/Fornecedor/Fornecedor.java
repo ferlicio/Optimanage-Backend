@@ -52,6 +52,9 @@ public class Fornecedor {
     @Column(nullable = false)
     private TipoPessoa tipoPessoa;
 
+    @Column(nullable = false, length = 64)
+    private String origem;
+
     @Column(nullable = false)
     private Boolean ativo = true;
     @Column(length = 64)
@@ -72,8 +75,6 @@ public class Fornecedor {
     private String site;
     @Column(length = 256)
     private String informacoesAdicionais;
-    @Column(length = 64)
-    private String origem;
 
     @OneToMany(mappedBy = "fornecedor", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<FornecedorContato> contatos;

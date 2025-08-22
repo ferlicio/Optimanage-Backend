@@ -73,8 +73,6 @@ public class Cliente {
     private String site;
     @Column(length = 256)
     private String informacoesAdicionais;
-    @Column(length = 64)
-    private String origem;
 
     @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ClienteEndereco> enderecos;
