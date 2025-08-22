@@ -2,8 +2,6 @@ package com.AIT.Optimanage.Auth;
 
 import lombok.*;
 
-@Setter
-@Getter
 @Data
 @Builder
 @AllArgsConstructor
