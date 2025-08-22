@@ -25,6 +25,7 @@ import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -51,7 +52,7 @@ public class CompraService {
     private final CompraServicoRepository compraServicoRepository;
     private final PagamentoCompraService pagamentoCompraService;
 
-    @Cacheable("compras")
+    @Cacheable(value = "compras", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
     public List<Compra> listarCompras(User loggedUser, CompraSearch pesquisa) {
         // Configuração de paginação e ordenação
@@ -83,6 +84,7 @@ public class CompraService {
     }
 
     @Transactional
+    @CacheEvict(value = "compras", allEntries = true)
     public Compra criarCompra(User loggedUser, CompraDTO compraDTO) {
         validarCompra(compraDTO, loggedUser);
 
@@ -122,6 +124,7 @@ public class CompraService {
     }
 
     @Transactional
+    @CacheEvict(value = "compras", allEntries = true)
     public Compra editarCompra(User loggedUser, Integer idCompra, CompraDTO compraDTO) {
         validarCompra(compraDTO, loggedUser);
 
@@ -242,6 +245,7 @@ public class CompraService {
         return compraRepository.save(compra);
     }
 
+    @CacheEvict(value = "compras", allEntries = true)
     public Compra cancelarCompra(User loggedUser, Integer idCompra) {
         Compra compra = listarUmaCompra(loggedUser, idCompra);
         atualizarStatus(compra, StatusCompra.CANCELADO);

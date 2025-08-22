@@ -8,6 +8,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,7 +27,7 @@ public class FornecedorService {
 
     private final FornecedorRepository fornecedorRepository;
 
-    @Cacheable("fornecedores")
+    @Cacheable(value = "fornecedores", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
     public List<Fornecedor> listarFornecedores(User loggedUser, FornecedorSearch pesquisa) {
         // Configuração de paginação e ordenação
@@ -58,6 +59,7 @@ public class FornecedorService {
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
     }
 
+    @CacheEvict(value = "fornecedores", allEntries = true)
     public Fornecedor criarFornecedor(User loggedUser, Fornecedor fornecedor) {
         fornecedor.setOwnerUser(loggedUser);
         fornecedor.setDataCadastro(LocalDate.now());
@@ -65,6 +67,7 @@ public class FornecedorService {
         return fornecedorRepository.save(fornecedor);
     }
 
+    @CacheEvict(value = "fornecedores", allEntries = true)
     public Fornecedor editarFornecedor(User loggedUser, Integer idFornecedor, Fornecedor fornecedor) {
         Fornecedor fornecedorSalvo = listarUmFornecedor(loggedUser, idFornecedor);
 
@@ -75,6 +78,7 @@ public class FornecedorService {
         return fornecedorRepository.save(fornecedorSalvo);
     }
 
+    @CacheEvict(value = "fornecedores", allEntries = true)
     public void inativarFornecedor(User loggedUser, Integer idFornecedor) {
         Fornecedor fornecedor = listarUmFornecedor(loggedUser, idFornecedor);
         fornecedor.setAtivo(false);
