@@ -72,6 +72,8 @@ public class Fornecedor {
     private String site;
     @Column(length = 256)
     private String informacoesAdicionais;
+    @Column(length = 64)
+    private String origem;
 
     @OneToMany(mappedBy = "fornecedor", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<FornecedorContato> contatos;
