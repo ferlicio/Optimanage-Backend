@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Controllers.Fornecedor;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
+import com.AIT.Optimanage.Controllers.dto.FornecedorRequest;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.Search.FornecedorSearch;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -55,13 +57,16 @@ public class FornecedorController extends V1BaseController {
     }
 
     @PostMapping
-    public Fornecedor criarFornecedor(@AuthenticationPrincipal User loggedUser, @RequestBody Fornecedor fornecedor) {
-        return fornecedorService.criarFornecedor(loggedUser, fornecedor);
+    public Fornecedor criarFornecedor(@AuthenticationPrincipal User loggedUser,
+                                     @RequestBody @Valid FornecedorRequest request) {
+        return fornecedorService.criarFornecedor(loggedUser, request);
     }
 
     @PutMapping("/{idFornecedor}")
-    public Fornecedor editarFornecedor(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idFornecedor, @RequestBody Fornecedor fornecedor) {
-        return fornecedorService.editarFornecedor(loggedUser, idFornecedor, fornecedor);
+    public Fornecedor editarFornecedor(@AuthenticationPrincipal User loggedUser,
+                                       @PathVariable Integer idFornecedor,
+                                       @RequestBody @Valid FornecedorRequest request) {
+        return fornecedorService.editarFornecedor(loggedUser, idFornecedor, request);
     }
 
     @DeleteMapping("/{idFornecedor}")

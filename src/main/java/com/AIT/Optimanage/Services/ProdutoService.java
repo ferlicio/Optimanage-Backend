@@ -1,5 +1,7 @@
 package com.AIT.Optimanage.Services;
 
+import com.AIT.Optimanage.Controllers.dto.ProdutoRequest;
+import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
@@ -24,14 +26,16 @@ public class ProdutoService {
         );
     }
 
-    public Produto cadastrarProduto(User loggedUser, Produto produto) {
+    public Produto cadastrarProduto(User loggedUser, ProdutoRequest request) {
+        Produto produto = fromRequest(request);
         produto.setId(null);
         produto.setOwnerUser(loggedUser);
         return produtoRepository.save(produto);
     }
 
-    public Produto editarProduto(User loggedUser, Integer idProduto, Produto produto) {
+    public Produto editarProduto(User loggedUser, Integer idProduto, ProdutoRequest request) {
         Produto produtoSalvo = listarUmProduto(loggedUser, idProduto);
+        Produto produto = fromRequest(request);
         produto.setId(produtoSalvo.getId());
         produto.setOwnerUser(produtoSalvo.getOwnerUser());
         return produtoRepository.save(produto);
@@ -40,5 +44,24 @@ public class ProdutoService {
     public void excluirProduto(User loggedUser, Integer idProduto) {
         Produto produto = listarUmProduto(loggedUser, idProduto);
         produtoRepository.delete(produto);
+    }
+
+    private Produto fromRequest(ProdutoRequest request) {
+        Produto produto = new Produto();
+        if (request.getFornecedorId() != null) {
+            Fornecedor fornecedor = new Fornecedor();
+            fornecedor.setId(request.getFornecedorId());
+            produto.setFornecedor(fornecedor);
+        }
+        produto.setSequencialUsuario(request.getSequencialUsuario());
+        produto.setCodigoReferencia(request.getCodigoReferencia());
+        produto.setNome(request.getNome());
+        produto.setDescricao(request.getDescricao());
+        produto.setCusto(request.getCusto());
+        produto.setDisponivelVenda(request.getDisponivelVenda());
+        produto.setValorVenda(request.getValorVenda());
+        produto.setQtdEstoque(request.getQtdEstoque());
+        produto.setTerceirizado(request.getTerceirizado());
+        return produto;
     }
 }

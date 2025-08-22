@@ -1,5 +1,7 @@
 package com.AIT.Optimanage.Services.Fornecedor;
 
+import com.AIT.Optimanage.Controllers.dto.FornecedorRequest;
+import com.AIT.Optimanage.Models.Atividade;
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
@@ -58,21 +60,22 @@ public class FornecedorService {
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
     }
 
-    public Fornecedor criarFornecedor(User loggedUser, Fornecedor fornecedor) {
+    public Fornecedor criarFornecedor(User loggedUser, FornecedorRequest request) {
+        Fornecedor fornecedor = fromRequest(request);
         fornecedor.setOwnerUser(loggedUser);
         fornecedor.setDataCadastro(LocalDate.now());
         validarFornecedor(loggedUser, fornecedor);
         return fornecedorRepository.save(fornecedor);
     }
 
-    public Fornecedor editarFornecedor(User loggedUser, Integer idFornecedor, Fornecedor fornecedor) {
+    public Fornecedor editarFornecedor(User loggedUser, Integer idFornecedor, FornecedorRequest request) {
         Fornecedor fornecedorSalvo = listarUmFornecedor(loggedUser, idFornecedor);
-
+        Fornecedor fornecedor = fromRequest(request);
         fornecedor.setId(fornecedorSalvo.getId());
         fornecedor.setOwnerUser(fornecedorSalvo.getOwnerUser());
         fornecedor.setDataCadastro(fornecedorSalvo.getDataCadastro());
         validarFornecedor(loggedUser, fornecedor);
-        return fornecedorRepository.save(fornecedorSalvo);
+        return fornecedorRepository.save(fornecedor);
     }
 
     public void inativarFornecedor(User loggedUser, Integer idFornecedor) {
@@ -96,5 +99,25 @@ public class FornecedorService {
             fornecedor.setCpf(null);
         }
 
+    }
+
+    private Fornecedor fromRequest(FornecedorRequest request) {
+        Fornecedor fornecedor = new Fornecedor();
+        Atividade atividade = new Atividade();
+        atividade.setId(request.getAtividadeId());
+        fornecedor.setAtividade(atividade);
+        fornecedor.setTipoPessoa(request.getTipoPessoa());
+        fornecedor.setOrigem(request.getOrigem());
+        fornecedor.setAtivo(request.getAtivo() != null ? request.getAtivo() : true);
+        fornecedor.setNome(request.getNome());
+        fornecedor.setNomeFantasia(request.getNomeFantasia());
+        fornecedor.setRazaoSocial(request.getRazaoSocial());
+        fornecedor.setCpf(request.getCpf());
+        fornecedor.setCnpj(request.getCnpj());
+        fornecedor.setInscricaoEstadual(request.getInscricaoEstadual());
+        fornecedor.setInscricaoMunicipal(request.getInscricaoMunicipal());
+        fornecedor.setSite(request.getSite());
+        fornecedor.setInformacoesAdicionais(request.getInformacoesAdicionais());
+        return fornecedor;
     }
 }

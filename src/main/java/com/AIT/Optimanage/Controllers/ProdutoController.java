@@ -1,10 +1,12 @@
 package com.AIT.Optimanage.Controllers;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
+import com.AIT.Optimanage.Controllers.dto.ProdutoRequest;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.ProdutoService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -27,13 +29,16 @@ public class ProdutoController extends V1BaseController {
     }
 
     @PostMapping
-    public Produto cadastrarProduto(@AuthenticationPrincipal User loggedUser, @RequestBody Produto produto) {
-        return produtoService.cadastrarProduto(loggedUser, produto);
+    public Produto cadastrarProduto(@AuthenticationPrincipal User loggedUser,
+                                    @RequestBody @Valid ProdutoRequest request) {
+        return produtoService.cadastrarProduto(loggedUser, request);
     }
 
     @PutMapping("/{idProduto}")
-    public Produto editarProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto, @RequestBody Produto produto) {
-        return produtoService.editarProduto(loggedUser, idProduto, produto);
+    public Produto editarProduto(@AuthenticationPrincipal User loggedUser,
+                                 @PathVariable Integer idProduto,
+                                 @RequestBody @Valid ProdutoRequest request) {
+        return produtoService.editarProduto(loggedUser, idProduto, request);
     }
 
     @DeleteMapping("/{idProduto}")
