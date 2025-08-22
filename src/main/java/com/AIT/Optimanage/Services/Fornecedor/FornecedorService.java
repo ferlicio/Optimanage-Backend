@@ -94,7 +94,7 @@ public class FornecedorService {
             fornecedor.setRazaoSocial(null);
             fornecedor.setCnpj(null);
             fornecedor.setInscricaoEstadual(null);
-            fornecedor.setInscricaoEstadual(null);
+            fornecedor.setInscricaoMunicipal(null);
         } else {
             if (fornecedor.getCnpj() == null || fornecedor.getCnpj().isEmpty()) {
                 throw new IllegalArgumentException("CNPJ é obrigatório");
