@@ -20,6 +20,12 @@ public class JwtService {
     @Value("${app.jwtSecret}")
     private String SECRET_KEY;
 
+    @Value("${app.jwt.expiration}")
+    private long jwtExpiration;
+
+    @Value("${app.jwt.refresh-expiration}")
+    private long refreshExpiration;
+
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -30,12 +36,17 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        return generateToken(new HashMap<>(), userDetails, jwtExpiration);
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        return generateToken(new HashMap<>(), userDetails, refreshExpiration);
     }
 
     public String generateToken(
             Map<String, Object> extraClaims,
-            UserDetails userDetails
+            UserDetails userDetails,
+            long expiration
     ) {
         return Jwts
                 .builder()
@@ -43,10 +54,14 @@ public class JwtService {
                     .subject(userDetails.getUsername())
                     .add(extraClaims)
                     .issuedAt(new Date(System.currentTimeMillis()))
-                    .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 24 * 5))
+                    .expiration(new Date(System.currentTimeMillis() + expiration))
                     .and()
                 .signWith(getSignInKey())
                 .compact();
+    }
+
+    public long getRefreshExpiration() {
+        return refreshExpiration;
     }
 
     public Boolean isTokenValid(String token, UserDetails userDetails) {
