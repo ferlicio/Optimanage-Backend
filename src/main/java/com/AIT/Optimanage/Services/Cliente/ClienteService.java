@@ -1,5 +1,7 @@
 package com.AIT.Optimanage.Services.Cliente;
 
+import com.AIT.Optimanage.Controllers.dto.ClienteRequest;
+import com.AIT.Optimanage.Models.Atividade;
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.Search.ClienteSearch;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
@@ -63,7 +65,8 @@ public class ClienteService {
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
-    public Cliente criarCliente(User loggedUser, Cliente cliente) {
+    public Cliente criarCliente(User loggedUser, ClienteRequest request) {
+        Cliente cliente = fromRequest(request);
         cliente.setId(null);
         cliente.setOwnerUser(loggedUser);
         cliente.setDataCadastro(LocalDate.now());
@@ -72,8 +75,9 @@ public class ClienteService {
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
-    public Cliente editarCliente(User loggedUser, Integer idCliente, Cliente cliente) {
+    public Cliente editarCliente(User loggedUser, Integer idCliente, ClienteRequest request) {
         Cliente clienteSalvo = listarUmCliente(loggedUser, idCliente);
+        Cliente cliente = fromRequest(request);
         cliente.setId(clienteSalvo.getId());
         cliente.setOwnerUser(clienteSalvo.getOwnerUser());
         cliente.setDataCadastro(clienteSalvo.getDataCadastro());
@@ -104,5 +108,25 @@ public class ClienteService {
             cliente.setCpf(null);
         }
 
+    }
+
+    private Cliente fromRequest(ClienteRequest request) {
+        Cliente cliente = new Cliente();
+        Atividade atividade = new Atividade();
+        atividade.setId(request.getAtividadeId());
+        cliente.setAtividade(atividade);
+        cliente.setTipoPessoa(request.getTipoPessoa());
+        cliente.setOrigem(request.getOrigem());
+        cliente.setAtivo(request.getAtivo() != null ? request.getAtivo() : true);
+        cliente.setNome(request.getNome());
+        cliente.setNomeFantasia(request.getNomeFantasia());
+        cliente.setRazaoSocial(request.getRazaoSocial());
+        cliente.setCpf(request.getCpf());
+        cliente.setCnpj(request.getCnpj());
+        cliente.setInscricaoEstadual(request.getInscricaoEstadual());
+        cliente.setInscricaoMunicipal(request.getInscricaoMunicipal());
+        cliente.setSite(request.getSite());
+        cliente.setInformacoesAdicionais(request.getInformacoesAdicionais());
+        return cliente;
     }
 }

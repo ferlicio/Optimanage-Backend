@@ -1,9 +1,9 @@
 package com.AIT.Optimanage.Controllers.Cliente;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
+import com.AIT.Optimanage.Controllers.dto.ClienteRequest;
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.Search.ClienteSearch;
-import com.AIT.Optimanage.Models.Enums.PageOrder;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.User.User;
 
@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -63,13 +64,16 @@ public class ClienteController extends V1BaseController {
     }
 
     @PostMapping
-    public Cliente criarCliente(@AuthenticationPrincipal User loggedUser, @RequestBody Cliente cliente) {
-        return clienteService.criarCliente(loggedUser, cliente);
+    public Cliente criarCliente(@AuthenticationPrincipal User loggedUser,
+                                @RequestBody @Valid ClienteRequest request) {
+        return clienteService.criarCliente(loggedUser, request);
     }
 
     @PutMapping("/{idCliente}")
-    public Cliente editarCliente(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idCliente, @RequestBody Cliente cliente) {
-        return clienteService.editarCliente(loggedUser, idCliente, cliente);
+    public Cliente editarCliente(@AuthenticationPrincipal User loggedUser,
+                                 @PathVariable Integer idCliente,
+                                 @RequestBody @Valid ClienteRequest request) {
+        return clienteService.editarCliente(loggedUser, idCliente, request);
     }
 
     @DeleteMapping("/{idCliente}")
