@@ -25,7 +25,7 @@ public class ServicoController extends V1BaseController {
     }
 
     @GetMapping("/{idServico}")
-    public Servico listarUmServico(@AuthenticationPrincipal User loggedUser, Integer idServico) {
+    public Servico listarUmServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
         return servicoService.listarUmServico(loggedUser, idServico);
     }
 

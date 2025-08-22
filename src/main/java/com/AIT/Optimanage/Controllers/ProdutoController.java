@@ -24,7 +24,7 @@ public class ProdutoController extends V1BaseController {
     }
 
     @GetMapping("/{idProduto}")
-    public Produto listarUmProduto(@AuthenticationPrincipal User loggedUser, Integer idProduto) {
+    public Produto listarUmProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
         return produtoService.listarUmProduto(loggedUser, idProduto);
     }
 
