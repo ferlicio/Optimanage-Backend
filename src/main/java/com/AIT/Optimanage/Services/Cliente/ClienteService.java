@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,7 +32,7 @@ public class ClienteService {
         return clienteRepository.findByOwnerUser(usuario);
     }
 
-    @Cacheable("clientes")
+    @Cacheable(value = "clientes", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
     public List<Cliente> listarClientes(User loggedUser, ClienteSearch pesquisa) {
         // Configuração de paginação e ordenação
@@ -63,6 +64,7 @@ public class ClienteService {
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
     }
 
+    @CacheEvict(value = "clientes", allEntries = true)
     public Cliente criarCliente(User loggedUser, ClienteRequest request) {
         Cliente cliente = fromRequest(request);
         cliente.setId(null);
@@ -72,6 +74,7 @@ public class ClienteService {
         return clienteRepository.save(cliente);
     }
 
+    @CacheEvict(value = "clientes", allEntries = true)
     public Cliente editarCliente(User loggedUser, Integer idCliente, ClienteRequest request) {
         Cliente clienteSalvo = listarUmCliente(loggedUser, idCliente);
         Cliente cliente = fromRequest(request);
@@ -82,6 +85,7 @@ public class ClienteService {
         return clienteRepository.save(cliente);
     }
 
+    @CacheEvict(value = "clientes", allEntries = true)
     public void inativarCliente(User loggedUser, Integer idCliente) {
         Cliente cliente = listarUmCliente(loggedUser, idCliente);
         cliente.setAtivo(false);

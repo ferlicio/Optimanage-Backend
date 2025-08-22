@@ -26,6 +26,7 @@ import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -52,7 +53,7 @@ public class VendaService {
     private final ContadorService contadorService;
     private final PagamentoVendaService pagamentoVendaService;
 
-    @Cacheable("vendas")
+    @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
     public List<Venda> listarVendas(User loggedUser, VendaSearch pesquisa) {
         // Configuração de paginação e ordenação
@@ -83,6 +84,7 @@ public class VendaService {
     }
 
     @Transactional
+    @CacheEvict(value = "vendas", allEntries = true)
     public Venda registrarVenda(User loggedUser, VendaDTO vendaDTO) {
         validarVenda(vendaDTO, loggedUser);
 
@@ -127,6 +129,7 @@ public class VendaService {
     }
 
     @Transactional
+    @CacheEvict(value = "vendas", allEntries = true)
     public Venda atualizarVenda(User loggedUser, Integer vendaId, VendaDTO vendaDTO) {
         validarVenda(vendaDTO, loggedUser);
 
@@ -287,6 +290,7 @@ public class VendaService {
         return vendaRepository.save(venda);
     }
 
+    @CacheEvict(value = "vendas", allEntries = true)
     public Venda cancelarVenda(User loggedUser, Integer idVenda) {
         Venda venda = listarUmaVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
