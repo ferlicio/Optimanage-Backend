@@ -1,11 +1,9 @@
 package com.AIT.Optimanage.Services.Fornecedor;
 
-import com.AIT.Optimanage.Models.Cliente.ClienteEndereco;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.FornecedorEndereco;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorEnderecoRepository;
-import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,12 +18,12 @@ public class FornecedorEnderecoService {
     private final FornecedorService fornecedorService;
 
     public List<FornecedorEndereco> listarEnderecos(User loggedUser, Integer idFornecedor) {
-        return fornecedorEnderecoRepository.findAllByFornecedorIdAndFornecedorOwnerUser(idFornecedor, loggedUser);
+        return fornecedorEnderecoRepository.findAllByFornecedor_IdAndFornecedorOwnerUser(idFornecedor, loggedUser);
     }
 
     public FornecedorEndereco listarUmEndereco(User loggedUser, Integer idFornecedor, Integer idEndereco) {
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
-        return fornecedorEnderecoRepository.findByIdAndFornecedorIdAndFornecedorOwnerUser(idEndereco, idFornecedor, loggedUser)
+        return fornecedorEnderecoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idEndereco, fornecedor.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
     }
 

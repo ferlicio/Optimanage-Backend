@@ -24,7 +24,7 @@ public class ContextoCompatibilidadeService {
     }
 
     public ContextoCompatibilidade listarUmContextoPorNome(User loggedUser, String nomeContexto) {
-        return contextoRepository.findByNomeAndOwnerUser(loggedUser, nomeContexto)
+        return contextoRepository.findByOwnerUserAndNome(loggedUser, nomeContexto)
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
     }
 

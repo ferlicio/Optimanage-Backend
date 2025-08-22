@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface ClienteContatoRepository extends JpaRepository<ClienteContato, Integer> {
     
-    List<ClienteContato> findAllByClienteIdAndClienteOwnerUser(Integer idCliente, User loggedUser);
+    List<ClienteContato> findAllByCliente_IdAndClienteOwnerUser(Integer idCliente, User loggedUser);
 
-    Optional<ClienteContato> findByIdAndClienteIdAndClienteOwnerUser(Integer idContato, Integer idCliente, User loggedUser);
+    Optional<ClienteContato> findByIdAndCliente_IdAndClienteOwnerUser(Integer idContato, Integer idCliente, User loggedUser);
 }

@@ -4,7 +4,6 @@ import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.ClienteContato;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteContatoRepository;
-import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,12 +18,12 @@ public class ClienteContatoService {
     private final ClienteService clienteService;
 
     public List<ClienteContato> listarContatos(User loggedUser, Integer idCliente) {
-        return clienteContatoRepository.findAllByClienteIdAndClienteOwnerUser(idCliente, loggedUser);
+        return clienteContatoRepository.findAllByCliente_IdAndClienteOwnerUser(idCliente, loggedUser);
     }
 
     public ClienteContato listarUmContato(User loggedUser, Integer idCliente, Integer idContato) {
         Cliente cliente = clienteService.listarUmCliente(loggedUser, idCliente);
-        return clienteContatoRepository.findByIdAndClienteIdAndClienteOwnerUser(idContato, idCliente, loggedUser)
+        return clienteContatoRepository.findByIdAndCliente_IdAndClienteOwnerUser(idContato, cliente.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Contato não encontrado"));
     }
 

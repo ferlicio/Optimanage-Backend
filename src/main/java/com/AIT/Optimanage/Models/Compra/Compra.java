@@ -3,7 +3,6 @@ package com.AIT.Optimanage.Models.Compra;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.User.User;
-import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -67,7 +66,7 @@ public class Compra {
     @OneToMany(mappedBy = "compra", cascade = CascadeType.ALL)
     private List<CompraServico> compraServicos;
 
-    @OneToMany(mappedBy = "venda", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "compra", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<CompraPagamento> pagamentos;
 
 }

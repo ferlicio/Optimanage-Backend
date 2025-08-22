@@ -4,7 +4,6 @@ import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.ClienteEndereco;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteEnderecoRepository;
-import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,12 +18,12 @@ public class ClienteEnderecoService {
     private final ClienteService clienteService;
 
     public List<ClienteEndereco> listarEnderecos(User loggedUser, Integer idCliente) {
-        return clienteEnderecoRepository.findAllByClienteIdAndClienteOwnerUser(idCliente, loggedUser);
+        return clienteEnderecoRepository.findAllByCliente_IdAndClienteOwnerUser(idCliente, loggedUser);
     }
 
     public ClienteEndereco listarUmEndereco(User loggedUser, Integer idCliente, Integer idEndereco) {
         Cliente cliente = clienteService.listarUmCliente(loggedUser, idCliente);
-        return clienteEnderecoRepository.findByIdAndClienteIdAndClienteOwnerUser(idEndereco, idCliente, loggedUser)
+        return clienteEnderecoRepository.findByIdAndCliente_IdAndClienteOwnerUser(idEndereco, cliente.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
     }
 

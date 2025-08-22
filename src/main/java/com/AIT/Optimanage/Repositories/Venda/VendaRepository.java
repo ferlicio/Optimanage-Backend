@@ -21,16 +21,16 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
             "LEFT JOIN FETCH vp.produto p " +
             "LEFT JOIN FETCH v.vendaServicos vs " +
             "LEFT JOIN FETCH vs.servico s " +
-            "LEFT JOIN v.pagamentos pag" +
+            "LEFT JOIN v.pagamentos pag " +
             "WHERE " +
-            "(:id IS NOT NULL AND v.ownerUser.id = :userId AND v.sequencialUsuario = :id) " +
-            "OR (:userId IS NULL OR v.ownerUser.id = :userId) " +
+            "((:id IS NOT NULL AND v.ownerUser.id = :userId AND v.sequencialUsuario = :id) " +
+            "OR (:userId IS NULL OR v.ownerUser.id = :userId)) " +
             "AND (:clienteId IS NULL OR v.cliente.id = :clienteId) " +
-            "AND (:dataInicial IS NULL OR v.data >= :dataInicial) " +
-            "AND (:dataFinal IS NULL OR v.data <= :dataFinal) " +
+            "AND (:dataInicial IS NULL OR v.dataEfetuacao >= :dataInicial) " +
+            "AND (:dataFinal IS NULL OR v.dataEfetuacao <= :dataFinal) " +
             "AND (:status IS NULL OR v.status = :status) " +
-            "AND (:pago IS NULL OR (CASE WHEN v.valorPendente <= 0 THEN TRUE ELSE FALSE END) = :pago)" +
-            "AND (:formaPagamento IS NULL OR EXISTS (SELECT 1 FROM Pagamento pagSub WHERE pagSub.venda.id = v.id AND pagSub.formaPagamento = :formaPagamento)))" )
+            "AND (:pago IS NULL OR (CASE WHEN v.valorPendente <= 0 THEN TRUE ELSE FALSE END) = :pago) " +
+            "AND (:formaPagamento IS NULL OR EXISTS (SELECT 1 FROM VendaPagamento pagSub WHERE pagSub.venda.id = v.id AND pagSub.formaPagamento = :formaPagamento))")
     Page<Venda> buscarVendas(
             @Param("userId") Integer userId,
             @Param("id") Integer id,

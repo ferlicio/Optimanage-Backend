@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface ContextoCompatibilidadeRepository extends JpaRepository<ContextoCompatibilidade, Integer> {
-    Optional<ContextoCompatibilidade> findByNomeAndOwnerUser(User logedUser, String nome);
+    Optional<ContextoCompatibilidade> findByOwnerUserAndNome(User loggedUser, String nome);
 
     Optional<ContextoCompatibilidade> findByOwnerUser(User loggedUser);
 }

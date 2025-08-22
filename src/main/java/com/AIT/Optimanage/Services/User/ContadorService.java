@@ -5,7 +5,7 @@ import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.User.ContadorRepository;
 import lombok.RequiredArgsConstructor;
-import org.jvnet.hk2.annotations.Service;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor

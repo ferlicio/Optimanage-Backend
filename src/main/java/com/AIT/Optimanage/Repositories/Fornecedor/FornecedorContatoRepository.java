@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface FornecedorContatoRepository extends JpaRepository<FornecedorContato, Integer> {
 
-    List<FornecedorContato> findAllByFornecedorIdAndFornecedorOwnerUser(Integer idFornecedor, User loggedUser);
+    List<FornecedorContato> findAllByFornecedor_IdAndFornecedorOwnerUser(Integer idFornecedor, User loggedUser);
 
-    Optional<FornecedorContato>  findByIdAndFornecedorIdAndFornecedorOwnerUser(Integer idContato, Integer idFornecedor, User loggedUser);
+    Optional<FornecedorContato>  findByIdAndFornecedor_IdAndFornecedorOwnerUser(Integer idContato, Integer idFornecedor, User loggedUser);
 }

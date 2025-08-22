@@ -23,7 +23,7 @@ public class CompatibilidadeService {
 
     public List<Compatibilidade> buscarCompatibilidades(User logedUser, String nomeContexto) {
         ContextoCompatibilidade contexto = contextoCompatibilidadeService.listarUmContextoPorNome(logedUser, nomeContexto);
-        return compatibilidadeRepository.findByContextoAndConfirmadoIsTrue(contexto);
+        return compatibilidadeRepository.findByContexto_IdAndCompativelIsTrue(contexto.getId());
     }
 
     public Compatibilidade adicionarCompatibilidade(User logedUser, CompatibilidadeDTO request) {

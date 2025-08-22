@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface ClienteEnderecoRepository extends JpaRepository<ClienteEndereco, Integer> {
 
-    List<ClienteEndereco> findAllByClienteIdAndClienteOwnerUser(Integer idCliente, User loggedUser);
+    List<ClienteEndereco> findAllByCliente_IdAndClienteOwnerUser(Integer idCliente, User loggedUser);
 
-    Optional<ClienteEndereco> findByIdAndClienteIdAndClienteOwnerUser(Integer idEndereco, Integer idCliente, User loggedUser);
+    Optional<ClienteEndereco> findByIdAndCliente_IdAndClienteOwnerUser(Integer idEndereco, Integer idCliente, User loggedUser);
 }

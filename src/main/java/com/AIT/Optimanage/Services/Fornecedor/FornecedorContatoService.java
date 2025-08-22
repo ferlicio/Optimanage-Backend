@@ -19,12 +19,12 @@ public class FornecedorContatoService {
     private final FornecedorService fornecedorService;
 
     public List<FornecedorContato> listarContatos(User loggedUser, Integer idFornecedor) {
-        return fornecedorContatoRepository.findAllByFornecedorIdAndFornecedorOwnerUser(idFornecedor, loggedUser);
+        return fornecedorContatoRepository.findAllByFornecedor_IdAndFornecedorOwnerUser(idFornecedor, loggedUser);
     }
 
     public FornecedorContato listarUmContato(User loggedUser, Integer idFornecedor, Integer idContato) {
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
-        return fornecedorContatoRepository.findByIdAndFornecedorIdAndFornecedorOwnerUser(idContato, idFornecedor, loggedUser)
+        return fornecedorContatoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idContato, fornecedor.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Contato não encontrado"));
     }
 
