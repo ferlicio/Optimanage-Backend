@@ -128,10 +128,10 @@
             </goals>
             <configuration>
               <!-- OPÇÃO A (recomendada em CI): gerar SEM rodar a app, varrendo pacotes -->
-              <packagesToScan>com.seu.pacote.api,com.seu.pacote.controller</packagesToScan>
+              <!-- <packagesToScan>com.seu.pacote.api,com.seu.pacote.controller</packagesToScan> -->
 
               <!-- OPÇÃO B: puxar de uma URL (descomente se preferir rodar a app e apontar) -->
-              <!-- <apiDocsUrl>http://localhost:8080/v3/api-docs</apiDocsUrl> -->
+              <apiDocsUrl>http://localhost:8015/v1/api-docs</apiDocsUrl>
 
               <!-- Saída -->
               <outputDir>${project.build.directory}</outputDir>
