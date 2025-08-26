@@ -46,9 +46,6 @@ jobs:
       - name: Compile
         run: mvn clean package -Dmaven.test.skip=true
 
-      - name: Generate API documentation
-        run: mvn -Dmaven.test.skip=true springdoc-openapi-maven-plugin:generate
-
       - name: Update Production
         run: |
           pm2 stop Optimage || true
