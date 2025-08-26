@@ -112,3 +112,7 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 2. Rodar testes: `./mvnw test`
 3. Executar aplicação: `./mvnw spring-boot:run`
 
+## Monitoramento
+- `GET /actuator/health` – verificar status da aplicação.
+- `GET /actuator/info` – informações adicionais incluindo contagem de clientes e produtos.
+
