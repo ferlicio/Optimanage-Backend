@@ -2,9 +2,11 @@ package com.AIT.Optimanage.Controllers.User;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/usuarios")
+@Tag(name = "Usuários", description = "Operações relacionadas a usuários")
 public class UsuarioController extends V1BaseController {
 
 //    @Autowired

@@ -15,10 +15,14 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/clientes")
 @RequiredArgsConstructor
+@Tag(name = "Clientes", description = "Operações relacionadas a clientes")
 public class ClienteController extends V1BaseController {
 
 
@@ -30,6 +34,8 @@ public class ClienteController extends V1BaseController {
 //    }
 
     @GetMapping
+    @Operation(summary = "Listar clientes", description = "Retorna uma lista de clientes")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public List<Cliente> listarClientes(@AuthenticationPrincipal User loggedUser,
                                         @RequestParam(value = "id", required = false) Integer id,
                                         @RequestParam(value = "nome", required = false) String nome,
@@ -59,17 +65,23 @@ public class ClienteController extends V1BaseController {
     }
 
     @GetMapping("/{idCliente}")
+    @Operation(summary = "Listar cliente", description = "Retorna um cliente pelo ID")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Cliente listarUmCliente(@AuthenticationPrincipal User loggedUser, Integer idCliente) {
         return clienteService.listarUmCliente(loggedUser, idCliente);
     }
 
     @PostMapping
+    @Operation(summary = "Criar cliente", description = "Cria um novo cliente")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Cliente criarCliente(@AuthenticationPrincipal User loggedUser,
                                 @RequestBody @Valid ClienteRequest request) {
         return clienteService.criarCliente(loggedUser, request);
     }
 
     @PutMapping("/{idCliente}")
+    @Operation(summary = "Editar cliente", description = "Atualiza um cliente existente")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Cliente editarCliente(@AuthenticationPrincipal User loggedUser,
                                  @PathVariable Integer idCliente,
                                  @RequestBody @Valid ClienteRequest request) {
@@ -77,6 +89,8 @@ public class ClienteController extends V1BaseController {
     }
 
     @DeleteMapping("/{idCliente}")
+    @Operation(summary = "Inativar cliente", description = "Inativa um cliente pelo ID")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public void inativarCliente(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idCliente) {
         clienteService.inativarCliente(loggedUser, idCliente);
     }

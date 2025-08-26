@@ -15,15 +15,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/agenda")
 @RequiredArgsConstructor
+@Tag(name = "Agenda", description = "Operações de agenda")
 public class AgendaController extends V1BaseController {
 
     private final AgendaService agendaService;
 
     @GetMapping
+    @Operation(summary = "Listar eventos", description = "Lista eventos da agenda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public List<EventoAgenda> listarEventos(@AuthenticationPrincipal User loggedUser,
                                             @RequestParam(value = "data_inicial", required = false) LocalDate data_inicial,
                                             @RequestParam(value = "data_final", required = false) LocalDate data_final,
