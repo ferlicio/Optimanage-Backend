@@ -32,7 +32,8 @@ public class AnalyticsService {
                 .mapToDouble(Compra::getValorFinal)
                 .sum();
 
-        return new ResumoDTO(totalVendas, totalCompras);
+        double lucro = totalVendas - totalCompras;
+        return new ResumoDTO(totalVendas, totalCompras, lucro);
     }
 
     public PrevisaoDTO preverDemanda(User user) {

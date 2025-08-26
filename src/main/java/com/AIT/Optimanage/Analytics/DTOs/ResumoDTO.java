@@ -10,5 +10,6 @@ import lombok.NoArgsConstructor;
 public class ResumoDTO {
     private double totalVendas;
     private double totalCompras;
+    private double lucro;
 }
 
