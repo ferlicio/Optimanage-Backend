@@ -7,26 +7,37 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Tag(name = "Autenticação", description = "Endpoints de autenticação")
 public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
 
     @PostMapping("/register")
+    @Operation(summary = "Registrar", description = "Registra um novo usuário")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<AuthenticationResponse> register(
             @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authenticationService.register(request));
     }
 
     @PostMapping("/authenticate")
+    @Operation(summary = "Autenticar", description = "Autentica um usuário")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<AuthenticationResponse> authenticate(
             @RequestBody AuthenticationRequest request) {
         return ResponseEntity.ok(authenticationService.authenticate(request));
     }
 
     @PostMapping("/refresh")
+    @Operation(summary = "Atualizar token", description = "Atualiza o token JWT")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<AuthenticationResponse> refresh(
             @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authenticationService.refreshToken(request.getRefreshToken()));
