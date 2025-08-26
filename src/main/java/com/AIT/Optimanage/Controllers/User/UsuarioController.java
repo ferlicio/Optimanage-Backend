@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 
@@ -16,6 +17,7 @@ import java.util.List;
 @RequestMapping("/usuarios")
 @RequiredArgsConstructor
 @PreAuthorize("hasAuthority('ADMIN')")
+@Tag(name = "Usuários", description = "Operações relacionadas a usuários")
 public class UsuarioController extends V1BaseController {
 
     private final UsuarioService usuarioService;

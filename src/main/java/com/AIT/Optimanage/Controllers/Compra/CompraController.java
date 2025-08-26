@@ -15,15 +15,21 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/compras")
 @RequiredArgsConstructor
+@Tag(name = "Compras", description = "Operações relacionadas a compras")
 public class CompraController extends V1BaseController {
 
     private final CompraService compraService;
 
     @GetMapping
+    @Operation(summary = "Listar compras", description = "Retorna uma lista de compras")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public List<Compra> listarCompras(@AuthenticationPrincipal User loggedUser,
                                       @RequestParam(value = "id", required = false) Integer id,
                                       @RequestParam(value = "fornecedor_id", required = false) Integer fornecedorId,
@@ -53,51 +59,71 @@ public class CompraController extends V1BaseController {
     }
 
     @GetMapping("/{idCompra}")
+    @Operation(summary = "Listar compra", description = "Retorna uma compra pelo ID")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra listarUmaCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.listarUmaCompra(loggedUser, idCompra);
     }
 
     @PostMapping
+    @Operation(summary = "Criar compra", description = "Cria uma nova compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra criarCompra(@AuthenticationPrincipal User loggedUser, @RequestBody CompraDTO compra) {
         return compraService.criarCompra(loggedUser, compra);
     }
 
     @PutMapping("/{idCompra}")
+    @Operation(summary = "Editar compra", description = "Atualiza uma compra existente")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra editarCompra(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idCompra, @RequestBody CompraDTO compra) {
         return compraService.editarCompra(loggedUser, idCompra, compra);
     }
 
-    @GetMapping("/{idCompra}/confirmar")
+    @PutMapping("/{idCompra}/confirmar")
+    @Operation(summary = "Confirmar compra", description = "Confirma uma compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra confirmarCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.confirmarCompra(loggedUser, idCompra);
     }
 
-    @GetMapping("/{idCompra}/pagar/{idPagamento}")
+    @PutMapping("/{idCompra}/pagar/{idPagamento}")
+    @Operation(summary = "Pagar compra", description = "Realiza pagamento de uma compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra pagarCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra, Integer idPagamento) {
         return compraService.pagarCompra(loggedUser, idCompra, idPagamento);
     }
 
     @PutMapping("/{idCompra}/lancar-pagamento")
+    @Operation(summary = "Lançar pagamento", description = "Registra pagamento de uma compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra lancarPagamentoCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra, @RequestBody List<PagamentoDTO> pagamentoDTO) {
         return compraService.lancarPagamentoCompra(loggedUser, idCompra, pagamentoDTO);
     }
 
-    @GetMapping("/{idCompra}/estornar")
+    @PutMapping("/{idCompra}/estornar")
+    @Operation(summary = "Estornar compra", description = "Estorna uma compra integralmente")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra estornarCompraIntegral(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.estornarCompraIntegral(loggedUser, idCompra);
     }
 
-    @GetMapping("/{idCompra}/estornar/{idPagamento}")
+    @PutMapping("/{idCompra}/estornar/{idPagamento}")
+    @Operation(summary = "Estornar pagamento", description = "Estorna pagamento de uma compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra estornarPagamentoCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra, Integer idPagamento) {
         return compraService.estornarPagamentoCompra(loggedUser, idCompra, idPagamento);
     }
 
-    @GetMapping("/{idCompra}/finalizar")
+    @PutMapping("/{idCompra}/finalizar")
+    @Operation(summary = "Finalizar compra", description = "Finaliza uma compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra finalizarCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.finalizarCompra(loggedUser, idCompra);
     }
 
-    @DeleteMapping("/{idCompra}/cancelar")
+    @PutMapping("/{idCompra}/cancelar")
+    @Operation(summary = "Cancelar compra", description = "Cancela uma compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Compra cancelarCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.cancelarCompra(loggedUser, idCompra);
     }

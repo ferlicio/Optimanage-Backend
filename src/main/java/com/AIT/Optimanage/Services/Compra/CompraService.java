@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -256,14 +257,15 @@ public class CompraService {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
                     Produto produto = produtoService.listarUmProduto(compra.getOwnerUser(), produtoDTO.getProdutoId());
-                    double valorFinalProduto = produto.getValorVenda() * produtoDTO.getQuantidade();
+                    BigDecimal valorFinalProduto = produto.getValorVenda()
+                            .multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
 
                     return CompraProduto.builder()
                             .compra(compra)
                             .produto(produto)
-                            .valorUnitario(produto.getValorVenda())
+                            .valorUnitario(produto.getValorVenda().doubleValue())
                             .quantidade(produtoDTO.getQuantidade())
-                            .valorTotal(valorFinalProduto)
+                            .valorTotal(valorFinalProduto.doubleValue())
                             .build();
                 })
                 .collect(Collectors.toList());

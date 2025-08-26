@@ -14,15 +14,21 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/fornecedores")
 @RequiredArgsConstructor
+@Tag(name = "Fornecedores", description = "Operações relacionadas a fornecedores")
 public class FornecedorController extends V1BaseController {
 
     private final FornecedorService fornecedorService;
 
     @GetMapping
+    @Operation(summary = "Listar fornecedores", description = "Retorna uma lista de fornecedores")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public List<Fornecedor> listarFornecedores(@AuthenticationPrincipal User loggedUser,
                                                @RequestParam(value = "id", required = false) Integer id,
                                                @RequestParam(value = "nome", required = false) String nome,
@@ -52,17 +58,23 @@ public class FornecedorController extends V1BaseController {
     }
 
     @GetMapping("/{idFornecedor}")
+    @Operation(summary = "Listar fornecedor", description = "Retorna um fornecedor pelo ID")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Fornecedor listarUmFornecedor(@AuthenticationPrincipal User loggedUser, Integer idFornecedor) {
         return fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
     }
 
     @PostMapping
+    @Operation(summary = "Criar fornecedor", description = "Cria um novo fornecedor")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Fornecedor criarFornecedor(@AuthenticationPrincipal User loggedUser,
                                      @RequestBody @Valid FornecedorRequest request) {
         return fornecedorService.criarFornecedor(loggedUser, request);
     }
 
     @PutMapping("/{idFornecedor}")
+    @Operation(summary = "Editar fornecedor", description = "Atualiza um fornecedor existente")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Fornecedor editarFornecedor(@AuthenticationPrincipal User loggedUser,
                                        @PathVariable Integer idFornecedor,
                                        @RequestBody @Valid FornecedorRequest request) {
@@ -70,6 +82,8 @@ public class FornecedorController extends V1BaseController {
     }
 
     @DeleteMapping("/{idFornecedor}")
+    @Operation(summary = "Inativar fornecedor", description = "Inativa um fornecedor pelo ID")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public void inativarFornecedor(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idFornecedor) {
         fornecedorService.inativarFornecedor(loggedUser, idFornecedor);
     }

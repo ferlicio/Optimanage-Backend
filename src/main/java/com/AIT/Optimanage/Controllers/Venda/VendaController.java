@@ -15,15 +15,21 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/vendas")
 @RequiredArgsConstructor
+@Tag(name = "Vendas", description = "Operações relacionadas a vendas")
 public class VendaController extends V1BaseController {
 
     private final VendaService vendaService;
 
     @GetMapping
+    @Operation(summary = "Listar vendas", description = "Retorna uma lista de vendas")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public List<Venda> listarVendas(@AuthenticationPrincipal User loggedUser,
                                     @RequestParam(value = "id", required = false) Integer id,
                                     @RequestParam(value = "cliente_id", required = false) Integer clienteId,
@@ -55,61 +61,85 @@ public class VendaController extends V1BaseController {
 
 
     @GetMapping("/{idVenda}")
+    @Operation(summary = "Listar venda", description = "Retorna uma venda pelo ID")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda listarUmaVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.listarUmaVenda(loggedUser, idVenda);
     }
 
     @PostMapping
+    @Operation(summary = "Registrar venda", description = "Cria uma nova venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda registrarVenda(@AuthenticationPrincipal User loggedUser, VendaDTO venda) {
         return vendaService.registrarVenda(loggedUser, venda);
     }
 
     @PutMapping("/{idVenda}")
+    @Operation(summary = "Editar venda", description = "Atualiza uma venda existente")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda editarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda, VendaDTO venda) {
         return vendaService.atualizarVenda(loggedUser, idVenda, venda);
     }
 
-    @GetMapping("/{idVenda}/confirmar")
+    @PutMapping("/{idVenda}/confirmar")
+    @Operation(summary = "Confirmar venda", description = "Confirma uma venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda confirmarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.confirmarVenda(loggedUser, idVenda);
     }
 
     @PutMapping("/{idVenda}/pagar/{idPagamento}")
+    @Operation(summary = "Pagar venda", description = "Realiza pagamento de uma venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda pagarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda, Integer idPagamento) {
         return vendaService.pagarVenda(loggedUser, idVenda, idPagamento);
     }
 
     @PutMapping("/{idVenda}/lancar-pagamento")
+    @Operation(summary = "Lançar pagamento", description = "Registra pagamento de uma venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda lancarPagamentoVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda, List<PagamentoDTO> pagamentoDTO) {
         return vendaService.lancarPagamentoVenda(loggedUser, idVenda, pagamentoDTO);
     }
 
-    @GetMapping("/{idVenda}/estornar")
+    @PutMapping("/{idVenda}/estornar")
+    @Operation(summary = "Estornar venda", description = "Estorna venda integralmente")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda estornarVendaIntegral(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.estornarVendaIntegral(loggedUser, idVenda);
     }
 
-    @GetMapping("/{idVenda}/estornar/{idPagamento}")
+    @PutMapping("/{idVenda}/estornar/{idPagamento}")
+    @Operation(summary = "Estornar pagamento", description = "Estorna pagamento de uma venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda estornarPagamentoVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda, Integer idPagamento) {
         return vendaService.estornarPagamentoVenda(loggedUser, idVenda, idPagamento);
     }
 
     @PutMapping("/{idVenda}/agendar")
+    @Operation(summary = "Agendar venda", description = "Agenda uma venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda agendarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda, String dataAgendada) {
         return vendaService.agendarVenda(loggedUser, idVenda, dataAgendada);
     }
 
-    @GetMapping("/{idVenda}/finalizar-agendamento")
+    @PutMapping("/{idVenda}/finalizar-agendamento")
+    @Operation(summary = "Finalizar agendamento", description = "Finaliza o agendamento de uma venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda finalizarAgendamentoVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.finalizarAgendamentoVenda(loggedUser, idVenda);
     }
 
-    @GetMapping("/{idVenda}/finalizar")
+    @PutMapping("/{idVenda}/finalizar")
+    @Operation(summary = "Finalizar venda", description = "Finaliza uma venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda finalizarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.finalizarVenda(loggedUser, idVenda);
     }
 
-    @GetMapping("/{idVenda}/cancelar")
+    @PutMapping("/{idVenda}/cancelar")
+    @Operation(summary = "Cancelar venda", description = "Cancela uma venda")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
     public Venda cancelarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.cancelarVenda(loggedUser, idVenda);
     }
