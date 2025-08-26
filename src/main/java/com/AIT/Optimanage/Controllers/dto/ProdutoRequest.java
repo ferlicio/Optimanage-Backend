@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -27,13 +29,13 @@ public class ProdutoRequest {
 
     @NotNull
     @PositiveOrZero
-    private Double custo;
+    private BigDecimal custo;
 
     private Boolean disponivelVenda;
 
     @NotNull
     @PositiveOrZero
-    private Double valorVenda;
+    private BigDecimal valorVenda;
 
     @NotNull
     private Integer qtdEstoque;
