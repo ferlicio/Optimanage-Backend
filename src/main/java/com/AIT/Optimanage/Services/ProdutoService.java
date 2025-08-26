@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Controllers.dto.ProdutoRequest;
+import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.User.User;
@@ -16,33 +17,37 @@ public class ProdutoService {
 
     private final ProdutoRepository produtoRepository;
 
-    public List<Produto> listarProdutos(User loggedUser) {
-        return produtoRepository.findAllByOwnerUser(loggedUser);
+    public List<ProdutoResponse> listarProdutos(User loggedUser) {
+        return produtoRepository.findAllByOwnerUser(loggedUser)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Produto listarUmProduto(User loggedUser, Integer idProduto) {
-        return produtoRepository.findByIdAndOwnerUser(idProduto, loggedUser)
-                .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado")
-        );
+    public ProdutoResponse listarUmProduto(User loggedUser, Integer idProduto) {
+        Produto produto = buscarProduto(loggedUser, idProduto);
+        return toResponse(produto);
     }
 
-    public Produto cadastrarProduto(User loggedUser, ProdutoRequest request) {
+    public ProdutoResponse cadastrarProduto(User loggedUser, ProdutoRequest request) {
         Produto produto = fromRequest(request);
         produto.setId(null);
         produto.setOwnerUser(loggedUser);
-        return produtoRepository.save(produto);
+        Produto salvo = produtoRepository.save(produto);
+        return toResponse(salvo);
     }
 
-    public Produto editarProduto(User loggedUser, Integer idProduto, ProdutoRequest request) {
-        Produto produtoSalvo = listarUmProduto(loggedUser, idProduto);
+    public ProdutoResponse editarProduto(User loggedUser, Integer idProduto, ProdutoRequest request) {
+        Produto produtoSalvo = buscarProduto(loggedUser, idProduto);
         Produto produto = fromRequest(request);
         produto.setId(produtoSalvo.getId());
         produto.setOwnerUser(produtoSalvo.getOwnerUser());
-        return produtoRepository.save(produto);
+        Produto atualizado = produtoRepository.save(produto);
+        return toResponse(atualizado);
     }
 
     public void excluirProduto(User loggedUser, Integer idProduto) {
-        Produto produto = listarUmProduto(loggedUser, idProduto);
+        Produto produto = buscarProduto(loggedUser, idProduto);
         produtoRepository.delete(produto);
     }
 
@@ -63,5 +68,27 @@ public class ProdutoService {
         produto.setQtdEstoque(request.getQtdEstoque());
         produto.setTerceirizado(request.getTerceirizado());
         return produto;
+    }
+
+    private Produto buscarProduto(User loggedUser, Integer idProduto) {
+        return produtoRepository.findByIdAndOwnerUser(idProduto, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
+    }
+
+    private ProdutoResponse toResponse(Produto produto) {
+        return ProdutoResponse.builder()
+                .id(produto.getId())
+                .ownerUserId(produto.getOwnerUser() != null ? produto.getOwnerUser().getId() : null)
+                .fornecedorId(produto.getFornecedor() != null ? produto.getFornecedor().getId() : null)
+                .sequencialUsuario(produto.getSequencialUsuario())
+                .codigoReferencia(produto.getCodigoReferencia())
+                .nome(produto.getNome())
+                .descricao(produto.getDescricao())
+                .custo(produto.getCusto())
+                .disponivelVenda(produto.getDisponivelVenda())
+                .valorVenda(produto.getValorVenda())
+                .qtdEstoque(produto.getQtdEstoque())
+                .terceirizado(produto.getTerceirizado())
+                .build();
     }
 }
