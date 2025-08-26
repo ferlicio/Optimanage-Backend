@@ -103,6 +103,10 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `GET /api/v1/compatibilidades/{contexto}` &ndash; buscar compatibilidades.
 - `POST /api/v1/compatibilidades` &ndash; adicionar compatibilidade.
 
+### Analytics
+- `GET /api/v1/analytics/resumo` &ndash; resumo de vendas, compras e lucro.
+- `GET /api/v1/analytics/previsao` &ndash; previsão de demanda com regressão linear.
+
 ## Execução
 1. Requisitos: Java 17+ e Maven.
 2. Rodar testes: `./mvnw test`
