@@ -6,8 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Getter
-@Setter
 @Data
 @Builder
 @NoArgsConstructor
