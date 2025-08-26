@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -305,17 +306,18 @@ public class VendaService {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
                     Produto produto = produtoService.listarUmProduto(venda.getOwnerUser(), produtoDTO.getProdutoId());
-                    double valorProduto = produto.getValorVenda() * produtoDTO.getQuantidade();
-                    double descontoProduto = (produtoDTO.getDesconto() / 100.0) * valorProduto;
-                    double valorFinalProduto = valorProduto - descontoProduto;
+                    BigDecimal valorProduto = produto.getValorVenda().multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
+                    BigDecimal descontoProduto = valorProduto
+                            .multiply(BigDecimal.valueOf(produtoDTO.getDesconto()).divide(BigDecimal.valueOf(100)));
+                    BigDecimal valorFinalProduto = valorProduto.subtract(descontoProduto);
 
                     return VendaProduto.builder()
                             .venda(venda)
                             .produto(produto)
-                            .valorUnitario(produto.getValorVenda())
+                            .valorUnitario(produto.getValorVenda().doubleValue())
                             .quantidade(produtoDTO.getQuantidade())
                             .desconto(produtoDTO.getDesconto())
-                            .valorFinal(valorFinalProduto)
+                            .valorFinal(valorFinalProduto.doubleValue())
                             .build();
                 })
                 .collect(Collectors.toList());

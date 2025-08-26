@@ -69,28 +69,28 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `GET /api/v1/compras/{idCompra}` &ndash; obter compra.
 - `POST /api/v1/compras` &ndash; criar compra.
 - `PUT /api/v1/compras/{idCompra}` &ndash; editar compra.
-- `GET /api/v1/compras/{idCompra}/confirmar` &ndash; confirmar compra.
-- `GET /api/v1/compras/{idCompra}/pagar/{idPagamento}` &ndash; pagar compra.
+- `PUT /api/v1/compras/{idCompra}/confirmar` &ndash; confirmar compra.
+- `PUT /api/v1/compras/{idCompra}/pagar/{idPagamento}` &ndash; pagar compra.
 - `PUT /api/v1/compras/{idCompra}/lancar-pagamento` &ndash; lançar pagamentos.
-- `GET /api/v1/compras/{idCompra}/estornar` &ndash; estornar compra.
-- `GET /api/v1/compras/{idCompra}/estornar/{idPagamento}` &ndash; estornar pagamento.
-- `GET /api/v1/compras/{idCompra}/finalizar` &ndash; finalizar compra.
-- `DELETE /api/v1/compras/{idCompra}/cancelar` &ndash; cancelar compra.
+- `PUT /api/v1/compras/{idCompra}/estornar` &ndash; estornar compra.
+- `PUT /api/v1/compras/{idCompra}/estornar/{idPagamento}` &ndash; estornar pagamento.
+- `PUT /api/v1/compras/{idCompra}/finalizar` &ndash; finalizar compra.
+- `PUT /api/v1/compras/{idCompra}/cancelar` &ndash; cancelar compra.
 
 ### Vendas
 - `GET /api/v1/vendas` &ndash; listar vendas (`id`, `cliente_id`, `data_inicial`, `data_final`, `pago`, `status`, `forma_pagamento`, `sort`, `order`, `page`, `pagesize`).
 - `GET /api/v1/vendas/{idVenda}` &ndash; obter venda.
 - `POST /api/v1/vendas` &ndash; registrar venda.
 - `PUT /api/v1/vendas/{idVenda}` &ndash; editar venda.
-- `GET /api/v1/vendas/{idVenda}/confirmar` &ndash; confirmar venda.
+- `PUT /api/v1/vendas/{idVenda}/confirmar` &ndash; confirmar venda.
 - `PUT /api/v1/vendas/{idVenda}/pagar/{idPagamento}` &ndash; registrar pagamento.
 - `PUT /api/v1/vendas/{idVenda}/lancar-pagamento` &ndash; lançar pagamentos.
-- `GET /api/v1/vendas/{idVenda}/estornar` &ndash; estornar venda.
-- `GET /api/v1/vendas/{idVenda}/estornar/{idPagamento}` &ndash; estornar pagamento.
+- `PUT /api/v1/vendas/{idVenda}/estornar` &ndash; estornar venda.
+- `PUT /api/v1/vendas/{idVenda}/estornar/{idPagamento}` &ndash; estornar pagamento.
 - `PUT /api/v1/vendas/{idVenda}/agendar` &ndash; agendar venda.
-- `GET /api/v1/vendas/{idVenda}/finalizar-agendamento` &ndash; finalizar agendamento.
-- `GET /api/v1/vendas/{idVenda}/finalizar` &ndash; finalizar venda.
-- `GET /api/v1/vendas/{idVenda}/cancelar` &ndash; cancelar venda.
+- `PUT /api/v1/vendas/{idVenda}/finalizar-agendamento` &ndash; finalizar agendamento.
+- `PUT /api/v1/vendas/{idVenda}/finalizar` &ndash; finalizar venda.
+- `PUT /api/v1/vendas/{idVenda}/cancelar` &ndash; cancelar venda.
 
 ### Contextos de Compatibilidade
 - `GET /api/v1/contextos` &ndash; listar contextos.
