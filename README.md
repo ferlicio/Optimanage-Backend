@@ -17,6 +17,13 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `POST /api/v1/auth/register` &ndash; registrar novo usuário.
 - `POST /api/v1/auth/authenticate` &ndash; autenticar usuário.
 
+### Usuários
+- `POST /api/v1/usuarios/criar` &ndash; criar usuário (requer autoridade `ADMIN`).
+- `GET /api/v1/usuarios/listar` &ndash; listar usuários (requer autoridade `ADMIN`).
+- `GET /api/v1/usuarios/{id}` &ndash; obter usuário (requer autoridade `ADMIN`).
+- `PUT /api/v1/usuarios/{id}/atualizar-plano?novoPlanoId={novoPlanoId}` &ndash; atualizar plano ativo (requer autoridade `ADMIN`).
+- `DELETE /api/v1/usuarios/{id}/desativar` &ndash; desativar usuário (requer autoridade `ADMIN`).
+
 ### Produtos
 - `GET /api/v1/produtos` &ndash; listar produtos.
 - `GET /api/v1/produtos/{idProduto}` &ndash; obter um produto.
