@@ -67,12 +67,12 @@ public class CompraController extends V1BaseController {
         return compraService.editarCompra(loggedUser, idCompra, compra);
     }
 
-    @GetMapping("/{idCompra}/confirmar")
+    @PutMapping("/{idCompra}/confirmar")
     public Compra confirmarCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.confirmarCompra(loggedUser, idCompra);
     }
 
-    @GetMapping("/{idCompra}/pagar/{idPagamento}")
+    @PutMapping("/{idCompra}/pagar/{idPagamento}")
     public Compra pagarCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra, Integer idPagamento) {
         return compraService.pagarCompra(loggedUser, idCompra, idPagamento);
     }
@@ -82,22 +82,22 @@ public class CompraController extends V1BaseController {
         return compraService.lancarPagamentoCompra(loggedUser, idCompra, pagamentoDTO);
     }
 
-    @GetMapping("/{idCompra}/estornar")
+    @PutMapping("/{idCompra}/estornar")
     public Compra estornarCompraIntegral(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.estornarCompraIntegral(loggedUser, idCompra);
     }
 
-    @GetMapping("/{idCompra}/estornar/{idPagamento}")
+    @PutMapping("/{idCompra}/estornar/{idPagamento}")
     public Compra estornarPagamentoCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra, Integer idPagamento) {
         return compraService.estornarPagamentoCompra(loggedUser, idCompra, idPagamento);
     }
 
-    @GetMapping("/{idCompra}/finalizar")
+    @PutMapping("/{idCompra}/finalizar")
     public Compra finalizarCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.finalizarCompra(loggedUser, idCompra);
     }
 
-    @DeleteMapping("/{idCompra}/cancelar")
+    @PutMapping("/{idCompra}/cancelar")
     public Compra cancelarCompra(@AuthenticationPrincipal User loggedUser, Integer idCompra) {
         return compraService.cancelarCompra(loggedUser, idCompra);
     }

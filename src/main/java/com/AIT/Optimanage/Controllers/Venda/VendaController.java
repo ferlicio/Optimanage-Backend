@@ -69,7 +69,7 @@ public class VendaController extends V1BaseController {
         return vendaService.atualizarVenda(loggedUser, idVenda, venda);
     }
 
-    @GetMapping("/{idVenda}/confirmar")
+    @PutMapping("/{idVenda}/confirmar")
     public Venda confirmarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.confirmarVenda(loggedUser, idVenda);
     }
@@ -84,12 +84,12 @@ public class VendaController extends V1BaseController {
         return vendaService.lancarPagamentoVenda(loggedUser, idVenda, pagamentoDTO);
     }
 
-    @GetMapping("/{idVenda}/estornar")
+    @PutMapping("/{idVenda}/estornar")
     public Venda estornarVendaIntegral(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.estornarVendaIntegral(loggedUser, idVenda);
     }
 
-    @GetMapping("/{idVenda}/estornar/{idPagamento}")
+    @PutMapping("/{idVenda}/estornar/{idPagamento}")
     public Venda estornarPagamentoVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda, Integer idPagamento) {
         return vendaService.estornarPagamentoVenda(loggedUser, idVenda, idPagamento);
     }
@@ -99,17 +99,17 @@ public class VendaController extends V1BaseController {
         return vendaService.agendarVenda(loggedUser, idVenda, dataAgendada);
     }
 
-    @GetMapping("/{idVenda}/finalizar-agendamento")
+    @PutMapping("/{idVenda}/finalizar-agendamento")
     public Venda finalizarAgendamentoVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.finalizarAgendamentoVenda(loggedUser, idVenda);
     }
 
-    @GetMapping("/{idVenda}/finalizar")
+    @PutMapping("/{idVenda}/finalizar")
     public Venda finalizarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.finalizarVenda(loggedUser, idVenda);
     }
 
-    @GetMapping("/{idVenda}/cancelar")
+    @PutMapping("/{idVenda}/cancelar")
     public Venda cancelarVenda(@AuthenticationPrincipal User loggedUser, Integer idVenda) {
         return vendaService.cancelarVenda(loggedUser, idVenda);
     }
