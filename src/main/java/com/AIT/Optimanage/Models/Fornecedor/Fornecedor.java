@@ -13,8 +13,6 @@ import java.util.Date;
 import java.util.List;
 
 
-@Setter
-@Getter
 @Data
 @Builder
 @NoArgsConstructor
