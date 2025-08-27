@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 
@@ -22,17 +23,17 @@ public class AnalyticsService {
     private final CompraRepository compraRepository;
 
     public ResumoDTO obterResumo(User user) {
-        double totalVendas = vendaRepository.findAll().stream()
+        BigDecimal totalVendas = vendaRepository.findAll().stream()
                 .filter(v -> v.getOwnerUser().getId().equals(user.getId()))
-                .mapToDouble(Venda::getValorFinal)
-                .sum();
+                .map(Venda::getValorFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        double totalCompras = compraRepository.findAll().stream()
+        BigDecimal totalCompras = compraRepository.findAll().stream()
                 .filter(c -> c.getOwnerUser().getId().equals(user.getId()))
-                .mapToDouble(Compra::getValorFinal)
-                .sum();
+                .map(Compra::getValorFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        double lucro = totalVendas - totalCompras;
+        BigDecimal lucro = totalVendas.subtract(totalCompras);
         return new ResumoDTO(totalVendas, totalCompras, lucro);
     }
 
@@ -43,7 +44,7 @@ public class AnalyticsService {
                 .toList();
 
         if (vendas.size() < 2) {
-            return new PrevisaoDTO(0.0);
+            return new PrevisaoDTO(BigDecimal.ZERO);
         }
 
         // Forecast using a simple linear regression from Apache Commons Math.
@@ -51,11 +52,11 @@ public class AnalyticsService {
         SimpleRegression regression = new SimpleRegression();
         int i = 0;
         for (Venda venda : vendas) {
-            regression.addData(i++, venda.getValorFinal());
+            regression.addData(i++, venda.getValorFinal().doubleValue());
         }
 
         double forecast = regression.predict(i);
-        return new PrevisaoDTO(forecast);
+        return new PrevisaoDTO(BigDecimal.valueOf(forecast));
     }
 }
 

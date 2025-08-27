@@ -96,12 +96,12 @@ public class VendaService {
                 .dataEfetuacao(vendaDTO.getDataEfetuacao())
                 .dataAgendada(vendaDTO.getDataAgendada())
                 .dataCobranca(vendaDTO.getDataCobranca())
-                .valorTotal(0.0)
+                .valorTotal(BigDecimal.ZERO)
                 .descontoGeral(vendaDTO.getDescontoGeral())
-                .valorFinal(0.0)
+                .valorFinal(BigDecimal.ZERO)
                 .condicaoPagamento(vendaDTO.getCondicaoPagamento())
                 .alteracoesPermitidas(vendaDTO.getAlteracoesPermitidas())
-                .valorPendente(0.0)
+                .valorPendente(BigDecimal.ZERO)
                 .status(vendaDTO.getStatus())
                 .observacoes(vendaDTO.getObservacoes())
                 .build();
@@ -109,14 +109,21 @@ public class VendaService {
         List<VendaProduto> vendaProdutos = criarListaProdutos(vendaDTO.getProdutos(), novaVenda);
         List<VendaServico> vendaServicos = criarListaServicos(vendaDTO.getServicos(), novaVenda);
 
-        double valorTotal = vendaProdutos.stream().mapToDouble(VendaProduto::getValorFinal).sum()
-                + vendaServicos.stream().mapToDouble(VendaServico::getValorFinal).sum();
+        BigDecimal valorProdutos = vendaProdutos.stream()
+                .map(VendaProduto::getValorFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorServicos = vendaServicos.stream()
+                .map(VendaServico::getValorFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorTotal = valorProdutos.add(valorServicos);
 
-        double valorPago = 0.0;
+        BigDecimal valorPago = BigDecimal.ZERO;
 
         novaVenda.setValorTotal(valorTotal);
-        novaVenda.setValorFinal(valorTotal - novaVenda.getDescontoGeral());
-        novaVenda.setValorPendente(novaVenda.getValorFinal() - valorPago);
+        BigDecimal valorFinal = valorTotal.multiply(BigDecimal.valueOf(100).subtract(novaVenda.getDescontoGeral()))
+                .divide(BigDecimal.valueOf(100));
+        novaVenda.setValorFinal(valorFinal);
+        novaVenda.setValorPendente(valorFinal.subtract(valorPago));
         novaVenda.setVendaProdutos(vendaProdutos);
         novaVenda.setVendaServicos(vendaServicos);
 
@@ -154,16 +161,23 @@ public class VendaService {
         List<VendaProduto> vendaProdutos = criarListaProdutos(vendaDTO.getProdutos(), vendaAtualizada);
         List<VendaServico> vendaServicos = criarListaServicos(vendaDTO.getServicos(), vendaAtualizada);
 
-        double valorTotal = vendaProdutos.stream().mapToDouble(VendaProduto::getValorFinal).sum()
-                + vendaServicos.stream().mapToDouble(VendaServico::getValorFinal).sum();
+        BigDecimal valorProdutos = vendaProdutos.stream()
+                .map(VendaProduto::getValorFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorServicos = vendaServicos.stream()
+                .map(VendaServico::getValorFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorTotal = valorProdutos.add(valorServicos);
 
-        double valorPago = venda.getPagamentos() == null
-                ? 0.0
-                : venda.getPagamentos().stream().mapToDouble(VendaPagamento::getValorPago).sum();
+        BigDecimal valorPago = venda.getPagamentos() == null
+                ? BigDecimal.ZERO
+                : venda.getPagamentos().stream().map(VendaPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
 
         vendaAtualizada.setValorTotal(valorTotal);
-        vendaAtualizada.setValorFinal(valorTotal * (100 - vendaAtualizada.getDescontoGeral())/100);
-        vendaAtualizada.setValorPendente(vendaAtualizada.getValorFinal() - valorPago);
+        BigDecimal valorFinalAtualizado = valorTotal.multiply(BigDecimal.valueOf(100).subtract(vendaAtualizada.getDescontoGeral()))
+                .divide(BigDecimal.valueOf(100));
+        vendaAtualizada.setValorFinal(valorFinalAtualizado);
+        vendaAtualizada.setValorPendente(valorFinalAtualizado.subtract(valorPago));
         vendaAtualizada.setVendaProdutos(vendaProdutos);
         vendaAtualizada.setVendaServicos(vendaServicos);
         atualizarStatus(venda, vendaAtualizada.getStatus());
@@ -200,7 +214,7 @@ public class VendaService {
         podePagarVenda(venda);
 
         for (PagamentoDTO pagamento : pagamentoDTO) {
-            if (pagamento.getValorPago() <= 0) {
+            if (pagamento.getValorPago().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("O valor do pagamento deve ser maior que zero.");
             } else if (pagamento.getDataPagamento().isAfter(LocalDate.now())) {
                 throw new IllegalArgumentException("A data de pagamento não pode ser no futuro.");
@@ -234,13 +248,15 @@ public class VendaService {
         } else {
             throw new IllegalArgumentException("O pagamento informado não pertence a esta venda.");
         }
-        double valorPago = venda.getPagamentos().stream().mapToDouble(VendaPagamento::getValorPago).sum();
-        venda.setValorPendente(venda.getValorFinal() - valorPago);
-        if (venda.getValorPendente() <= 0) {
+        BigDecimal valorPago = venda.getPagamentos().stream()
+                .map(VendaPagamento::getValorPago)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        venda.setValorPendente(venda.getValorFinal().subtract(valorPago));
+        if (venda.getValorPendente().compareTo(BigDecimal.ZERO) <= 0) {
             if (venda.getStatus() == StatusVenda.AGUARDANDO_PAG || venda.getStatus() == StatusVenda.PENDENTE) {
                 atualizarStatus(venda, StatusVenda.PAGA);
             }
-        } else if (valorPago > 0) {
+        } else if (valorPago.compareTo(BigDecimal.ZERO) > 0) {
             atualizarStatus(venda, StatusVenda.PARCIALMENTE_PAGA);
         }
         return vendaRepository.save(venda);
@@ -262,10 +278,10 @@ public class VendaService {
     public Venda finalizarAgendamentoVenda(User loggedUser, Integer idVenda) {
         Venda venda = listarUmaVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.AGENDADA) {
-            double valorPago = venda.getValorFinal() - venda.getValorPendente();
-            if (valorPago <= 0) {
+            BigDecimal valorPago = venda.getValorFinal().subtract(venda.getValorPendente());
+            if (valorPago.compareTo(BigDecimal.ZERO) <= 0) {
                 venda.setStatus(StatusVenda.AGUARDANDO_PAG);
-            } else if ( valorPago < venda.getValorFinal()) {
+            } else if (valorPago.compareTo(venda.getValorFinal()) < 0) {
                 venda.setStatus(StatusVenda.PARCIALMENTE_PAGA);
             } else {
                 venda.setStatus(StatusVenda.CONCRETIZADA);
@@ -278,9 +294,9 @@ public class VendaService {
 
     public Venda finalizarVenda(User loggedUser, Integer idVenda) {
         Venda venda = listarUmaVenda(loggedUser, idVenda);
-         if (venda.getStatus() == StatusVenda.ORCAMENTO) {
+        if (venda.getStatus() == StatusVenda.ORCAMENTO) {
             throw new IllegalArgumentException("Uma venda orçamento não pode ser finalizada.");
-        } else if (venda.getValorPendente() > 0) {
+        } else if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
             throw new IllegalArgumentException("A venda não pode ser finalizada enquanto houver saldo pendente.");
         }
         if (venda.getStatus() == StatusVenda.AGENDADA || venda.getStatus() == StatusVenda.PAGA) {
@@ -306,16 +322,16 @@ public class VendaService {
                     Produto produto = produtoService.buscarProdutoAtivo(venda.getOwnerUser(), produtoDTO.getProdutoId());
                     BigDecimal valorProduto = produto.getValorVenda().multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
                     BigDecimal descontoProduto = valorProduto
-                            .multiply(BigDecimal.valueOf(produtoDTO.getDesconto()).divide(BigDecimal.valueOf(100)));
+                            .multiply(produtoDTO.getDesconto().divide(BigDecimal.valueOf(100)));
                     BigDecimal valorFinalProduto = valorProduto.subtract(descontoProduto);
 
                     return VendaProduto.builder()
                             .venda(venda)
                             .produto(produto)
-                            .valorUnitario(produto.getValorVenda().doubleValue())
+                            .valorUnitario(produto.getValorVenda())
                             .quantidade(produtoDTO.getQuantidade())
                             .desconto(produtoDTO.getDesconto())
-                            .valorFinal(valorFinalProduto.doubleValue())
+                            .valorFinal(valorFinalProduto)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -325,9 +341,10 @@ public class VendaService {
         return servicosDTO.stream()
             .map(servicoDTO -> {
                 Servico servico = servicoService.buscarServicoAtivo(venda.getOwnerUser(), servicoDTO.getServicoId());
-                double valorServico = servico.getValorVenda() * servicoDTO.getQuantidade();
-                double descontoServico = (servicoDTO.getDesconto() / 100.0) * valorServico;
-                double valorFinalServico = valorServico - descontoServico;
+                BigDecimal valorServico = servico.getValorVenda().multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
+                BigDecimal descontoServico = valorServico
+                        .multiply(servicoDTO.getDesconto().divide(BigDecimal.valueOf(100)));
+                BigDecimal valorFinalServico = valorServico.subtract(descontoServico);
 
                 return VendaServico.builder()
                         .venda(venda)
@@ -406,7 +423,7 @@ public class VendaService {
                 if (statusAtual == StatusVenda.CONCRETIZADA || statusAtual == StatusVenda.CANCELADA) {
                     throw new IllegalStateException("Uma venda CONCRETIZADA ou CANCELADA não pode voltar para o estado de paga.");
                 }
-                if (venda.getValorPendente() > 0) {
+                if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
                     throw new IllegalStateException("A venda não pode ser paga sem o pagamento completo.");
                 }
                 break;
@@ -418,7 +435,7 @@ public class VendaService {
                 if (statusAtual == StatusVenda.ORCAMENTO) {
                     throw new IllegalStateException("Um orçamento não pode ser concretizado.");
                 }
-                if (venda.getValorPendente() > 0) {
+                if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
                     throw new IllegalStateException("A venda não pode ser concretizada sem o pagamento completo.");
                 }
                 break;
@@ -441,7 +458,7 @@ public class VendaService {
             throw new IllegalArgumentException("Não é possível pagar uma venda cancelada.");
         } else if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             throw new IllegalArgumentException("Não é possível pagar uma venda concretizada.");
-        } else if (venda.getStatus() == StatusVenda.PAGA || venda.getValorPendente() <= 0) {
+        } else if (venda.getStatus() == StatusVenda.PAGA || venda.getValorPendente().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Esta venda já foi paga.");
         }
     }
@@ -449,9 +466,9 @@ public class VendaService {
     private void atualizarVendaPosPagamento(Venda venda) {
         List<VendaPagamento> pagamentos = pagamentoVendaService.listarPagamentosRealizadosVenda(venda.getOwnerUser(), venda.getId());
 
-        double valorPago = pagamentos.stream().mapToDouble(VendaPagamento::getValorPago).sum();
-        venda.setValorPendente(venda.getValorFinal() - valorPago);
-        if (venda.getValorPendente() <= 0) {
+        BigDecimal valorPago = pagamentos.stream().map(VendaPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
+        venda.setValorPendente(venda.getValorFinal().subtract(valorPago));
+        if (venda.getValorPendente().compareTo(BigDecimal.ZERO) <= 0) {
             if (venda.getStatus() == StatusVenda.AGUARDANDO_PAG || venda.getStatus() == StatusVenda.PENDENTE) {
                 atualizarStatus(venda, StatusVenda.PAGA);
             }

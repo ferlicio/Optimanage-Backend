@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -17,9 +18,9 @@ public class ServicoResponse {
     private Integer sequencialUsuario;
     private String nome;
     private String descricao;
-    private Double custo;
+    private BigDecimal custo;
     private Boolean disponivelVenda;
-    private Double valorVenda;
+    private BigDecimal valorVenda;
     private Integer tempoExecucao;
     private Boolean terceirizado;
     private Boolean ativo;

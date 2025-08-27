@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -24,8 +25,8 @@ public class VendaPagamento {
     @JoinColumn(name = "venda_id", nullable = false)
     private Venda venda;
 
-    @Column(nullable = false)
-    private Double valorPago;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorPago;
 
     @Column(nullable = false)
     private LocalDate dataPagamento;

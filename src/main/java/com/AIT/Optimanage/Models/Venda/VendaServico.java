@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -39,13 +41,13 @@ public class VendaServico {
     @Column(nullable = false)
     private Integer quantidade;
 
-    @Column(length = 10, precision = 2, nullable = false)
-    private Double valorUnitario;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorUnitario;
 
     @Column(length = 3)
-    private Double desconto = 0.0;
+    private BigDecimal desconto = BigDecimal.ZERO;
 
-    @Column(length = 10,precision = 2)
-    private Double valorFinal;
+    @Column(precision = 10, scale = 2)
+    private BigDecimal valorFinal;
 
 }

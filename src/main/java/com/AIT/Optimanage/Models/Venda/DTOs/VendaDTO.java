@@ -2,13 +2,13 @@ package com.AIT.Optimanage.Models.Venda.DTOs;
 
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -23,8 +23,8 @@ public class VendaDTO {
     private LocalDate dataEfetuacao = LocalDate.now();
     private LocalDate dataAgendada = null;
     private LocalDate dataCobranca;
-    @Min(0)
-    private Double descontoGeral = 0.0;
+    @DecimalMin(value = "0.0")
+    private BigDecimal descontoGeral = BigDecimal.ZERO;
     private String condicaoPagamento;
     @Min(0)
     private Integer alteracoesPermitidas = 0;

@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Controllers.dto;
 
 import jakarta.validation.constraints.*;
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,14 +24,14 @@ public class ServicoRequest {
     private String descricao;
 
     @NotNull
-    @PositiveOrZero
-    private Double custo;
+    @DecimalMin(value = "0.0")
+    private BigDecimal custo;
 
     private Boolean disponivelVenda;
 
     @NotNull
-    @PositiveOrZero
-    private Double valorVenda;
+    @DecimalMin(value = "0.0")
+    private BigDecimal valorVenda;
 
     @NotNull
     private Integer tempoExecucao;

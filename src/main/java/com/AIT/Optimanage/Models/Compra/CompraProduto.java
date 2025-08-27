@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -36,13 +38,13 @@ public class CompraProduto {
         return produto.getId();
     }
 
-    @Column(length = 10, precision = 2, nullable = false)
-    private Double valorUnitario;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorUnitario;
 
     @Column(nullable = false)
     private Integer quantidade;
 
-    @Column(nullable = false)
-    private Double valorTotal;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorTotal;
 
 }
