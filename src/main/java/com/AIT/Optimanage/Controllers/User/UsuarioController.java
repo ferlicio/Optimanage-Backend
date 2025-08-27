@@ -7,12 +7,14 @@ import com.AIT.Optimanage.Services.User.UsuarioService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -30,8 +32,15 @@ public class UsuarioController extends V1BaseController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UserResponse>> listarUsuarios() {
-        List<UserResponse> usuarios = usuarioService.listarUsuarios();
+    public ResponseEntity<Page<UserResponse>> listarUsuarios(
+            @RequestParam(value = "sort", required = false) String sort,
+            @RequestParam(value = "order", required = false) Sort.Direction order,
+            @RequestParam(value = "page", required = true) Integer page,
+            @RequestParam(value = "pagesize", required = true) Integer pagesize) {
+        Sort.Direction direction = order != null ? order : Sort.Direction.ASC;
+        String sortBy = sort != null ? sort : "id";
+        Pageable pageable = PageRequest.of(page, pagesize, Sort.by(direction, sortBy));
+        Page<UserResponse> usuarios = usuarioService.listarUsuarios(pageable);
         return ResponseEntity.ok(usuarios);
     }
 

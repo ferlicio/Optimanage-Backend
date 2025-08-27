@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -31,7 +30,7 @@ public class FornecedorService {
 
     @Cacheable(value = "fornecedores", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public List<Fornecedor> listarFornecedores(User loggedUser, FornecedorSearch pesquisa) {
+    public Page<Fornecedor> listarFornecedores(User loggedUser, FornecedorSearch pesquisa) {
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -41,8 +40,8 @@ public class FornecedorService {
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
         // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
-        Page<Fornecedor> fornecedores = fornecedorRepository.buscarFornecedores(
-                loggedUser.getId(), // Filtro pelo usuário logado
+        return fornecedorRepository.buscarFornecedores(
+                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getNome(),
                 pesquisa.getCpfOuCnpj(),
@@ -52,8 +51,6 @@ public class FornecedorService {
                 pesquisa.getAtivo() != null ? pesquisa.getAtivo() : true,
                 pageable
         );
-
-        return fornecedores.getContent();
     }
 
     public Fornecedor listarUmFornecedor(User loggedUser, Integer idFornecedor) {

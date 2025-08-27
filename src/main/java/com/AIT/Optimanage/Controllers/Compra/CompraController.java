@@ -15,7 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,9 +29,9 @@ public class CompraController extends V1BaseController {
     private final CompraService compraService;
 
     @GetMapping
-    @Operation(summary = "Listar compras", description = "Retorna uma lista de compras")
+    @Operation(summary = "Listar compras", description = "Retorna uma página de compras")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<Compra> listarCompras(@AuthenticationPrincipal User loggedUser,
+    public Page<Compra> listarCompras(@AuthenticationPrincipal User loggedUser,
                                       @RequestParam(value = "id", required = false) Integer id,
                                       @RequestParam(value = "fornecedor_id", required = false) Integer fornecedorId,
                                       @RequestParam(value = "data_inicial", required = false) String data_inicial,

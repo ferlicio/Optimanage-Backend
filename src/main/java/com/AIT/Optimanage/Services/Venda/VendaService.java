@@ -56,7 +56,7 @@ public class VendaService {
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public List<Venda> listarVendas(User loggedUser, VendaSearch pesquisa) {
+    public Page<Venda> listarVendas(User loggedUser, VendaSearch pesquisa) {
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -65,7 +65,7 @@ public class VendaService {
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
         // Realiza a busca no repositório com os filtros definidos e associando o usuario logado
-        Page<Venda> vendas = vendaRepository.buscarVendas(
+        return vendaRepository.buscarVendas(
                 loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getClienteId(),
@@ -75,8 +75,6 @@ public class VendaService {
                 pesquisa.getPago(),
                 pesquisa.getFormaPagamento(),
                 pageable);
-
-        return vendas.getContent();
     }
 
     public Venda listarUmaVenda(User loggedUser, Integer idVenda) {
