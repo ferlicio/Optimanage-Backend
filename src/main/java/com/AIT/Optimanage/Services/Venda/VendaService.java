@@ -326,7 +326,7 @@ public class VendaService {
     private List<VendaServico> criarListaServicos(List<VendaServicoDTO> servicosDTO, Venda venda) {
         return servicosDTO.stream()
             .map(servicoDTO -> {
-                Servico servico = servicoService.listarUmServico(venda.getOwnerUser(), servicoDTO.getServicoId());
+                Servico servico = servicoService.buscarServicoAtivo(venda.getOwnerUser(), servicoDTO.getServicoId());
                 double valorServico = servico.getValorVenda() * servicoDTO.getQuantidade();
                 double descontoServico = (servicoDTO.getDesconto() / 100.0) * valorServico;
                 double valorFinalServico = valorServico - descontoServico;
