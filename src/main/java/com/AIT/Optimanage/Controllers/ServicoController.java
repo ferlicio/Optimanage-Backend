@@ -2,7 +2,7 @@ package com.AIT.Optimanage.Controllers;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
 import com.AIT.Optimanage.Controllers.dto.ServicoRequest;
-import com.AIT.Optimanage.Models.Servico;
+import com.AIT.Optimanage.Controllers.dto.ServicoResponse;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.ServicoService;
 import lombok.RequiredArgsConstructor;
@@ -27,21 +27,21 @@ public class ServicoController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar serviços", description = "Retorna uma lista de serviços")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<Servico> listarServicos(@AuthenticationPrincipal User loggedUser) {
+    public List<ServicoResponse> listarServicos(@AuthenticationPrincipal User loggedUser) {
         return servicoService.listarServicos(loggedUser);
     }
 
     @GetMapping("/{idServico}")
     @Operation(summary = "Listar serviço", description = "Retorna um serviço pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Servico listarUmServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
+    public ServicoResponse listarUmServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
         return servicoService.listarUmServico(loggedUser, idServico);
     }
 
     @PostMapping
     @Operation(summary = "Cadastrar serviço", description = "Cria um novo serviço")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Servico cadastrarServico(@AuthenticationPrincipal User loggedUser,
+    public ServicoResponse cadastrarServico(@AuthenticationPrincipal User loggedUser,
                                     @RequestBody @Valid ServicoRequest request) {
         return servicoService.cadastrarServico(loggedUser, request);
     }
@@ -49,7 +49,7 @@ public class ServicoController extends V1BaseController {
     @PutMapping("/{idServico}")
     @Operation(summary = "Editar serviço", description = "Atualiza um serviço existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Servico editarServico(@AuthenticationPrincipal User loggedUser,
+    public ServicoResponse editarServico(@AuthenticationPrincipal User loggedUser,
                                  @PathVariable Integer idServico,
                                  @RequestBody @Valid ServicoRequest request) {
         return servicoService.editarServico(loggedUser, idServico, request);
@@ -66,7 +66,7 @@ public class ServicoController extends V1BaseController {
     @PutMapping("/{idServico}/restaurar")
     @Operation(summary = "Restaurar serviço", description = "Restaura um serviço inativo")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Servico restaurarServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
+    public ServicoResponse restaurarServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
         return servicoService.restaurarServico(loggedUser, idServico);
     }
 
@@ -78,3 +78,4 @@ public class ServicoController extends V1BaseController {
         servicoService.removerServico(loggedUser, idServico);
     }
 }
+
