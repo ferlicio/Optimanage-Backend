@@ -29,7 +29,7 @@ public class Compra {
 
     @JsonProperty("owner_user_id")
     public Integer getOwnerUserId() {
-        return ownerUser.getId();
+        return ownerUser != null ? ownerUser.getId() : null;
     }
 
     @JsonIgnore
@@ -38,7 +38,7 @@ public class Compra {
 
     @JsonProperty("fornecedor_id")
     public Integer getFornecedorId() {
-        return fornecedor.getId();
+        return fornecedor != null ? fornecedor.getId() : null;
     }
 
 

@@ -27,7 +27,7 @@ public class Servico {
 
     @JsonProperty("owner_user_id")
     public Integer getOwnerUserId() {
-        return ownerUser.getId();
+        return ownerUser != null ? ownerUser.getId() : null;
     }
 
     @JsonIgnore
@@ -37,7 +37,7 @@ public class Servico {
 
     @JsonProperty("fornecedor_id")
     public Integer getFornecedorId() {
-        return fornecedor.getId();
+        return fornecedor != null ? fornecedor.getId() : null;
     }
 
     @Column(nullable = false)

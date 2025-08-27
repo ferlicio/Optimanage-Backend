@@ -27,7 +27,7 @@ public class Alteracao {
 
     @JsonProperty("venda_id")
     public Integer getVendaId() {
-        return venda.getId();
+        return venda != null ? venda.getId() : null;
     }
 
     @Column(nullable = false)

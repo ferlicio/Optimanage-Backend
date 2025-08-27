@@ -28,7 +28,7 @@ public class Cliente {
 
     @JsonProperty("owner_user_id")
     public Integer getOwnerUserId() {
-        return ownerUser.getId();
+        return ownerUser != null ? ownerUser.getId() : null;
     }
 
     @JsonIgnore
@@ -38,7 +38,7 @@ public class Cliente {
 
     @JsonProperty("atividade_id")
     public Integer getAtividadeId() {
-        return atividade.getId();
+        return atividade != null ? atividade.getId() : null;
     }
 
     @Column(nullable = false)

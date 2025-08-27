@@ -23,7 +23,7 @@ public class CompraProduto {
 
     @JsonProperty("compra_id")
     public Integer getCompraId() {
-        return compra.getId();
+        return compra != null ? compra.getId() : null;
     }
 
     @JsonIgnore
@@ -33,7 +33,7 @@ public class CompraProduto {
 
     @JsonProperty("produto_id")
     public Integer getProdutoId() {
-        return produto.getId();
+        return produto != null ? produto.getId() : null;
     }
 
     @Column(length = 10, precision = 2, nullable = false)

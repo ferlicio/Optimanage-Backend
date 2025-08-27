@@ -22,7 +22,7 @@ public class ClienteContato {
 
     @JsonProperty("cliente_id")
     public Integer getClienteId() {
-        return cliente.getId();
+        return cliente != null ? cliente.getId() : null;
     }
 
     @Column(nullable = false, length = 64)
