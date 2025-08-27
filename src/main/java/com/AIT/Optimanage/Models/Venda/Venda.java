@@ -7,9 +7,10 @@ import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -51,22 +52,22 @@ public class Venda {
     private LocalDate dataAgendada;
     @Column(nullable = false)
     private LocalDate dataCobranca;
-    @Min(0)
-    @Column(nullable = false)
-    private Double valorTotal;
-    @Min(0)
-    @Column(nullable = false)
-    private Double descontoGeral;
-    @Min(0)
-    @Column(nullable = false)
-    private Double valorFinal;
+    @DecimalMin(value = "0.0")
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorTotal;
+    @DecimalMin(value = "0.0")
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal descontoGeral;
+    @DecimalMin(value = "0.0")
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorFinal;
     private String condicaoPagamento;
     @Min(0)
     @Column(nullable = false)
     private Integer alteracoesPermitidas = 0;
-    @Min(0)
-    @Column(nullable = false)
-    private Double valorPendente;
+    @DecimalMin(value = "0.0")
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorPendente;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusVenda status = StatusVenda.PENDENTE;
@@ -89,7 +90,7 @@ public class Venda {
     }
 
     public boolean isPago() {
-        return this.valorPendente == 0.0;
+        return this.valorPendente.compareTo(BigDecimal.ZERO) == 0;
     }
 
 }

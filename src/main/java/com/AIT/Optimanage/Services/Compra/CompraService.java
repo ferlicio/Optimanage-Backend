@@ -95,9 +95,9 @@ public class CompraService {
                 .sequencialUsuario(contador.getContagemAtual())
                 .dataEfetuacao(compraDTO.getDataEfetuacao())
                 .dataAgendada(compraDTO.getDataAgendada())
-                .valorFinal(0.0)
+                .valorFinal(BigDecimal.ZERO)
                 .condicaoPagamento(compraDTO.getCondicaoPagamento())
-                .valorPendente(0.0)
+                .valorPendente(BigDecimal.ZERO)
                 .status(compraDTO.getStatus())
                 .observacoes(compraDTO.getObservacoes())
                 .build();
@@ -107,12 +107,17 @@ public class CompraService {
         novaCompra.setCompraProdutos(compraProdutos);
         novaCompra.setCompraServicos(compraServicos);
 
-        double valorTotal = compraProdutos.stream().mapToDouble(CompraProduto::getValorTotal).sum()
-                + compraServicos.stream().mapToDouble(CompraServico::getValorTotal).sum();
-        double valorPago = 0.0;
+        BigDecimal valorProdutos = compraProdutos.stream()
+                .map(CompraProduto::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorServicos = compraServicos.stream()
+                .map(CompraServico::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorTotal = valorProdutos.add(valorServicos);
+        BigDecimal valorPago = BigDecimal.ZERO;
 
         novaCompra.setValorFinal(valorTotal);
-        novaCompra.setValorPendente(valorTotal - valorPago);
+        novaCompra.setValorPendente(valorTotal.subtract(valorPago));
 
         
         compraRepository.save(novaCompra);
@@ -134,9 +139,9 @@ public class CompraService {
                 .sequencialUsuario(compra.getSequencialUsuario())
                 .dataEfetuacao(compraDTO.getDataEfetuacao())
                 .dataAgendada(compraDTO.getDataAgendada())
-                .valorFinal(0.0)
+                .valorFinal(BigDecimal.ZERO)
                 .condicaoPagamento(compraDTO.getCondicaoPagamento())
-                .valorPendente(0.0)
+                .valorPendente(BigDecimal.ZERO)
                 .status(compraDTO.getStatus())
                 .observacoes(compraDTO.getObservacoes())
                 .build();
@@ -149,15 +154,20 @@ public class CompraService {
         compraAtualizada.setCompraProdutos(compraProdutos);
         compraAtualizada.setCompraServicos(compraServicos);
 
-        double valorTotal = compraProdutos.stream().mapToDouble(CompraProduto::getValorTotal).sum()
-                + compraServicos.stream().mapToDouble(CompraServico::getValorTotal).sum();
+        BigDecimal valorProdutos = compraProdutos.stream()
+                .map(CompraProduto::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorServicos = compraServicos.stream()
+                .map(CompraServico::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorTotal = valorProdutos.add(valorServicos);
 
-        double valorPago = compra.getPagamentos() == null
-                ? 0.0
-                : compra.getPagamentos().stream().mapToDouble(CompraPagamento::getValorPago).sum();
+        BigDecimal valorPago = compra.getPagamentos() == null
+                ? BigDecimal.ZERO
+                : compra.getPagamentos().stream().map(CompraPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
 
         compraAtualizada.setValorFinal(valorTotal);
-        compraAtualizada.setValorPendente(valorTotal - valorPago);
+        compraAtualizada.setValorPendente(valorTotal.subtract(valorPago));
         atualizarStatus(compra, compraAtualizada.getStatus());
 
         compraProdutoRepository.saveAll(compraProdutos);
@@ -191,7 +201,7 @@ public class CompraService {
         podePagarCompra(compra);
 
         for (PagamentoDTO pagamento : pagamentoDTO) {
-            if (pagamento.getValorPago() <= 0) {
+            if (pagamento.getValorPago().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("Valor de pagamento deve ser maior que zero");
             } else if (pagamento.getStatusPagamento() == StatusPagamento.PAGO && pagamento.getDataPagamento().isAfter(LocalDate.now())) {
                 throw new IllegalArgumentException("Um pagamento realizado não pode ser no futuro");
@@ -226,13 +236,15 @@ public class CompraService {
         } else {
             throw new IllegalArgumentException("O pagamento informado não pode ser estornado");
         }
-        double valorPago = compra.getPagamentos().stream().mapToDouble(CompraPagamento::getValorPago).sum();
-        compra.setValorPendente(compra.getValorFinal() - valorPago);
-        if (compra.getValorPendente() <= 0) {
+        BigDecimal valorPago = compra.getPagamentos().stream()
+                .map(CompraPagamento::getValorPago)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        compra.setValorPendente(compra.getValorFinal().subtract(valorPago));
+        if (compra.getValorPendente().compareTo(BigDecimal.ZERO) <= 0) {
             if (compra.getStatus() == StatusCompra.AGUARDANDO_PAG || compra.getStatus() == StatusCompra.PARCIALMENTE_PAGO) {
                 atualizarStatus(compra, StatusCompra.PAGO);
             }
-        } else if (valorPago < 0) {
+        } else if (valorPago.compareTo(BigDecimal.ZERO) < 0) {
             atualizarStatus(compra, StatusCompra.PARCIALMENTE_PAGO);
         }
         return compraRepository.save(compra);
@@ -261,9 +273,9 @@ public class CompraService {
                     return CompraProduto.builder()
                             .compra(compra)
                             .produto(produto)
-                            .valorUnitario(produto.getValorVenda().doubleValue())
+                            .valorUnitario(produto.getValorVenda())
                             .quantidade(produtoDTO.getQuantidade())
-                            .valorTotal(valorFinalProduto.doubleValue())
+                            .valorTotal(valorFinalProduto)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -273,7 +285,8 @@ public class CompraService {
         return servicosDTO.stream()
                 .map(servicoDTO -> {
                     Servico servico = servicoService.buscarServicoAtivo(compra.getOwnerUser(), servicoDTO.getServicoId());
-                    double valorFinalServico = servico.getValorVenda() * servicoDTO.getQuantidade();
+                    BigDecimal valorFinalServico = servico.getValorVenda()
+                            .multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
 
                     return CompraServico.builder()
                             .compra(compra)
@@ -369,7 +382,7 @@ public class CompraService {
             throw new IllegalArgumentException("Não é possível lançar um pagamento para uma compra já concretizada");
         } else if (compra.getStatus() == StatusCompra.CANCELADO) {
             throw new IllegalArgumentException("Não é possível lançar um pagamento para uma compra cancelada");
-        } else if (compra.getStatus() == StatusCompra.PAGO || compra.getValorPendente() <= 0) {
+        } else if (compra.getStatus() == StatusCompra.PAGO || compra.getValorPendente().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Não é possível lançar um pagamento para uma compra já paga");
         } else if (compra.getStatus() == StatusCompra.ORCAMENTO) {
             throw new IllegalArgumentException("Não é possível lançar um pagamento para um orçamento");
@@ -379,10 +392,10 @@ public class CompraService {
     public void atualizarCompraPosPagamento(Compra compra) {
         List<CompraPagamento> pagamentos = pagamentoCompraService.listarPagamentosRealizadosCompra(compra.getOwnerUser(), compra.getId());
 
-        double valorPago = pagamentos.stream().mapToDouble(CompraPagamento::getValorPago).sum();
-        compra.setValorPendente(compra.getValorFinal() - valorPago);
+        BigDecimal valorPago = pagamentos.stream().map(CompraPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
+        compra.setValorPendente(compra.getValorFinal().subtract(valorPago));
 
-        if (compra.getValorPendente() == 0) {
+        if (compra.getValorPendente().compareTo(BigDecimal.ZERO) == 0) {
             if (compra.getStatus() == StatusCompra.AGUARDANDO_PAG || compra.getStatus() == StatusCompra.PARCIALMENTE_PAGO) {
                 atualizarStatus(compra, StatusCompra.PAGO);
             }
