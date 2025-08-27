@@ -34,9 +34,11 @@ public class ClienteRequest {
     private String razaoSocial;
 
     @Size(max = 14)
+    @Pattern(regexp = "^(\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}|\\d{11})$", message = "CPF inválido")
     private String cpf;
 
     @Size(max = 18)
+    @Pattern(regexp = "^(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}|\\d{14})$", message = "CNPJ inválido")
     private String cnpj;
 
     @Size(max = 18)
