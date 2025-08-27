@@ -67,7 +67,8 @@ public class ClienteController extends V1BaseController {
     @GetMapping("/{idCliente}")
     @Operation(summary = "Listar cliente", description = "Retorna um cliente pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Cliente listarUmCliente(@AuthenticationPrincipal User loggedUser, Integer idCliente) {
+    public Cliente listarUmCliente(@AuthenticationPrincipal User loggedUser,
+                                   @PathVariable("idCliente") Integer idCliente) {
         return clienteService.listarUmCliente(loggedUser, idCliente);
     }
 
@@ -83,7 +84,7 @@ public class ClienteController extends V1BaseController {
     @Operation(summary = "Editar cliente", description = "Atualiza um cliente existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public Cliente editarCliente(@AuthenticationPrincipal User loggedUser,
-                                 @PathVariable Integer idCliente,
+                                 @PathVariable("idCliente") Integer idCliente,
                                  @RequestBody @Valid ClienteRequest request) {
         return clienteService.editarCliente(loggedUser, idCliente, request);
     }
@@ -91,7 +92,8 @@ public class ClienteController extends V1BaseController {
     @DeleteMapping("/{idCliente}")
     @Operation(summary = "Inativar cliente", description = "Inativa um cliente pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void inativarCliente(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idCliente) {
+    public void inativarCliente(@AuthenticationPrincipal User loggedUser,
+                                @PathVariable("idCliente") Integer idCliente) {
         clienteService.inativarCliente(loggedUser, idCliente);
     }
 

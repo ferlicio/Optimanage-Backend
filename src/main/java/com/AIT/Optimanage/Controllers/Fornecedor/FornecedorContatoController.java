@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Services.Fornecedor.FornecedorContatoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,28 +25,36 @@ public class FornecedorContatoController extends V1BaseController {
     @GetMapping("/{idFornecedor}/contatos")
     @Operation(summary = "Listar contatos", description = "Lista contatos de um fornecedor")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<FornecedorContato> listarContatos(@AuthenticationPrincipal User loggedUser, Integer idFornecedor) {
-        return fornecedorContatoService.listarContatos(loggedUser, idFornecedor);
-    }
+      public List<FornecedorContato> listarContatos(@AuthenticationPrincipal User loggedUser,
+                                                    @PathVariable("idFornecedor") Integer idFornecedor) {
+          return fornecedorContatoService.listarContatos(loggedUser, idFornecedor);
+      }
 
     @PostMapping("/{idFornecedor}/contatos")
     @Operation(summary = "Cadastrar contato", description = "Adiciona contato a um fornecedor")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public FornecedorContato cadastrarContato(@AuthenticationPrincipal User loggedUser, Integer idFornecedor, FornecedorContato contato) {
-        return fornecedorContatoService.cadastrarContato(loggedUser, idFornecedor, contato);
-    }
+      public FornecedorContato cadastrarContato(@AuthenticationPrincipal User loggedUser,
+                                               @PathVariable("idFornecedor") Integer idFornecedor,
+                                               @RequestBody @Valid FornecedorContato contato) {
+          return fornecedorContatoService.cadastrarContato(loggedUser, idFornecedor, contato);
+      }
 
     @PutMapping("/{idFornecedor}/contatos/{idContato}")
     @Operation(summary = "Editar contato", description = "Atualiza contato de um fornecedor")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public FornecedorContato editarContato(@AuthenticationPrincipal User loggedUser, Integer idFornecedor, Integer idContato, FornecedorContato contato) {
-        return fornecedorContatoService.editarContato(loggedUser, idFornecedor, idContato, contato);
-    }
+      public FornecedorContato editarContato(@AuthenticationPrincipal User loggedUser,
+                                             @PathVariable("idFornecedor") Integer idFornecedor,
+                                             @PathVariable("idContato") Integer idContato,
+                                             @RequestBody @Valid FornecedorContato contato) {
+          return fornecedorContatoService.editarContato(loggedUser, idFornecedor, idContato, contato);
+      }
 
     @DeleteMapping("/{idFornecedor}/contatos/{idContato}")
     @Operation(summary = "Excluir contato", description = "Remove contato de um fornecedor")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void excluirContato(@AuthenticationPrincipal User loggedUser, Integer idFornecedor, Integer idContato) {
-        fornecedorContatoService.excluirContato(loggedUser, idFornecedor, idContato);
-    }
+      public void excluirContato(@AuthenticationPrincipal User loggedUser,
+                                 @PathVariable("idFornecedor") Integer idFornecedor,
+                                 @PathVariable("idContato") Integer idContato) {
+          fornecedorContatoService.excluirContato(loggedUser, idFornecedor, idContato);
+      }
 }

@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Services.Cliente.ClienteEnderecoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,29 +25,37 @@ public class ClienteEnderecoController extends V1BaseController {
     @GetMapping("/{idCliente}/enderecos")
     @Operation(summary = "Listar endereços", description = "Lista endereços de um cliente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<ClienteEndereco> listarEnderecos(@AuthenticationPrincipal User loggedUser, Integer idCliente) {
-        return clienteEnderecoService.listarEnderecos(loggedUser, idCliente);
-    }
+      public List<ClienteEndereco> listarEnderecos(@AuthenticationPrincipal User loggedUser,
+                                                   @PathVariable("idCliente") Integer idCliente) {
+          return clienteEnderecoService.listarEnderecos(loggedUser, idCliente);
+      }
 
     @PostMapping("/{idCliente}/enderecos")
     @Operation(summary = "Cadastrar endereço", description = "Adiciona endereço a um cliente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ClienteEndereco cadastrarEndereco(@AuthenticationPrincipal User loggedUser, Integer idCliente, ClienteEndereco endereco) {
-        return clienteEnderecoService.cadastrarEndereco(loggedUser, idCliente, endereco);
-    }
+      public ClienteEndereco cadastrarEndereco(@AuthenticationPrincipal User loggedUser,
+                                              @PathVariable("idCliente") Integer idCliente,
+                                              @RequestBody @Valid ClienteEndereco endereco) {
+          return clienteEnderecoService.cadastrarEndereco(loggedUser, idCliente, endereco);
+      }
 
     @PutMapping("/{idCliente}/enderecos/{idEndereco}")
     @Operation(summary = "Editar endereço", description = "Atualiza endereço de um cliente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ClienteEndereco editarEndereco(@AuthenticationPrincipal User loggedUser, Integer idCliente, Integer idEndereco, ClienteEndereco endereco) {
-        return clienteEnderecoService.editarEndereco(loggedUser, idCliente, idEndereco, endereco);
-    }
+      public ClienteEndereco editarEndereco(@AuthenticationPrincipal User loggedUser,
+                                           @PathVariable("idCliente") Integer idCliente,
+                                           @PathVariable("idEndereco") Integer idEndereco,
+                                           @RequestBody @Valid ClienteEndereco endereco) {
+          return clienteEnderecoService.editarEndereco(loggedUser, idCliente, idEndereco, endereco);
+      }
 
     @DeleteMapping("/{idCliente}/enderecos/{idEndereco}")
     @Operation(summary = "Excluir endereço", description = "Remove endereço de um cliente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void excluirEndereco(@AuthenticationPrincipal User loggedUser, Integer idCliente, Integer idEndereco) {
-        clienteEnderecoService.excluirEndereco(loggedUser, idCliente, idEndereco);
-    }
+      public void excluirEndereco(@AuthenticationPrincipal User loggedUser,
+                                  @PathVariable("idCliente") Integer idCliente,
+                                  @PathVariable("idEndereco") Integer idEndereco) {
+          clienteEnderecoService.excluirEndereco(loggedUser, idCliente, idEndereco);
+      }
 
 }
