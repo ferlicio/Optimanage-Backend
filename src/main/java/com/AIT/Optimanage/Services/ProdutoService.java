@@ -89,7 +89,7 @@ public class ProdutoService {
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
 
-    private Produto buscarProdutoAtivo(User loggedUser, Integer idProduto) {
+    public Produto buscarProdutoAtivo(User loggedUser, Integer idProduto) {
         return produtoRepository.findByIdAndOwnerUserAndAtivoTrue(idProduto, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
