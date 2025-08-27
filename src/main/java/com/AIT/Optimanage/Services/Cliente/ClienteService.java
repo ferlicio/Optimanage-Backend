@@ -29,7 +29,7 @@ public class ClienteService {
     private final ClienteRepository clienteRepository;
 
     public List<Cliente> mostrarTodosClientes(User usuario){
-        return clienteRepository.findByOwnerUser(usuario);
+        return clienteRepository.findByOwnerUserAndAtivoTrue(usuario);
     }
 
     @Cacheable(value = "clientes", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
@@ -52,7 +52,7 @@ public class ClienteService {
                 pesquisa.getAtividade(),
                 pesquisa.getEstado(),
                 pesquisa.getTipoPessoa(),
-                pesquisa.getAtivo(),
+                pesquisa.getAtivo() != null ? pesquisa.getAtivo() : true,
                 pageable
         );
 
@@ -60,7 +60,7 @@ public class ClienteService {
     }
 
     public Cliente listarUmCliente(User loggedUser, Integer idCliente) {
-        return clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
+        return clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
     }
 
@@ -90,6 +90,21 @@ public class ClienteService {
         Cliente cliente = listarUmCliente(loggedUser, idCliente);
         cliente.setAtivo(false);
         clienteRepository.save(cliente);
+    }
+
+    @CacheEvict(value = "clientes", allEntries = true)
+    public Cliente reativarCliente(User loggedUser, Integer idCliente) {
+        Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
+        cliente.setAtivo(true);
+        return clienteRepository.save(cliente);
+    }
+
+    @CacheEvict(value = "clientes", allEntries = true)
+    public void removerCliente(User loggedUser, Integer idCliente) {
+        Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
+        clienteRepository.delete(cliente);
     }
 
 

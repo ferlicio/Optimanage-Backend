@@ -18,14 +18,14 @@ public class ProdutoService {
     private final ProdutoRepository produtoRepository;
 
     public List<ProdutoResponse> listarProdutos(User loggedUser) {
-        return produtoRepository.findAllByOwnerUser(loggedUser)
+        return produtoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     public ProdutoResponse listarUmProduto(User loggedUser, Integer idProduto) {
-        Produto produto = buscarProduto(loggedUser, idProduto);
+        Produto produto = buscarProdutoAtivo(loggedUser, idProduto);
         return toResponse(produto);
     }
 
@@ -38,7 +38,7 @@ public class ProdutoService {
     }
 
     public ProdutoResponse editarProduto(User loggedUser, Integer idProduto, ProdutoRequest request) {
-        Produto produtoSalvo = buscarProduto(loggedUser, idProduto);
+        Produto produtoSalvo = buscarProdutoAtivo(loggedUser, idProduto);
         Produto produto = fromRequest(request);
         produto.setId(produtoSalvo.getId());
         produto.setOwnerUser(produtoSalvo.getOwnerUser());
@@ -47,6 +47,19 @@ public class ProdutoService {
     }
 
     public void excluirProduto(User loggedUser, Integer idProduto) {
+        Produto produto = buscarProdutoAtivo(loggedUser, idProduto);
+        produto.setAtivo(false);
+        produtoRepository.save(produto);
+    }
+
+    public ProdutoResponse restaurarProduto(User loggedUser, Integer idProduto) {
+        Produto produto = buscarProduto(loggedUser, idProduto);
+        produto.setAtivo(true);
+        Produto atualizado = produtoRepository.save(produto);
+        return toResponse(atualizado);
+    }
+
+    public void removerProduto(User loggedUser, Integer idProduto) {
         Produto produto = buscarProduto(loggedUser, idProduto);
         produtoRepository.delete(produto);
     }
@@ -67,11 +80,17 @@ public class ProdutoService {
         produto.setValorVenda(request.getValorVenda());
         produto.setQtdEstoque(request.getQtdEstoque());
         produto.setTerceirizado(request.getTerceirizado());
+        produto.setAtivo(request.getAtivo() != null ? request.getAtivo() : true);
         return produto;
     }
 
     private Produto buscarProduto(User loggedUser, Integer idProduto) {
         return produtoRepository.findByIdAndOwnerUser(idProduto, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
+    }
+
+    private Produto buscarProdutoAtivo(User loggedUser, Integer idProduto) {
+        return produtoRepository.findByIdAndOwnerUserAndAtivoTrue(idProduto, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
 
@@ -89,6 +108,7 @@ public class ProdutoService {
                 .valorVenda(produto.getValorVenda())
                 .qtdEstoque(produto.getQtdEstoque())
                 .terceirizado(produto.getTerceirizado())
+                .ativo(produto.getAtivo())
                 .build();
     }
 }

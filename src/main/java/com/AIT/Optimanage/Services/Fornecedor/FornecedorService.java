@@ -49,7 +49,7 @@ public class FornecedorService {
                 pesquisa.getAtividade(),
                 pesquisa.getEstado(),
                 pesquisa.getTipoPessoa(),
-                pesquisa.getAtivo(),
+                pesquisa.getAtivo() != null ? pesquisa.getAtivo() : true,
                 pageable
         );
 
@@ -57,7 +57,7 @@ public class FornecedorService {
     }
 
     public Fornecedor listarUmFornecedor(User loggedUser, Integer idFornecedor) {
-        return fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
+        return fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
     }
 
@@ -86,6 +86,21 @@ public class FornecedorService {
         Fornecedor fornecedor = listarUmFornecedor(loggedUser, idFornecedor);
         fornecedor.setAtivo(false);
         fornecedorRepository.save(fornecedor);
+    }
+
+    @CacheEvict(value = "fornecedores", allEntries = true)
+    public Fornecedor reativarFornecedor(User loggedUser, Integer idFornecedor) {
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
+        fornecedor.setAtivo(true);
+        return fornecedorRepository.save(fornecedor);
+    }
+
+    @CacheEvict(value = "fornecedores", allEntries = true)
+    public void removerFornecedor(User loggedUser, Integer idFornecedor) {
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
+        fornecedorRepository.delete(fornecedor);
     }
 
     public void validarFornecedor(User loggedUser, Fornecedor fornecedor) {

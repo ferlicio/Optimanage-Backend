@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.ProdutoService;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -58,5 +59,21 @@ public class ProdutoController extends V1BaseController {
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public void excluirProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
         produtoService.excluirProduto(loggedUser, idProduto);
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PutMapping("/{idProduto}/restaurar")
+    @Operation(summary = "Restaurar produto", description = "Restaura um produto inativo")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public ProdutoResponse restaurarProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
+        return produtoService.restaurarProduto(loggedUser, idProduto);
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @DeleteMapping("/{idProduto}/permanente")
+    @Operation(summary = "Remover produto permanentemente", description = "Exclui definitivamente um produto")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public void removerProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
+        produtoService.removerProduto(loggedUser, idProduto);
     }
 }

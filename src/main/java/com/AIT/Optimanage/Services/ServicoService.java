@@ -19,13 +19,11 @@ public class ServicoService {
 
 
     public List<Servico> listarServicos(User loggedUser) {
-        return servicoRepository.findAllByOwnerUser(loggedUser);
+        return servicoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser);
     }
 
     public Servico listarUmServico(User loggedUser, Integer idServico) {
-        return servicoRepository.findByIdAndOwnerUser(idServico, loggedUser)
-                .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado")
-        );
+        return buscarServicoAtivo(loggedUser, idServico);
     }
 
     public Servico cadastrarServico(User loggedUser, ServicoRequest request) {
@@ -36,7 +34,7 @@ public class ServicoService {
     }
 
     public Servico editarServico(User loggedUser, Integer idServico, ServicoRequest request) {
-        Servico servicoSalvo = listarUmServico(loggedUser, idServico);
+        Servico servicoSalvo = buscarServicoAtivo(loggedUser, idServico);
         Servico servico = fromRequest(request);
         servico.setId(servicoSalvo.getId());
         servico.setOwnerUser(servicoSalvo.getOwnerUser());
@@ -44,7 +42,19 @@ public class ServicoService {
     }
 
     public void excluirServico(User loggedUser, Integer idServico) {
-        Servico servico = listarUmServico(loggedUser, idServico);
+        Servico servico = buscarServicoAtivo(loggedUser, idServico);
+        servico.setAtivo(false);
+        servicoRepository.save(servico);
+    }
+
+    public Servico restaurarServico(User loggedUser, Integer idServico) {
+        Servico servico = buscarServico(loggedUser, idServico);
+        servico.setAtivo(true);
+        return servicoRepository.save(servico);
+    }
+
+    public void removerServico(User loggedUser, Integer idServico) {
+        Servico servico = buscarServico(loggedUser, idServico);
         servicoRepository.delete(servico);
     }
 
@@ -63,6 +73,17 @@ public class ServicoService {
         servico.setValorVenda(request.getValorVenda());
         servico.setTempoExecucao(request.getTempoExecucao());
         servico.setTerceirizado(request.getTerceirizado());
+        servico.setAtivo(request.getAtivo() != null ? request.getAtivo() : true);
         return servico;
+    }
+
+    private Servico buscarServico(User loggedUser, Integer idServico) {
+        return servicoRepository.findByIdAndOwnerUser(idServico, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
+    }
+
+    private Servico buscarServicoAtivo(User loggedUser, Integer idServico) {
+        return servicoRepository.findByIdAndOwnerUserAndAtivoTrue(idServico, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
     }
 }

@@ -41,4 +41,5 @@ public class ProdutoRequest {
     private Integer qtdEstoque;
 
     private Boolean terceirizado;
+    private Boolean ativo;
 }
