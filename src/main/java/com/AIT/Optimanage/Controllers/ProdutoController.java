@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,64 +29,66 @@ public class ProdutoController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar produtos", description = "Retorna uma lista de produtos")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Page<ProdutoResponse> listarProdutos(@AuthenticationPrincipal User loggedUser,
-                                                @RequestParam(value = "page") Integer page,
-                                                @RequestParam(value = "pageSize") Integer pageSize,
-                                                @RequestParam(value = "sort", required = false) String sort,
-                                                @RequestParam(value = "order", required = false) Sort.Direction order) {
+    public ResponseEntity<Page<ProdutoResponse>> listarProdutos(@AuthenticationPrincipal User loggedUser,
+                                                                @RequestParam(value = "page") Integer page,
+                                                                @RequestParam(value = "pageSize") Integer pageSize,
+                                                                @RequestParam(value = "sort", required = false) String sort,
+                                                                @RequestParam(value = "order", required = false) Sort.Direction order) {
         var pesquisa = Search.builder()
                 .page(page)
                 .pageSize(pageSize)
                 .sort(sort)
                 .order(order)
                 .build();
-        return produtoService.listarProdutos(loggedUser, pesquisa);
+        return ok(produtoService.listarProdutos(loggedUser, pesquisa));
     }
 
     @GetMapping("/{idProduto}")
     @Operation(summary = "Listar produto", description = "Retorna um produto pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ProdutoResponse listarUmProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
-        return produtoService.listarUmProduto(loggedUser, idProduto);
+    public ResponseEntity<ProdutoResponse> listarUmProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
+        return ok(produtoService.listarUmProduto(loggedUser, idProduto));
     }
 
     @PostMapping
     @Operation(summary = "Cadastrar produto", description = "Cria um novo produto")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ProdutoResponse cadastrarProduto(@AuthenticationPrincipal User loggedUser,
-                                            @RequestBody @Valid ProdutoRequest request) {
-        return produtoService.cadastrarProduto(loggedUser, request);
+    @ApiResponse(responseCode = "201", description = "Criado")
+    public ResponseEntity<ProdutoResponse> cadastrarProduto(@AuthenticationPrincipal User loggedUser,
+                                                            @RequestBody @Valid ProdutoRequest request) {
+        return created(produtoService.cadastrarProduto(loggedUser, request));
     }
 
     @PutMapping("/{idProduto}")
     @Operation(summary = "Editar produto", description = "Atualiza um produto existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ProdutoResponse editarProduto(@AuthenticationPrincipal User loggedUser,
-                                         @PathVariable Integer idProduto,
-                                         @RequestBody @Valid ProdutoRequest request) {
-        return produtoService.editarProduto(loggedUser, idProduto, request);
+    public ResponseEntity<ProdutoResponse> editarProduto(@AuthenticationPrincipal User loggedUser,
+                                                         @PathVariable Integer idProduto,
+                                                         @RequestBody @Valid ProdutoRequest request) {
+        return ok(produtoService.editarProduto(loggedUser, idProduto, request));
     }
 
     @DeleteMapping("/{idProduto}")
     @Operation(summary = "Excluir produto", description = "Remove um produto")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void excluirProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> excluirProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
         produtoService.excluirProduto(loggedUser, idProduto);
+        return noContent();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{idProduto}/restaurar")
     @Operation(summary = "Restaurar produto", description = "Restaura um produto inativo")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ProdutoResponse restaurarProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
-        return produtoService.restaurarProduto(loggedUser, idProduto);
+    public ResponseEntity<ProdutoResponse> restaurarProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
+        return ok(produtoService.restaurarProduto(loggedUser, idProduto));
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{idProduto}/permanente")
     @Operation(summary = "Remover produto permanentemente", description = "Exclui definitivamente um produto")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void removerProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> removerProduto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idProduto) {
         produtoService.removerProduto(loggedUser, idProduto);
+        return noContent();
     }
 }

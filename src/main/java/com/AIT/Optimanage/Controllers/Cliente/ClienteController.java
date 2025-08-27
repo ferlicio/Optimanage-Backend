@@ -10,6 +10,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +38,7 @@ public class ClienteController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar clientes", description = "Retorna uma página de clientes")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Page<Cliente> listarClientes(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<Page<Cliente>> listarClientes(@AuthenticationPrincipal User loggedUser,
                                         @RequestParam(value = "id", required = false) Integer id,
                                         @RequestParam(value = "nome", required = false) String nome,
                                         @RequestParam(value = "estado", required = false) String estado,
@@ -62,58 +63,60 @@ public class ClienteController extends V1BaseController {
                 .sort(sort)
                 .order(order)
                 .build();
-        return clienteService.listarClientes(loggedUser, pesquisa);
+        return ok(clienteService.listarClientes(loggedUser, pesquisa));
     }
 
     @GetMapping("/{idCliente}")
     @Operation(summary = "Listar cliente", description = "Retorna um cliente pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Cliente listarUmCliente(@AuthenticationPrincipal User loggedUser,
-                                   @PathVariable("idCliente") Integer idCliente) {
-        return clienteService.listarUmCliente(loggedUser, idCliente);
+    public ResponseEntity<Cliente> listarUmCliente(@AuthenticationPrincipal User loggedUser,
+                                                   @PathVariable("idCliente") Integer idCliente) {
+        return ok(clienteService.listarUmCliente(loggedUser, idCliente));
     }
 
     @PostMapping
     @Operation(summary = "Criar cliente", description = "Cria um novo cliente")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Cliente criarCliente(@AuthenticationPrincipal User loggedUser,
-                                @RequestBody @Valid ClienteRequest request) {
-        return clienteService.criarCliente(loggedUser, request);
+    @ApiResponse(responseCode = "201", description = "Criado")
+    public ResponseEntity<Cliente> criarCliente(@AuthenticationPrincipal User loggedUser,
+                                                @RequestBody @Valid ClienteRequest request) {
+        return created(clienteService.criarCliente(loggedUser, request));
     }
 
     @PutMapping("/{idCliente}")
     @Operation(summary = "Editar cliente", description = "Atualiza um cliente existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Cliente editarCliente(@AuthenticationPrincipal User loggedUser,
-                                 @PathVariable("idCliente") Integer idCliente,
-                                 @RequestBody @Valid ClienteRequest request) {
-        return clienteService.editarCliente(loggedUser, idCliente, request);
+    public ResponseEntity<Cliente> editarCliente(@AuthenticationPrincipal User loggedUser,
+                                                 @PathVariable("idCliente") Integer idCliente,
+                                                 @RequestBody @Valid ClienteRequest request) {
+        return ok(clienteService.editarCliente(loggedUser, idCliente, request));
     }
 
     @DeleteMapping("/{idCliente}")
     @Operation(summary = "Inativar cliente", description = "Inativa um cliente pelo ID")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void inativarCliente(@AuthenticationPrincipal User loggedUser,
-                                @PathVariable("idCliente") Integer idCliente) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> inativarCliente(@AuthenticationPrincipal User loggedUser,
+                                                @PathVariable("idCliente") Integer idCliente) {
         clienteService.inativarCliente(loggedUser, idCliente);
+        return noContent();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{idCliente}/restaurar")
     @Operation(summary = "Restaurar cliente", description = "Reativa um cliente inativo")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Cliente restaurarCliente(@AuthenticationPrincipal User loggedUser,
-                                    @PathVariable("idCliente") Integer idCliente) {
-        return clienteService.reativarCliente(loggedUser, idCliente);
+    public ResponseEntity<Cliente> restaurarCliente(@AuthenticationPrincipal User loggedUser,
+                                                    @PathVariable("idCliente") Integer idCliente) {
+        return ok(clienteService.reativarCliente(loggedUser, idCliente));
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{idCliente}/permanente")
     @Operation(summary = "Remover cliente permanentemente", description = "Exclui definitivamente um cliente")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void removerCliente(@AuthenticationPrincipal User loggedUser,
-                               @PathVariable("idCliente") Integer idCliente) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> removerCliente(@AuthenticationPrincipal User loggedUser,
+                                               @PathVariable("idCliente") Integer idCliente) {
         clienteService.removerCliente(loggedUser, idCliente);
+        return noContent();
     }
 
 }

@@ -6,7 +6,6 @@ import com.AIT.Optimanage.Models.Venda.Compatibilidade.ContextoCompatibilidadeDT
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.Venda.ContextoCompatibilidadeService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -27,14 +26,14 @@ public class ContextoCompatibilidadeController extends V1BaseController {
     @Operation(summary = "Listar contextos", description = "Retorna os contextos de compatibilidade")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<ContextoCompatibilidade> listarContextos(@AuthenticationPrincipal User loggedUser) {
-        return ResponseEntity.ok(contextoService.listarContextos(loggedUser));
+        return ok(contextoService.listarContextos(loggedUser));
     }
 
     @GetMapping("/{idContexto}")
     @Operation(summary = "Listar contexto", description = "Retorna um contexto pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<ContextoCompatibilidade> listarUmContexto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idContexto) {
-        return ResponseEntity.ok(contextoService.listarUmContexto(loggedUser, idContexto));
+        return ok(contextoService.listarUmContexto(loggedUser, idContexto));
     }
 
     @PostMapping
@@ -42,7 +41,7 @@ public class ContextoCompatibilidadeController extends V1BaseController {
     @ApiResponse(responseCode = "201", description = "Criado")
     public ResponseEntity<ContextoCompatibilidade> criarContexto(@AuthenticationPrincipal User loggedUser, @RequestBody ContextoCompatibilidadeDTO request) {
         ContextoCompatibilidade contexto = contextoService.criarContexto(loggedUser, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(contexto);
+        return created(contexto);
     }
 
     @PutMapping("/{idContexto}")
@@ -50,7 +49,7 @@ public class ContextoCompatibilidadeController extends V1BaseController {
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<ContextoCompatibilidade> editarContexto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idContexto, @RequestBody ContextoCompatibilidadeDTO request) {
         ContextoCompatibilidade contexto = contextoService.editarContexto(loggedUser, idContexto, request);
-        return ResponseEntity.ok(contexto);
+        return ok(contexto);
     }
 
     @DeleteMapping("/{idContexto}")
@@ -58,6 +57,6 @@ public class ContextoCompatibilidadeController extends V1BaseController {
     @ApiResponse(responseCode = "204", description = "Sem conteúdo")
     public ResponseEntity<Void> excluirContexto(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idContexto) {
         contextoService.excluirContexto(loggedUser, idContexto);
-        return ResponseEntity.noContent().build();
+        return noContent();
     }
 }

@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Models.Cliente.ClienteEndereco;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.Cliente.ClienteEnderecoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -25,37 +26,38 @@ public class ClienteEnderecoController extends V1BaseController {
     @GetMapping("/{idCliente}/enderecos")
     @Operation(summary = "Listar endereços", description = "Lista endereços de um cliente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public List<ClienteEndereco> listarEnderecos(@AuthenticationPrincipal User loggedUser,
-                                                   @PathVariable("idCliente") Integer idCliente) {
-          return clienteEnderecoService.listarEnderecos(loggedUser, idCliente);
+      public ResponseEntity<List<ClienteEndereco>> listarEnderecos(@AuthenticationPrincipal User loggedUser,
+                                                                   @PathVariable("idCliente") Integer idCliente) {
+          return ok(clienteEnderecoService.listarEnderecos(loggedUser, idCliente));
       }
 
     @PostMapping("/{idCliente}/enderecos")
     @Operation(summary = "Cadastrar endereço", description = "Adiciona endereço a um cliente")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ClienteEndereco cadastrarEndereco(@AuthenticationPrincipal User loggedUser,
+    @ApiResponse(responseCode = "201", description = "Criado")
+      public ResponseEntity<ClienteEndereco> cadastrarEndereco(@AuthenticationPrincipal User loggedUser,
                                               @PathVariable("idCliente") Integer idCliente,
                                               @RequestBody @Valid ClienteEndereco endereco) {
-          return clienteEnderecoService.cadastrarEndereco(loggedUser, idCliente, endereco);
+          return created(clienteEnderecoService.cadastrarEndereco(loggedUser, idCliente, endereco));
       }
 
     @PutMapping("/{idCliente}/enderecos/{idEndereco}")
     @Operation(summary = "Editar endereço", description = "Atualiza endereço de um cliente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ClienteEndereco editarEndereco(@AuthenticationPrincipal User loggedUser,
-                                           @PathVariable("idCliente") Integer idCliente,
-                                           @PathVariable("idEndereco") Integer idEndereco,
-                                           @RequestBody @Valid ClienteEndereco endereco) {
-          return clienteEnderecoService.editarEndereco(loggedUser, idCliente, idEndereco, endereco);
+      public ResponseEntity<ClienteEndereco> editarEndereco(@AuthenticationPrincipal User loggedUser,
+                                                           @PathVariable("idCliente") Integer idCliente,
+                                                           @PathVariable("idEndereco") Integer idEndereco,
+                                                           @RequestBody @Valid ClienteEndereco endereco) {
+          return ok(clienteEnderecoService.editarEndereco(loggedUser, idCliente, idEndereco, endereco));
       }
 
     @DeleteMapping("/{idCliente}/enderecos/{idEndereco}")
     @Operation(summary = "Excluir endereço", description = "Remove endereço de um cliente")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-      public void excluirEndereco(@AuthenticationPrincipal User loggedUser,
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+      public ResponseEntity<Void> excluirEndereco(@AuthenticationPrincipal User loggedUser,
                                   @PathVariable("idCliente") Integer idCliente,
                                   @PathVariable("idEndereco") Integer idEndereco) {
           clienteEnderecoService.excluirEndereco(loggedUser, idCliente, idEndereco);
+          return noContent();
       }
 
 }
