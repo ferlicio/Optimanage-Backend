@@ -423,7 +423,7 @@ public class VendaService {
                 if (statusAtual == StatusVenda.CONCRETIZADA || statusAtual == StatusVenda.CANCELADA) {
                     throw new IllegalStateException("Uma venda CONCRETIZADA ou CANCELADA não pode voltar para o estado de paga.");
                 }
-                if (venda.getValorPendente() > 0) {
+                if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
                     throw new IllegalStateException("A venda não pode ser paga sem o pagamento completo.");
                 }
                 break;
@@ -435,7 +435,7 @@ public class VendaService {
                 if (statusAtual == StatusVenda.ORCAMENTO) {
                     throw new IllegalStateException("Um orçamento não pode ser concretizado.");
                 }
-                if (venda.getValorPendente() > 0) {
+                if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
                     throw new IllegalStateException("A venda não pode ser concretizada sem o pagamento completo.");
                 }
                 break;

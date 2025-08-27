@@ -359,7 +359,7 @@ public class CompraService {
                 if (statusAtual != StatusCompra.PAGO && statusAtual != StatusCompra.AGUARDANDO_EXECUCAO) {
                     throw new IllegalStateException("A compra só pode ser finalizada se estiver paga ou aguardando execução.");
                 }
-                if (compra.getValorPendente() > 0) {
+                if (compra.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
                     throw new IllegalStateException("A compra não pode ser finalizada enquanto houver saldo pendente.");
                 }
                 break;

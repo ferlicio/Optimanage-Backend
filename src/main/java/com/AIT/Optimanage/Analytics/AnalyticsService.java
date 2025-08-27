@@ -44,7 +44,7 @@ public class AnalyticsService {
                 .toList();
 
         if (vendas.size() < 2) {
-            return new PrevisaoDTO(0.0);
+            return new PrevisaoDTO(BigDecimal.ZERO);
         }
 
         // Forecast using a simple linear regression from Apache Commons Math.
