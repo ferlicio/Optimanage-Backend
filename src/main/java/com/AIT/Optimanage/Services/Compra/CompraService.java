@@ -274,9 +274,9 @@ public class CompraService {
     private List<CompraServico> criarListaServicos(List<CompraServicoDTO> servicosDTO, Compra compra) {
         return servicosDTO.stream()
                 .map(servicoDTO -> {
-                    Servico servico = servicoService.listarUmServico(compra.getOwnerUser(), servicoDTO.getServicoId());
+                    Servico servico = servicoService.buscarServicoAtivo(compra.getOwnerUser(), servicoDTO.getServicoId());
                     double valorFinalServico = servico.getValorVenda() * servicoDTO.getQuantidade();
-                    
+
                     return CompraServico.builder()
                             .compra(compra)
                             .servico(servico)

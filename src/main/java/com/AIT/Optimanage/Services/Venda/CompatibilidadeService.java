@@ -31,7 +31,7 @@ public class CompatibilidadeService {
 
         Compatibilidade compatibilidade = Compatibilidade.builder()
                 .produto(request.getProdutoId() != null ? produtoService.buscarProdutoAtivo(logedUser, request.getProdutoId()) : null)
-                .servico(request.getServicoId() != null ? servicoService.listarUmServico(logedUser, request.getServicoId()) : null)
+                .servico(request.getServicoId() != null ? servicoService.buscarServicoAtivo(logedUser, request.getServicoId()) : null)
                 .contexto(contexto)
                 .compativel(request.getCompativel())
                 .build();
