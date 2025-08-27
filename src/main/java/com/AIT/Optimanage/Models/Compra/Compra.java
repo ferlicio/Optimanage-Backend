@@ -6,9 +6,10 @@ import com.AIT.Optimanage.Models.User.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -48,13 +49,13 @@ public class Compra {
     @Column(nullable = false)
     private LocalDate dataEfetuacao;
     private LocalDate dataAgendada;
-    @Min(0)
-    @Column(nullable = false)
-    private Double valorFinal;
+    @DecimalMin(value = "0.0")
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorFinal;
     private String condicaoPagamento;
-    @Min(0)
-    @Column(nullable = false)
-    private Double valorPendente;
+    @DecimalMin(value = "0.0")
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorPendente;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusCompra status = StatusCompra.ORCAMENTO;

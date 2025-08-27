@@ -2,13 +2,13 @@ package com.AIT.Optimanage.Models.Compra.DTOs;
 
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.PagamentoDTO;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -23,9 +23,9 @@ public class CompraDTO {
     private LocalDate dataEfetuacao = LocalDate.now();
     private LocalDate dataAgendada = null;
     private LocalDate dataCobranca;
-    @Min(0)
+    @DecimalMin(value = "0.0")
     @NotNull
-    private Double valorFinal;
+    private BigDecimal valorFinal;
     private String condicaoPagamento;
     @NotNull
     private StatusCompra status = StatusCompra.ORCAMENTO;

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -45,11 +46,11 @@ public class Servico {
     @Column(nullable = false)
     private String nome;
     private String descricao;
-    @Column(nullable = false, length = 10, precision = 2)
-    private Double custo;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal custo;
     private Boolean disponivelVenda;
-    @Column(nullable = false, length = 10, precision = 2)
-    private Double valorVenda;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorVenda;
     @Column(nullable = false)
     private Integer tempoExecucao;
     private Boolean terceirizado;

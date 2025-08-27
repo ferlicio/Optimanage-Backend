@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,5 +19,5 @@ public class VendaServicoDTO {
     @Min(1)
     private Integer quantidade;
 
-    private Double desconto = 0.0;
+    private BigDecimal desconto = BigDecimal.ZERO;
 }
