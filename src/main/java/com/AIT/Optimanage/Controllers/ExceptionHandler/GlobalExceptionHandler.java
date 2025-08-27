@@ -3,13 +3,14 @@ package com.AIT.Optimanage.Controllers.ExceptionHandler;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.context.support.DefaultMessageSourceResolvable;
 import jakarta.validation.ConstraintViolationException;
 
 import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
@@ -17,7 +18,6 @@ import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -29,7 +29,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex) {
-        String correlationId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
         log.warn("Entity not found: {} - correlationId: {}", ex.getMessage(), correlationId);
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.NOT_FOUND.value(),
@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
-        String correlationId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
         log.warn("Illegal argument: {} - correlationId: {}", ex.getMessage(), correlationId);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.BAD_REQUEST.value(),
@@ -47,7 +47,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
-        String correlationId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .toList();
@@ -59,7 +59,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
-        String correlationId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
         List<String> errors = ex.getConstraintViolations().stream()
                 .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
                 .toList();
@@ -71,7 +71,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
-        String correlationId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
         log.warn("Access denied: {} - correlationId: {}", ex.getMessage(), correlationId);
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.FORBIDDEN.value(),
@@ -80,7 +80,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomRuntimeException.class)
     public ResponseEntity<ErrorResponse> handleCustomRuntime(CustomRuntimeException ex) {
-        String correlationId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
         log.warn("Runtime exception: {} - correlationId: {}", ex.getMessage(), correlationId);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.BAD_REQUEST.value(),
@@ -89,7 +89,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
-        String correlationId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
         log.error("Internal server error - correlationId: {}", correlationId, ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.INTERNAL_SERVER_ERROR.value(),
