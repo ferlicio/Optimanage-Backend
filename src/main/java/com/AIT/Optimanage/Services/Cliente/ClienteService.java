@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -28,13 +27,9 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
 
-    public List<Cliente> mostrarTodosClientes(User usuario){
-        return clienteRepository.findByOwnerUserAndAtivoTrue(usuario);
-    }
-
     @Cacheable(value = "clientes", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public List<Cliente> listarClientes(User loggedUser, ClienteSearch pesquisa) {
+    public Page<Cliente> listarClientes(User loggedUser, ClienteSearch pesquisa) {
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -44,8 +39,8 @@ public class ClienteService {
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
         // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
-        Page<Cliente> clientes = clienteRepository.buscarClientes(
-                loggedUser.getId(), // Filtro pelo usuário logado
+        return clienteRepository.buscarClientes(
+                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getNome(),
                 pesquisa.getCpfOuCnpj(),
@@ -55,8 +50,6 @@ public class ClienteService {
                 pesquisa.getAtivo() != null ? pesquisa.getAtivo() : true,
                 pageable
         );
-
-        return clientes.getContent();
     }
 
     public Cliente listarUmCliente(User loggedUser, Integer idCliente) {

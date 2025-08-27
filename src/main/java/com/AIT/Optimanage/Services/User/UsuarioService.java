@@ -10,11 +10,12 @@ import com.AIT.Optimanage.Repositories.User.UserInfoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -38,11 +39,9 @@ public class UsuarioService {
         return toResponse(salvo);
     }
 
-    public List<UserResponse> listarUsuarios() {
-        return userRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<UserResponse> listarUsuarios(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(this::toResponse);
     }
 
     public UserResponse buscarUsuario(Integer id) {

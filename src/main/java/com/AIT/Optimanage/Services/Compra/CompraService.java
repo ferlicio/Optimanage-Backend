@@ -55,7 +55,7 @@ public class CompraService {
 
     @Cacheable(value = "compras", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public List<Compra> listarCompras(User loggedUser, CompraSearch pesquisa) {
+    public Page<Compra> listarCompras(User loggedUser, CompraSearch pesquisa) {
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -64,7 +64,7 @@ public class CompraService {
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
         // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
-        Page<Compra> compras = compraRepository.buscarCompras(
+        return compraRepository.buscarCompras(
                 loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getFornecedorId(),
@@ -75,8 +75,6 @@ public class CompraService {
                 pesquisa.getFormaPagamento(),
                 pageable
         );
-        
-        return compras.getContent();
     }
 
     public Compra listarUmaCompra(User loggedUser, Integer idCompra) {

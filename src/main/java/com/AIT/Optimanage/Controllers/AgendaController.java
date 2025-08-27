@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.util.List;
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,9 +28,9 @@ public class AgendaController extends V1BaseController {
     private final AgendaService agendaService;
 
     @GetMapping
-    @Operation(summary = "Listar eventos", description = "Lista eventos da agenda")
+    @Operation(summary = "Listar eventos", description = "Retorna uma página de eventos da agenda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<EventoAgenda> listarEventos(@AuthenticationPrincipal User loggedUser,
+    public Page<EventoAgenda> listarEventos(@AuthenticationPrincipal User loggedUser,
                                             @RequestParam(value = "data_inicial", required = false) LocalDate data_inicial,
                                             @RequestParam(value = "data_final", required = false) LocalDate data_final,
                                             @RequestParam(value = "sort", required = false) String sort,

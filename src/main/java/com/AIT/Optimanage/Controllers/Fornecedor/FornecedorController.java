@@ -14,7 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,10 +28,10 @@ public class FornecedorController extends V1BaseController {
     private final FornecedorService fornecedorService;
 
     @GetMapping
-    @Operation(summary = "Listar fornecedores", description = "Retorna uma lista de fornecedores")
+    @Operation(summary = "Listar fornecedores", description = "Retorna uma página de fornecedores")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<Fornecedor> listarFornecedores(@AuthenticationPrincipal User loggedUser,
-                                               @RequestParam(value = "id", required = false) Integer id,
+    public Page<Fornecedor> listarFornecedores(@AuthenticationPrincipal User loggedUser,
+                                              @RequestParam(value = "id", required = false) Integer id,
                                                @RequestParam(value = "nome", required = false) String nome,
                                                @RequestParam(value = "cpfOuCnpj", required = false) String cpfOuCnpj,
                                                @RequestParam(value = "atividade", required = false) Integer atividade,
