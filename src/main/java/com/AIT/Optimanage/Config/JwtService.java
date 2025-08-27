@@ -4,7 +4,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -17,14 +16,11 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${app.jwtSecret}")
-    private String SECRET_KEY;
+    private final JwtProperties jwtProperties;
 
-    @Value("${app.jwt.expiration}")
-    private long jwtExpiration;
-
-    @Value("${app.jwt.refresh-expiration}")
-    private long refreshExpiration;
+    public JwtService(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+    }
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -36,11 +32,11 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails, jwtExpiration);
+        return generateToken(new HashMap<>(), userDetails, jwtProperties.getExpiration());
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails, refreshExpiration);
+        return generateToken(new HashMap<>(), userDetails, jwtProperties.getRefreshExpiration());
     }
 
     public String generateToken(
@@ -61,7 +57,7 @@ public class JwtService {
     }
 
     public long getRefreshExpiration() {
-        return refreshExpiration;
+        return jwtProperties.getRefreshExpiration();
     }
 
     public Boolean isTokenValid(String token, UserDetails userDetails) {
@@ -87,8 +83,14 @@ public class JwtService {
     }
 
     private SecretKey getSignInKey() {
-        var secretKey = SECRET_KEY;
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getPrimaryKey());
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    /**
+     * Switch the signing keys without restarting the application.
+     */
+    public void switchKeys() {
+        jwtProperties.switchKeys();
     }
 }
