@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,5 +43,17 @@ public class AuthenticationController extends com.AIT.Optimanage.Controllers.Bas
     public ResponseEntity<AuthenticationResponse> refresh(
             @Valid @RequestBody RefreshTokenRequest request) {
         return ok(authenticationService.refreshToken(request.getRefreshToken()));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout", description = "Revoga tokens do usuário")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        final String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            authenticationService.logout(token);
+        }
+        return ResponseEntity.ok().build();
     }
 }
