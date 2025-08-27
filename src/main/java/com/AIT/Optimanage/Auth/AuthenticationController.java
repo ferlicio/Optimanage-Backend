@@ -1,5 +1,6 @@
 package com.AIT.Optimanage.Auth;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +24,7 @@ public class AuthenticationController {
     @Operation(summary = "Registrar", description = "Registra um novo usuário")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<AuthenticationResponse> register(
-            @RequestBody RegisterRequest request) {
+            @Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authenticationService.register(request));
     }
 
@@ -31,7 +32,7 @@ public class AuthenticationController {
     @Operation(summary = "Autenticar", description = "Autentica um usuário")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<AuthenticationResponse> authenticate(
-            @RequestBody AuthenticationRequest request) {
+            @Valid @RequestBody AuthenticationRequest request) {
         return ResponseEntity.ok(authenticationService.authenticate(request));
     }
 
@@ -39,7 +40,7 @@ public class AuthenticationController {
     @Operation(summary = "Atualizar token", description = "Atualiza o token JWT")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<AuthenticationResponse> refresh(
-            @RequestBody RefreshTokenRequest request) {
+            @Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authenticationService.refreshToken(request.getRefreshToken()));
     }
 }
