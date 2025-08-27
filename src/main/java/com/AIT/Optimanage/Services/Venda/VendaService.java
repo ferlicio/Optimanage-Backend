@@ -305,7 +305,7 @@ public class VendaService {
     private List<VendaProduto> criarListaProdutos(List<VendaProdutoDTO> produtosDTO, Venda venda) {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
-                    Produto produto = produtoService.listarUmProduto(venda.getOwnerUser(), produtoDTO.getProdutoId());
+                    Produto produto = produtoService.buscarProdutoAtivo(venda.getOwnerUser(), produtoDTO.getProdutoId());
                     BigDecimal valorProduto = produto.getValorVenda().multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
                     BigDecimal descontoProduto = valorProduto
                             .multiply(BigDecimal.valueOf(produtoDTO.getDesconto()).divide(BigDecimal.valueOf(100)));
