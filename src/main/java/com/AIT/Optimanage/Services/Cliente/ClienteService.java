@@ -58,6 +58,7 @@ public class ClienteService {
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
+    @Transactional(rollbackFor = Exception.class)
     public Cliente criarCliente(User loggedUser, ClienteRequest request) {
         Cliente cliente = fromRequest(request);
         cliente.setId(null);
@@ -68,6 +69,7 @@ public class ClienteService {
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
+    @Transactional(rollbackFor = Exception.class)
     public Cliente editarCliente(User loggedUser, Integer idCliente, ClienteRequest request) {
         Cliente clienteSalvo = listarUmCliente(loggedUser, idCliente);
         Cliente cliente = fromRequest(request);
@@ -79,6 +81,7 @@ public class ClienteService {
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
+    @Transactional(rollbackFor = Exception.class)
     public void inativarCliente(User loggedUser, Integer idCliente) {
         Cliente cliente = listarUmCliente(loggedUser, idCliente);
         cliente.setAtivo(false);
@@ -86,6 +89,7 @@ public class ClienteService {
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
+    @Transactional(rollbackFor = Exception.class)
     public Cliente reativarCliente(User loggedUser, Integer idCliente) {
         Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
@@ -94,6 +98,7 @@ public class ClienteService {
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
+    @Transactional(rollbackFor = Exception.class)
     public void removerCliente(User loggedUser, Integer idCliente) {
         Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
