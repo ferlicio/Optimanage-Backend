@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import lombok.*;
+import com.AIT.Optimanage.Models.BaseEntity;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,7 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class Venda {
+public class Venda extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;

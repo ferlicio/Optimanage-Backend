@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Models.User;
 
 import com.AIT.Optimanage.Models.Plano;
+import com.AIT.Optimanage.Models.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -16,7 +17,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class UserInfo {
+public class UserInfo extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
