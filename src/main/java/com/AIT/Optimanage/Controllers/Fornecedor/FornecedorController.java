@@ -60,7 +60,8 @@ public class FornecedorController extends V1BaseController {
     @GetMapping("/{idFornecedor}")
     @Operation(summary = "Listar fornecedor", description = "Retorna um fornecedor pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Fornecedor listarUmFornecedor(@AuthenticationPrincipal User loggedUser, Integer idFornecedor) {
+    public Fornecedor listarUmFornecedor(@AuthenticationPrincipal User loggedUser,
+                                         @PathVariable("idFornecedor") Integer idFornecedor) {
         return fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
     }
 
@@ -76,7 +77,7 @@ public class FornecedorController extends V1BaseController {
     @Operation(summary = "Editar fornecedor", description = "Atualiza um fornecedor existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public Fornecedor editarFornecedor(@AuthenticationPrincipal User loggedUser,
-                                       @PathVariable Integer idFornecedor,
+                                       @PathVariable("idFornecedor") Integer idFornecedor,
                                        @RequestBody @Valid FornecedorRequest request) {
         return fornecedorService.editarFornecedor(loggedUser, idFornecedor, request);
     }
@@ -84,7 +85,8 @@ public class FornecedorController extends V1BaseController {
     @DeleteMapping("/{idFornecedor}")
     @Operation(summary = "Inativar fornecedor", description = "Inativa um fornecedor pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void inativarFornecedor(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idFornecedor) {
+    public void inativarFornecedor(@AuthenticationPrincipal User loggedUser,
+                                   @PathVariable("idFornecedor") Integer idFornecedor) {
         fornecedorService.inativarFornecedor(loggedUser, idFornecedor);
     }
 }
