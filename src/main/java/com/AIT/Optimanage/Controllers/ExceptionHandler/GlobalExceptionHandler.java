@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import jakarta.validation.ConstraintViolationException;
 
 import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
 
@@ -48,7 +49,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
         String correlationId = UUID.randomUUID().toString();
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .toList();
+        log.warn("Validation failed: {} - correlationId: {}", errors, correlationId);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.BAD_REQUEST.value(),
+                        "Validation failed", correlationId, errors));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        String correlationId = UUID.randomUUID().toString();
+        List<String> errors = ex.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
                 .toList();
         log.warn("Validation failed: {} - correlationId: {}", errors, correlationId);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
