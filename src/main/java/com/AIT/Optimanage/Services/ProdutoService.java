@@ -8,6 +8,8 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
@@ -17,6 +19,7 @@ public class ProdutoService {
 
     private final ProdutoRepository produtoRepository;
 
+    @Cacheable(value = "produtos", key = "#loggedUser.id")
     public List<ProdutoResponse> listarProdutos(User loggedUser) {
         return produtoRepository.findAllByOwnerUser(loggedUser)
                 .stream()
@@ -29,6 +32,7 @@ public class ProdutoService {
         return toResponse(produto);
     }
 
+    @CacheEvict(value = "produtos", key = "#loggedUser.id")
     public ProdutoResponse cadastrarProduto(User loggedUser, ProdutoRequest request) {
         Produto produto = fromRequest(request);
         produto.setId(null);
@@ -37,6 +41,7 @@ public class ProdutoService {
         return toResponse(salvo);
     }
 
+    @CacheEvict(value = "produtos", key = "#loggedUser.id")
     public ProdutoResponse editarProduto(User loggedUser, Integer idProduto, ProdutoRequest request) {
         Produto produtoSalvo = buscarProduto(loggedUser, idProduto);
         Produto produto = fromRequest(request);
@@ -46,6 +51,7 @@ public class ProdutoService {
         return toResponse(atualizado);
     }
 
+    @CacheEvict(value = "produtos", key = "#loggedUser.id")
     public void excluirProduto(User loggedUser, Integer idProduto) {
         Produto produto = buscarProduto(loggedUser, idProduto);
         produtoRepository.delete(produto);
