@@ -3,14 +3,16 @@ package com.AIT.Optimanage.Controllers;
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
 import com.AIT.Optimanage.Controllers.dto.ProdutoRequest;
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.ProdutoService;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,8 +28,18 @@ public class ProdutoController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar produtos", description = "Retorna uma lista de produtos")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<ProdutoResponse> listarProdutos(@AuthenticationPrincipal User loggedUser) {
-        return produtoService.listarProdutos(loggedUser);
+    public Page<ProdutoResponse> listarProdutos(@AuthenticationPrincipal User loggedUser,
+                                                @RequestParam(value = "page") Integer page,
+                                                @RequestParam(value = "pageSize") Integer pageSize,
+                                                @RequestParam(value = "sort", required = false) String sort,
+                                                @RequestParam(value = "order", required = false) Sort.Direction order) {
+        var pesquisa = Search.builder()
+                .page(page)
+                .pageSize(pageSize)
+                .sort(sort)
+                .order(order)
+                .build();
+        return produtoService.listarProdutos(loggedUser, pesquisa);
     }
 
     @GetMapping("/{idProduto}")

@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Services;
 import com.AIT.Optimanage.Controllers.dto.ServicoRequest;
 import com.AIT.Optimanage.Controllers.dto.ServicoResponse;
 import com.AIT.Optimanage.Mappers.ServicoMapper;
+import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.ServicoRepository;
@@ -10,10 +11,13 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,12 +26,17 @@ public class ServicoService {
     private final ServicoRepository servicoRepository;
     private final ServicoMapper servicoMapper;
 
-    @Cacheable(value = "servicos", key = "#loggedUser.id")
-    public List<ServicoResponse> listarServicos(User loggedUser) {
-        return servicoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser)
-                .stream()
-                .map(servicoMapper::toResponse)
-                .toList();
+    @Cacheable(value = "servicos", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
+    public Page<ServicoResponse> listarServicos(User loggedUser, Search pesquisa) {
+        Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
+                .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
+
+        String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
+
+        Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
+
+        return servicoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser, pageable)
+                .map(servicoMapper::toResponse);
     }
 
     public ServicoResponse listarUmServico(User loggedUser, Integer idServico) {
