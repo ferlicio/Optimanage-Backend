@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Config.JwtService;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Auth.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,6 +25,7 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Transactional
     public AuthenticationResponse register(RegisterRequest request) {
@@ -88,5 +90,15 @@ public class AuthenticationService {
                 .build();
         refreshTokenRepository.save(token);
         return refreshToken;
+    }
+
+    @Transactional
+    public void logout(String token) {
+        var userEmail = jwtService.extractEmail(token);
+        if (userEmail != null) {
+            userRepository.findByEmail(userEmail)
+                    .ifPresent(refreshTokenRepository::deleteByUser);
+        }
+        tokenBlacklistService.blacklistToken(token);
     }
 }

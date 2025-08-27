@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.verify;
 
 @WebMvcTest(controllers = AuthenticationController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -41,5 +42,13 @@ class AuthenticationControllerValidationTest {
                 .content("{\"email\":\"invalid\",\"senha\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0]").exists());
+    }
+
+    @Test
+    void whenLogout_thenReturnsOk() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                .header("Authorization", "Bearer token"))
+                .andExpect(status().isOk());
+        verify(authenticationService).logout("token");
     }
 }
