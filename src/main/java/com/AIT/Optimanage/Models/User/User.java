@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Models.User;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.AIT.Optimanage.Models.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,12 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class User implements UserDetails {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
+public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private String nome;
     @Column(nullable = false)

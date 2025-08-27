@@ -2,17 +2,14 @@ package com.AIT.Optimanage.Models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.AIT.Optimanage.Models.BaseEntity;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class Plano {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
+public class Plano extends BaseEntity {
     @Column(nullable = false)
     private String nome;
     @Column(nullable = false, precision = 2)
