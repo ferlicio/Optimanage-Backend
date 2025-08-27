@@ -36,4 +36,5 @@ public class ServicoRequest {
     private Integer tempoExecucao;
 
     private Boolean terceirizado;
+    private Boolean ativo;
 }

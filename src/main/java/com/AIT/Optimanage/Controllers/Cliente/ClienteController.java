@@ -10,6 +10,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -95,6 +96,24 @@ public class ClienteController extends V1BaseController {
     public void inativarCliente(@AuthenticationPrincipal User loggedUser,
                                 @PathVariable("idCliente") Integer idCliente) {
         clienteService.inativarCliente(loggedUser, idCliente);
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PutMapping("/{idCliente}/restaurar")
+    @Operation(summary = "Restaurar cliente", description = "Reativa um cliente inativo")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public Cliente restaurarCliente(@AuthenticationPrincipal User loggedUser,
+                                    @PathVariable("idCliente") Integer idCliente) {
+        return clienteService.reativarCliente(loggedUser, idCliente);
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @DeleteMapping("/{idCliente}/permanente")
+    @Operation(summary = "Remover cliente permanentemente", description = "Exclui definitivamente um cliente")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public void removerCliente(@AuthenticationPrincipal User loggedUser,
+                               @PathVariable("idCliente") Integer idCliente) {
+        clienteService.removerCliente(loggedUser, idCliente);
     }
 
 }
