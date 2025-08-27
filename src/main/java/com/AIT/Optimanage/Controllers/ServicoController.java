@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.ServicoService;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,5 +60,21 @@ public class ServicoController extends V1BaseController {
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public void excluirServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
         servicoService.excluirServico(loggedUser, idServico);
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PutMapping("/{idServico}/restaurar")
+    @Operation(summary = "Restaurar serviço", description = "Restaura um serviço inativo")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public Servico restaurarServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
+        return servicoService.restaurarServico(loggedUser, idServico);
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @DeleteMapping("/{idServico}/permanente")
+    @Operation(summary = "Remover serviço permanentemente", description = "Exclui definitivamente um serviço")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public void removerServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
+        servicoService.removerServico(loggedUser, idServico);
     }
 }

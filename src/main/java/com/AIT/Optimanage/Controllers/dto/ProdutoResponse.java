@@ -25,4 +25,5 @@ public class ProdutoResponse {
     private BigDecimal valorVenda;
     private Integer qtdEstoque;
     private Boolean terceirizado;
+    private Boolean ativo;
 }

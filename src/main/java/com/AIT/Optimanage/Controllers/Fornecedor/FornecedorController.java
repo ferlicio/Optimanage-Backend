@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -88,5 +89,23 @@ public class FornecedorController extends V1BaseController {
     public void inativarFornecedor(@AuthenticationPrincipal User loggedUser,
                                    @PathVariable("idFornecedor") Integer idFornecedor) {
         fornecedorService.inativarFornecedor(loggedUser, idFornecedor);
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PutMapping("/{idFornecedor}/restaurar")
+    @Operation(summary = "Restaurar fornecedor", description = "Reativa um fornecedor inativo")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public Fornecedor restaurarFornecedor(@AuthenticationPrincipal User loggedUser,
+                                          @PathVariable("idFornecedor") Integer idFornecedor) {
+        return fornecedorService.reativarFornecedor(loggedUser, idFornecedor);
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @DeleteMapping("/{idFornecedor}/permanente")
+    @Operation(summary = "Remover fornecedor permanentemente", description = "Exclui definitivamente um fornecedor")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public void removerFornecedor(@AuthenticationPrincipal User loggedUser,
+                                  @PathVariable("idFornecedor") Integer idFornecedor) {
+        fornecedorService.removerFornecedor(loggedUser, idFornecedor);
     }
 }

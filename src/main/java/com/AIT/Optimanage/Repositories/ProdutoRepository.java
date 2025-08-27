@@ -11,7 +11,9 @@ import java.util.Optional;
 @Repository
 public interface ProdutoRepository extends JpaRepository<Produto, Integer> {
 
-    List<Produto> findAllByOwnerUser(User loggedUser);
+    List<Produto> findAllByOwnerUserAndAtivoTrue(User loggedUser);
+
+    Optional<Produto> findByIdAndOwnerUserAndAtivoTrue(Integer idProduto, User loggedUser);
 
     Optional<Produto> findByIdAndOwnerUser(Integer idProduto, User loggedUser);
 }

@@ -53,6 +53,8 @@ public class Servico {
     @Column(nullable = false)
     private Integer tempoExecucao;
     private Boolean terceirizado;
+    @Column(nullable = false)
+    private Boolean ativo = true;
 
     @OneToMany(mappedBy = "servico", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Compatibilidade> compatibilidades;
