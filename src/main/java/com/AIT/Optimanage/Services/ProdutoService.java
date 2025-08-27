@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Services;
 import com.AIT.Optimanage.Controllers.dto.ProdutoRequest;
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
 import com.AIT.Optimanage.Models.Produto;
+import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Mappers.ProdutoMapper;
@@ -10,9 +11,13 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,12 +26,17 @@ public class ProdutoService {
     private final ProdutoRepository produtoRepository;
     private final ProdutoMapper produtoMapper;
 
-    @Cacheable(value = "produtos", key = "#loggedUser.id")
-    public List<ProdutoResponse> listarProdutos(User loggedUser) {
-        return produtoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    @Cacheable(value = "produtos", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
+    public Page<ProdutoResponse> listarProdutos(User loggedUser, Search pesquisa) {
+        Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
+                .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
+
+        String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
+
+        Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
+
+        return produtoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser, pageable)
+                .map(this::toResponse);
     }
 
     public ProdutoResponse listarUmProduto(User loggedUser, Integer idProduto) {

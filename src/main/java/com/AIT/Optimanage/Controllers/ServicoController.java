@@ -3,15 +3,16 @@ package com.AIT.Optimanage.Controllers;
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
 import com.AIT.Optimanage.Controllers.dto.ServicoRequest;
 import com.AIT.Optimanage.Controllers.dto.ServicoResponse;
+import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.ServicoService;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,8 +28,18 @@ public class ServicoController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar serviços", description = "Retorna uma lista de serviços")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<ServicoResponse> listarServicos(@AuthenticationPrincipal User loggedUser) {
-        return servicoService.listarServicos(loggedUser);
+    public Page<ServicoResponse> listarServicos(@AuthenticationPrincipal User loggedUser,
+                                                @RequestParam(value = "page") Integer page,
+                                                @RequestParam(value = "pageSize") Integer pageSize,
+                                                @RequestParam(value = "sort", required = false) String sort,
+                                                @RequestParam(value = "order", required = false) Sort.Direction order) {
+        var pesquisa = Search.builder()
+                .page(page)
+                .pageSize(pageSize)
+                .sort(sort)
+                .order(order)
+                .build();
+        return servicoService.listarServicos(loggedUser, pesquisa);
     }
 
     @GetMapping("/{idServico}")
