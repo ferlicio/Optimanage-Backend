@@ -107,7 +107,7 @@ public class ClienteService {
             cliente.setRazaoSocial(null);
             cliente.setCnpj(null);
             cliente.setInscricaoEstadual(null);
-            cliente.setInscricaoEstadual(null);
+            cliente.setInscricaoMunicipal(null);
         } else {
             if (cliente.getCnpj() == null || cliente.getCnpj().isEmpty()) {
                 throw new IllegalArgumentException("CNPJ é obrigatório");
