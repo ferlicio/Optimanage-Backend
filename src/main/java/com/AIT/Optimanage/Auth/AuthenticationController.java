@@ -13,19 +13,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Tag(name = "Autenticação", description = "Endpoints de autenticação")
-public class AuthenticationController {
+public class AuthenticationController extends com.AIT.Optimanage.Controllers.BaseController.V1BaseController {
 
     private final AuthenticationService authenticationService;
 
     @PostMapping("/register")
     @Operation(summary = "Registrar", description = "Registra um novo usuário")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
+    @ApiResponse(responseCode = "201", description = "Criado")
     public ResponseEntity<AuthenticationResponse> register(
             @Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authenticationService.register(request));
+        return created(authenticationService.register(request));
     }
 
     @PostMapping("/authenticate")
@@ -33,7 +33,7 @@ public class AuthenticationController {
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<AuthenticationResponse> authenticate(
             @Valid @RequestBody AuthenticationRequest request) {
-        return ResponseEntity.ok(authenticationService.authenticate(request));
+        return ok(authenticationService.authenticate(request));
     }
 
     @PostMapping("/refresh")
@@ -41,6 +41,6 @@ public class AuthenticationController {
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<AuthenticationResponse> refresh(
             @Valid @RequestBody RefreshTokenRequest request) {
-        return ResponseEntity.ok(authenticationService.refreshToken(request.getRefreshToken()));
+        return ok(authenticationService.refreshToken(request.getRefreshToken()));
     }
 }

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,33 +27,34 @@ public class PlanoController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar planos", description = "Retorna uma lista de planos")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<PlanoResponse> listarPlanos() {
-        return planoService.listarPlanos();
+    public ResponseEntity<List<PlanoResponse>> listarPlanos() {
+        return ok(planoService.listarPlanos());
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping
     @Operation(summary = "Cadastrar plano", description = "Cria um novo plano")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public PlanoResponse criarPlano(@RequestBody @Valid PlanoRequest request) {
-        return planoService.criarPlano(request);
+    @ApiResponse(responseCode = "201", description = "Criado")
+    public ResponseEntity<PlanoResponse> criarPlano(@RequestBody @Valid PlanoRequest request) {
+        return created(planoService.criarPlano(request));
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{idPlano}")
     @Operation(summary = "Atualizar plano", description = "Atualiza um plano existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public PlanoResponse atualizarPlano(@PathVariable Integer idPlano,
-                                        @RequestBody @Valid PlanoRequest request) {
-        return planoService.atualizarPlano(idPlano, request);
+    public ResponseEntity<PlanoResponse> atualizarPlano(@PathVariable Integer idPlano,
+                                                        @RequestBody @Valid PlanoRequest request) {
+        return ok(planoService.atualizarPlano(idPlano, request));
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{idPlano}")
     @Operation(summary = "Remover plano", description = "Remove um plano")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void removerPlano(@PathVariable Integer idPlano) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> removerPlano(@PathVariable Integer idPlano) {
         planoService.removerPlano(idPlano);
+        return noContent();
     }
 }
 

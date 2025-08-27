@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Models.Cliente.ClienteContato;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.Cliente.ClienteContatoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -25,37 +26,38 @@ public class ClienteContatoController extends V1BaseController {
     @GetMapping("/{idCliente}/contatos")
     @Operation(summary = "Listar contatos", description = "Lista contatos de um cliente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public List<ClienteContato> listarContatos(@AuthenticationPrincipal User loggedUser,
-                                               @PathVariable("idCliente") Integer idCliente) {
-        return clienteContatoService.listarContatos(loggedUser, idCliente);
+    public ResponseEntity<List<ClienteContato>> listarContatos(@AuthenticationPrincipal User loggedUser,
+                                                               @PathVariable("idCliente") Integer idCliente) {
+        return ok(clienteContatoService.listarContatos(loggedUser, idCliente));
     }
 
     @PostMapping("/{idCliente}/contatos")
     @Operation(summary = "Cadastrar contato", description = "Adiciona contato a um cliente")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ClienteContato cadastrarContato(@AuthenticationPrincipal User loggedUser,
-                                          @PathVariable("idCliente") Integer idCliente,
-                                          @RequestBody @Valid ClienteContato contato) {
-        return clienteContatoService.cadastrarContato(loggedUser, idCliente, contato);
+    @ApiResponse(responseCode = "201", description = "Criado")
+    public ResponseEntity<ClienteContato> cadastrarContato(@AuthenticationPrincipal User loggedUser,
+                                                           @PathVariable("idCliente") Integer idCliente,
+                                                           @RequestBody @Valid ClienteContato contato) {
+        return created(clienteContatoService.cadastrarContato(loggedUser, idCliente, contato));
     }
 
     @PutMapping("/{idCliente}/contatos/{idContato}")
     @Operation(summary = "Editar contato", description = "Atualiza contato de um cliente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ClienteContato editarContato(@AuthenticationPrincipal User loggedUser,
-                                        @PathVariable("idCliente") Integer idCliente,
-                                        @PathVariable("idContato") Integer idContato,
-                                        @RequestBody @Valid ClienteContato contato) {
-        return clienteContatoService.editarContato(loggedUser, idCliente, idContato, contato);
+    public ResponseEntity<ClienteContato> editarContato(@AuthenticationPrincipal User loggedUser,
+                                                        @PathVariable("idCliente") Integer idCliente,
+                                                        @PathVariable("idContato") Integer idContato,
+                                                        @RequestBody @Valid ClienteContato contato) {
+        return ok(clienteContatoService.editarContato(loggedUser, idCliente, idContato, contato));
     }
 
     @DeleteMapping("/{idCliente}/contatos/{idContato}")
     @Operation(summary = "Excluir contato", description = "Remove contato de um cliente")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void excluirContato(@AuthenticationPrincipal User loggedUser,
-                               @PathVariable("idCliente") Integer idCliente,
-                               @PathVariable("idContato") Integer idContato) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> excluirContato(@AuthenticationPrincipal User loggedUser,
+                                               @PathVariable("idCliente") Integer idCliente,
+                                               @PathVariable("idContato") Integer idContato) {
         clienteContatoService.excluirContato(loggedUser, idCliente, idContato);
+        return noContent();
     }
 }
 

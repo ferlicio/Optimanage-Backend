@@ -11,7 +11,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +27,7 @@ public class UsuarioController extends V1BaseController {
     @PostMapping
     public ResponseEntity<UserResponse> criarUsuario(@RequestBody @Valid UserRequest request) {
         UserResponse novoUsuario = usuarioService.salvarUsuario(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(novoUsuario);
+        return created(novoUsuario);
     }
 
     @GetMapping
@@ -41,26 +40,26 @@ public class UsuarioController extends V1BaseController {
         String sortBy = sort != null ? sort : "id";
         Pageable pageable = PageRequest.of(page, pagesize, Sort.by(direction, sortBy));
         Page<UserResponse> usuarios = usuarioService.listarUsuarios(pageable);
-        return ResponseEntity.ok(usuarios);
+        return ok(usuarios);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> buscarUsuario(@PathVariable Integer id) {
         UserResponse usuario = usuarioService.buscarUsuario(id);
-        return ResponseEntity.ok(usuario);
+        return ok(usuario);
     }
 
     @PutMapping("/{id}/plano")
     public ResponseEntity<UserResponse> atualizarPlanoAtivo(@PathVariable Integer id,
                                                             @RequestParam Integer novoPlanoId) {
         UserResponse usuarioAtualizado = usuarioService.atualizarPlanoAtivo(id, novoPlanoId);
-        return ResponseEntity.ok(usuarioAtualizado);
+        return ok(usuarioAtualizado);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> desativarUsuario(@PathVariable Integer id) {
         usuarioService.desativarUsuario(id);
-        return ResponseEntity.noContent().build();
+        return noContent();
     }
 }
 

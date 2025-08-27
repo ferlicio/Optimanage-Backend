@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +31,7 @@ public class FornecedorController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar fornecedores", description = "Retorna uma página de fornecedores")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Page<Fornecedor> listarFornecedores(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<Page<Fornecedor>> listarFornecedores(@AuthenticationPrincipal User loggedUser,
                                               @RequestParam(value = "id", required = false) Integer id,
                                                @RequestParam(value = "nome", required = false) String nome,
                                                @RequestParam(value = "cpfOuCnpj", required = false) String cpfOuCnpj,
@@ -55,57 +56,59 @@ public class FornecedorController extends V1BaseController {
                 .sort(sort)
                 .order(order)
                 .build();
-        return fornecedorService.listarFornecedores(loggedUser, pesquisa);
+        return ok(fornecedorService.listarFornecedores(loggedUser, pesquisa));
     }
 
     @GetMapping("/{idFornecedor}")
     @Operation(summary = "Listar fornecedor", description = "Retorna um fornecedor pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Fornecedor listarUmFornecedor(@AuthenticationPrincipal User loggedUser,
-                                         @PathVariable("idFornecedor") Integer idFornecedor) {
-        return fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
+    public ResponseEntity<Fornecedor> listarUmFornecedor(@AuthenticationPrincipal User loggedUser,
+                                                         @PathVariable("idFornecedor") Integer idFornecedor) {
+        return ok(fornecedorService.listarUmFornecedor(loggedUser, idFornecedor));
     }
 
     @PostMapping
     @Operation(summary = "Criar fornecedor", description = "Cria um novo fornecedor")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Fornecedor criarFornecedor(@AuthenticationPrincipal User loggedUser,
-                                     @RequestBody @Valid FornecedorRequest request) {
-        return fornecedorService.criarFornecedor(loggedUser, request);
+    @ApiResponse(responseCode = "201", description = "Criado")
+    public ResponseEntity<Fornecedor> criarFornecedor(@AuthenticationPrincipal User loggedUser,
+                                                     @RequestBody @Valid FornecedorRequest request) {
+        return created(fornecedorService.criarFornecedor(loggedUser, request));
     }
 
     @PutMapping("/{idFornecedor}")
     @Operation(summary = "Editar fornecedor", description = "Atualiza um fornecedor existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Fornecedor editarFornecedor(@AuthenticationPrincipal User loggedUser,
-                                       @PathVariable("idFornecedor") Integer idFornecedor,
-                                       @RequestBody @Valid FornecedorRequest request) {
-        return fornecedorService.editarFornecedor(loggedUser, idFornecedor, request);
+    public ResponseEntity<Fornecedor> editarFornecedor(@AuthenticationPrincipal User loggedUser,
+                                                       @PathVariable("idFornecedor") Integer idFornecedor,
+                                                       @RequestBody @Valid FornecedorRequest request) {
+        return ok(fornecedorService.editarFornecedor(loggedUser, idFornecedor, request));
     }
 
     @DeleteMapping("/{idFornecedor}")
     @Operation(summary = "Inativar fornecedor", description = "Inativa um fornecedor pelo ID")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void inativarFornecedor(@AuthenticationPrincipal User loggedUser,
-                                   @PathVariable("idFornecedor") Integer idFornecedor) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> inativarFornecedor(@AuthenticationPrincipal User loggedUser,
+                                                   @PathVariable("idFornecedor") Integer idFornecedor) {
         fornecedorService.inativarFornecedor(loggedUser, idFornecedor);
+        return noContent();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{idFornecedor}/restaurar")
     @Operation(summary = "Restaurar fornecedor", description = "Reativa um fornecedor inativo")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Fornecedor restaurarFornecedor(@AuthenticationPrincipal User loggedUser,
-                                          @PathVariable("idFornecedor") Integer idFornecedor) {
-        return fornecedorService.reativarFornecedor(loggedUser, idFornecedor);
+    public ResponseEntity<Fornecedor> restaurarFornecedor(@AuthenticationPrincipal User loggedUser,
+                                                          @PathVariable("idFornecedor") Integer idFornecedor) {
+        return ok(fornecedorService.reativarFornecedor(loggedUser, idFornecedor));
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{idFornecedor}/permanente")
     @Operation(summary = "Remover fornecedor permanentemente", description = "Exclui definitivamente um fornecedor")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void removerFornecedor(@AuthenticationPrincipal User loggedUser,
-                                  @PathVariable("idFornecedor") Integer idFornecedor) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> removerFornecedor(@AuthenticationPrincipal User loggedUser,
+                                                  @PathVariable("idFornecedor") Integer idFornecedor) {
         fornecedorService.removerFornecedor(loggedUser, idFornecedor);
+        return noContent();
     }
 }

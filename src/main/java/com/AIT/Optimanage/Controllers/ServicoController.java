@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,65 +29,67 @@ public class ServicoController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar serviços", description = "Retorna uma lista de serviços")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public Page<ServicoResponse> listarServicos(@AuthenticationPrincipal User loggedUser,
-                                                @RequestParam(value = "page") Integer page,
-                                                @RequestParam(value = "pageSize") Integer pageSize,
-                                                @RequestParam(value = "sort", required = false) String sort,
-                                                @RequestParam(value = "order", required = false) Sort.Direction order) {
+    public ResponseEntity<Page<ServicoResponse>> listarServicos(@AuthenticationPrincipal User loggedUser,
+                                                                @RequestParam(value = "page") Integer page,
+                                                                @RequestParam(value = "pageSize") Integer pageSize,
+                                                                @RequestParam(value = "sort", required = false) String sort,
+                                                                @RequestParam(value = "order", required = false) Sort.Direction order) {
         var pesquisa = Search.builder()
                 .page(page)
                 .pageSize(pageSize)
                 .sort(sort)
                 .order(order)
                 .build();
-        return servicoService.listarServicos(loggedUser, pesquisa);
+        return ok(servicoService.listarServicos(loggedUser, pesquisa));
     }
 
     @GetMapping("/{idServico}")
     @Operation(summary = "Listar serviço", description = "Retorna um serviço pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ServicoResponse listarUmServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
-        return servicoService.listarUmServico(loggedUser, idServico);
+    public ResponseEntity<ServicoResponse> listarUmServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
+        return ok(servicoService.listarUmServico(loggedUser, idServico));
     }
 
     @PostMapping
     @Operation(summary = "Cadastrar serviço", description = "Cria um novo serviço")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ServicoResponse cadastrarServico(@AuthenticationPrincipal User loggedUser,
-                                    @RequestBody @Valid ServicoRequest request) {
-        return servicoService.cadastrarServico(loggedUser, request);
+    @ApiResponse(responseCode = "201", description = "Criado")
+    public ResponseEntity<ServicoResponse> cadastrarServico(@AuthenticationPrincipal User loggedUser,
+                                                            @RequestBody @Valid ServicoRequest request) {
+        return created(servicoService.cadastrarServico(loggedUser, request));
     }
 
     @PutMapping("/{idServico}")
     @Operation(summary = "Editar serviço", description = "Atualiza um serviço existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ServicoResponse editarServico(@AuthenticationPrincipal User loggedUser,
-                                 @PathVariable Integer idServico,
-                                 @RequestBody @Valid ServicoRequest request) {
-        return servicoService.editarServico(loggedUser, idServico, request);
+    public ResponseEntity<ServicoResponse> editarServico(@AuthenticationPrincipal User loggedUser,
+                                                         @PathVariable Integer idServico,
+                                                         @RequestBody @Valid ServicoRequest request) {
+        return ok(servicoService.editarServico(loggedUser, idServico, request));
     }
 
     @DeleteMapping("/{idServico}")
     @Operation(summary = "Excluir serviço", description = "Remove um serviço")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void excluirServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> excluirServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
         servicoService.excluirServico(loggedUser, idServico);
+        return noContent();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{idServico}/restaurar")
     @Operation(summary = "Restaurar serviço", description = "Restaura um serviço inativo")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ServicoResponse restaurarServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
-        return servicoService.restaurarServico(loggedUser, idServico);
+    public ResponseEntity<ServicoResponse> restaurarServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
+        return ok(servicoService.restaurarServico(loggedUser, idServico));
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{idServico}/permanente")
     @Operation(summary = "Remover serviço permanentemente", description = "Exclui definitivamente um serviço")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public void removerServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
+    @ApiResponse(responseCode = "204", description = "Sem conteúdo")
+    public ResponseEntity<Void> removerServico(@AuthenticationPrincipal User loggedUser, @PathVariable Integer idServico) {
         servicoService.removerServico(loggedUser, idServico);
+        return noContent();
     }
 }
 
