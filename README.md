@@ -119,6 +119,18 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 2. Rodar testes: `./mvnw test`
 3. Executar aplicação: `./mvnw spring-boot:run`
 
+## Migrações de Banco de Dados
+As migrações de esquema são gerenciadas pelo [Flyway](https://flywaydb.org/). Os scripts SQL ficam em `src/main/resources/db/migration` e são aplicados automaticamente na inicialização da aplicação.
+
+Para executar as migrações manualmente, utilize o Maven especificando a conexão com o banco:
+
+```
+./mvnw flyway:migrate \
+    -Dflyway.url=jdbc:mariadb://localhost:3307/optimanage \
+    -Dflyway.user=<usuario> \
+    -Dflyway.password=<senha>
+```
+
 ## Monitoramento
 - `GET /actuator/health` – verificar status da aplicação.
 - `GET /actuator/info` – informações adicionais incluindo contagem de clientes e produtos.
