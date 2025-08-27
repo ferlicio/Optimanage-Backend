@@ -256,7 +256,7 @@ public class CompraService {
     private List<CompraProduto> criarListaProdutos(List<CompraProdutoDTO> produtosDTO, Compra compra) {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
-                    Produto produto = produtoService.listarUmProduto(compra.getOwnerUser(), produtoDTO.getProdutoId());
+                    Produto produto = produtoService.buscarProdutoAtivo(compra.getOwnerUser(), produtoDTO.getProdutoId());
                     BigDecimal valorFinalProduto = produto.getValorVenda()
                             .multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
 

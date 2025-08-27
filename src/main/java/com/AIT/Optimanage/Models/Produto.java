@@ -56,6 +56,8 @@ public class Produto {
     @Column(nullable = false)
     private Integer qtdEstoque;
     private Boolean terceirizado;
+    @Column(nullable = false)
+    private Boolean ativo = true;
 
     @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Compatibilidade> compatibilidades;

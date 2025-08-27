@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequestMapping("/fornecedor")
+@RequestMapping("/fornecedores")
 @RequiredArgsConstructor
 @Tag(name = "Fornecedores - Endereços", description = "Gerenciamento de endereços de fornecedores")
 public class FornecedorEnderecoController extends V1BaseController {

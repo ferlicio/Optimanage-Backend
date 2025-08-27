@@ -16,7 +16,7 @@ import java.util.Optional;
 @Repository
 public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
-    List<Cliente> findByOwnerUser(User ownerUser);
+    List<Cliente> findByOwnerUserAndAtivoTrue(User ownerUser);
 
     @Query("SELECT DISTINCT c FROM Cliente c " +
             "LEFT JOIN c.enderecos e " +
@@ -43,6 +43,8 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
             @Param("ativo") Boolean ativo,
             Pageable pageable
     );
+
+    Optional<Cliente> findByIdAndOwnerUserAndAtivoTrue(Integer idCliente, User loggedUser);
 
     Optional<Cliente> findByIdAndOwnerUser(Integer idCliente, User loggedUser);
 }

@@ -11,7 +11,9 @@ import java.util.Optional;
 @Repository
 public interface ServicoRepository extends JpaRepository<Servico, Integer> {
 
-    List<Servico> findAllByOwnerUser(User ownerUser);
+    List<Servico> findAllByOwnerUserAndAtivoTrue(User ownerUser);
+
+    Optional<Servico> findByIdAndOwnerUserAndAtivoTrue(Integer idServico, User ownerUser);
 
     Optional<Servico> findByIdAndOwnerUser(Integer idServico, User ownerUser);
 }
