@@ -13,10 +13,6 @@ import com.AIT.Optimanage.Models.BaseEntity;
 @AllArgsConstructor
 @Entity
 public class Funcionario extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)

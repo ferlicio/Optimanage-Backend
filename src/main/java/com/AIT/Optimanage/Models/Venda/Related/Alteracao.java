@@ -16,11 +16,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 public class Alteracao extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venda_id", referencedColumnName = "id", nullable = false)

@@ -17,10 +17,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Entity
 public class VendaPagamento extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
     @ManyToOne
     @JoinColumn(name = "venda_id", nullable = false)
     private Venda venda;

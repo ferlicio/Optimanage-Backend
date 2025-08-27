@@ -12,10 +12,6 @@ import com.AIT.Optimanage.Models.BaseEntity;
 @AllArgsConstructor
 @Entity
 public class FornecedorContato extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "fornecedor_id", referencedColumnName = "id", nullable = false)

@@ -20,11 +20,6 @@ import java.util.List;
 @AllArgsConstructor
 @Entity
 public class User extends BaseEntity implements UserDetails {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
     @Column(nullable = false)
     private String nome;
     @Column(nullable = false)
