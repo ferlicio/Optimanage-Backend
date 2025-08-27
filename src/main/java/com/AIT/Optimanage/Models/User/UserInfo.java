@@ -28,7 +28,7 @@ public class UserInfo {
 
     @JsonProperty("owner_user_id")
     public Integer getOwnerUserId() {
-        return ownerUser.getId();
+        return ownerUser != null ? ownerUser.getId() : null;
     }
 
     @JsonIgnore
@@ -38,7 +38,7 @@ public class UserInfo {
 
     @JsonProperty("tipo_acesso_id")
     public Integer getPlanoAtivoId() {
-        return planoAtivoId.getId();
+        return planoAtivoId != null ? planoAtivoId.getId() : null;
     }
 
     @Column(nullable = false)

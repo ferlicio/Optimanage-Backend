@@ -30,7 +30,7 @@ public class Venda {
 
     @JsonProperty("owner_user_id")
     public Integer getOwnerUserId() {
-        return ownerUser.getId();
+        return ownerUser != null ? ownerUser.getId() : null;
     }
 
     @JsonIgnore
@@ -40,7 +40,7 @@ public class Venda {
 
     @JsonProperty("cliente_id")
     public Integer getClienteId() {
-        return cliente.getId();
+        return cliente != null ? cliente.getId() : null;
     }
 
     @Min(1)

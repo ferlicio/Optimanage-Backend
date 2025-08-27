@@ -22,7 +22,7 @@ public class FornecedorContato {
 
     @JsonProperty("fornecedor_id")
     public Integer getFornecedorId() {
-        return fornecedor.getId();
+        return fornecedor != null ? fornecedor.getId() : null;
     }
 
     @Column(nullable = false, length = 64)
