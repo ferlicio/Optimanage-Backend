@@ -59,14 +59,6 @@ public class UserInfo extends BaseEntity {
     @Column(precision = 2)
     private Float metaAnual;
 
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
     public User getOwnerUser() {
         return ownerUser;
     }
