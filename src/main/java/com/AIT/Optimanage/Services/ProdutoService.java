@@ -8,6 +8,8 @@ import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Mappers.ProdutoMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -19,6 +21,7 @@ public class ProdutoService {
     private final ProdutoRepository produtoRepository;
     private final ProdutoMapper produtoMapper;
 
+    @Cacheable(value = "produtos", key = "#loggedUser.id")
     public List<ProdutoResponse> listarProdutos(User loggedUser) {
         return produtoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser)
                 .stream()
@@ -32,6 +35,7 @@ public class ProdutoService {
     }
 
     @Transactional
+    @CacheEvict(value = "produtos", key = "#loggedUser.id")
     public ProdutoResponse cadastrarProduto(User loggedUser, ProdutoRequest request) {
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(null);
@@ -41,6 +45,7 @@ public class ProdutoService {
     }
 
     @Transactional
+    @CacheEvict(value = "produtos", key = "#loggedUser.id")
     public ProdutoResponse editarProduto(User loggedUser, Integer idProduto, ProdutoRequest request) {
         Produto produtoSalvo = buscarProdutoAtivo(loggedUser, idProduto);
         Produto produto = produtoMapper.toEntity(request);
@@ -51,6 +56,7 @@ public class ProdutoService {
     }
 
     @Transactional
+    @CacheEvict(value = "produtos", key = "#loggedUser.id")
     public void excluirProduto(User loggedUser, Integer idProduto) {
         Produto produto = buscarProdutoAtivo(loggedUser, idProduto);
         produto.setAtivo(false);
