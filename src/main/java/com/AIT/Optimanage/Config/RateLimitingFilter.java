@@ -4,7 +4,6 @@ import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Bucket4j;
 import io.github.bucket4j.Refill;
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -31,12 +30,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final long CAPACITY = 100;
     private static final Duration DURATION = Duration.ofMinutes(1);
     private final ConcurrentMap<String, Bucket> buckets = new ConcurrentHashMap<>();
-    private final Counter blockedRequests;
+    private final MeterRegistry meterRegistry;
 
     public RateLimitingFilter(MeterRegistry meterRegistry) {
-        this.blockedRequests = Counter.builder("rate_limit.blocked_requests")
-                .description("Number of requests blocked due to rate limiting")
-                .register(meterRegistry);
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -48,7 +45,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
         } else {
-            blockedRequests.increment();
+            String tenant = String.valueOf(com.AIT.Optimanage.Support.TenantContext.getTenantId());
+            meterRegistry.counter("rate_limit.blocked_requests", "tenant", tenant).increment();
             response.setStatus(429);
             response.getWriter().write("Too many requests");
         }
