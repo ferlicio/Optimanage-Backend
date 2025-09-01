@@ -23,6 +23,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final RateLimitingFilter rateLimitingFilter;
+    private final TenantFilter tenantFilter;
     private final AuthenticationProvider authenticationProvider;
 
     @Bean
@@ -48,9 +49,8 @@ public class SecurityConfig {
                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider)
-                // Place rate limiting early, before authentication processing
-                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
-                // JWT authentication runs before username/password auth
+                .addFilterBefore(tenantFilter, RateLimitingFilter.class)
+                .addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

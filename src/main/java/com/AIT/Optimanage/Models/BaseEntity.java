@@ -12,15 +12,24 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
+import com.AIT.Optimanage.Support.TenantEntityListener;
 
 @Getter
 @Setter
 @MappedSuperclass
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners({AuditingEntityListener.class, TenantEntityListener.class})
+@FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = Integer.class))
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public abstract class BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private Integer tenantId;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
