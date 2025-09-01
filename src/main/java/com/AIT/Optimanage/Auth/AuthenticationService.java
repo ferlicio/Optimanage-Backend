@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Auth.TokenBlacklistService;
+import com.AIT.Optimanage.Support.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,6 +26,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenBlacklistService tokenBlacklistService;
+    private final EmailService emailService;
 
     @Transactional
     public AuthenticationResponse register(RegisterRequest request) {
@@ -176,6 +178,6 @@ public class AuthenticationService {
     }
 
     private void sendCode(String destination, String code) {
-        System.out.println("Sending code " + code + " to " + destination);
+        emailService.enviarCodigo(destination, code);
     }
 }
