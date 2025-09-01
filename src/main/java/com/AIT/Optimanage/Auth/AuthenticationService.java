@@ -37,7 +37,10 @@ public class AuthenticationService {
                 .ativo(true)
                 .build();
         userRepository.save(user);
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateToken(
+                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                user
+        );
         var refreshToken = createRefreshToken(user);
         return AuthenticationResponse.builder()
                 .token(jwtToken)
@@ -61,7 +64,10 @@ public class AuthenticationService {
                     .twoFactorRequired(true)
                     .build();
         }
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateToken(
+                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                user
+        );
         var refreshToken = createRefreshToken(user);
         return AuthenticationResponse.builder()
                 .token(jwtToken)
@@ -80,7 +86,10 @@ public class AuthenticationService {
         user.setTwoFactorCode(null);
         user.setTwoFactorExpiry(null);
         userRepository.save(user);
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateToken(
+                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                user
+        );
         var refreshToken = createRefreshToken(user);
         return AuthenticationResponse.builder()
                 .token(jwtToken)
@@ -126,7 +135,10 @@ public class AuthenticationService {
             refreshTokenRepository.delete(storedToken);
             throw new RuntimeException("Refresh token invalid");
         }
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateToken(
+                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                user
+        );
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .refreshToken(token)
