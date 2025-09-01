@@ -11,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -35,6 +36,14 @@ public class User extends BaseEntity implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean twoFactorEnabled = false;
+    private String twoFactorCode;
+    private Instant twoFactorExpiry;
+    private String resetCode;
+    private Instant resetCodeExpiry;
 
     @OneToOne(mappedBy = "ownerUser", orphanRemoval = true, fetch = FetchType.LAZY)
     private UserInfo userInfo;

@@ -1,7 +1,5 @@
 package com.AIT.Optimanage.Auth;
 
-
-
 import com.AIT.Optimanage.Config.JwtService;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
@@ -14,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 
 @Service
@@ -56,12 +55,66 @@ public class AuthenticationService {
         );
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
+            sendTwoFactorCode(user);
+            return AuthenticationResponse.builder()
+                    .twoFactorRequired(true)
+                    .build();
+        }
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = createRefreshToken(user);
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    @Transactional
+    public AuthenticationResponse verifyTwoFactor(TwoFactorRequest request) {
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getTwoFactorCode() == null || !user.getTwoFactorCode().equals(request.getCode())
+                || user.getTwoFactorExpiry() == null || user.getTwoFactorExpiry().isBefore(Instant.now())) {
+            throw new RuntimeException("Invalid 2FA code");
+        }
+        user.setTwoFactorCode(null);
+        user.setTwoFactorExpiry(null);
+        userRepository.save(user);
+        var jwtToken = jwtService.generateToken(user);
+        var refreshToken = createRefreshToken(user);
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    @Transactional
+    public void toggleTwoFactor(TwoFactorToggleRequest request) {
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setTwoFactorEnabled(request.isEnable());
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        sendResetCode(user);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getResetCode() == null || !user.getResetCode().equals(request.getCode())
+                || user.getResetCodeExpiry() == null || user.getResetCodeExpiry().isBefore(Instant.now())) {
+            throw new RuntimeException("Invalid reset code");
+        }
+        user.setSenha(passwordEncoder.encode(request.getNovaSenha()));
+        user.setResetCode(null);
+        user.setResetCodeExpiry(null);
+        userRepository.save(user);
     }
 
     @Transactional
@@ -100,5 +153,29 @@ public class AuthenticationService {
                     .ifPresent(refreshTokenRepository::deleteByUser);
         }
         tokenBlacklistService.blacklistToken(token);
+    }
+
+    private void sendTwoFactorCode(User user) {
+        String code = generateCode();
+        user.setTwoFactorCode(code);
+        user.setTwoFactorExpiry(Instant.now().plusSeconds(300));
+        userRepository.save(user);
+        sendCode(user.getEmail(), code);
+    }
+
+    private void sendResetCode(User user) {
+        String code = generateCode();
+        user.setResetCode(code);
+        user.setResetCodeExpiry(Instant.now().plusSeconds(600));
+        userRepository.save(user);
+        sendCode(user.getEmail(), code);
+    }
+
+    private String generateCode() {
+        return String.format("%06d", new SecureRandom().nextInt(1_000_000));
+    }
+
+    private void sendCode(String destination, String code) {
+        System.out.println("Sending code " + code + " to " + destination);
     }
 }
