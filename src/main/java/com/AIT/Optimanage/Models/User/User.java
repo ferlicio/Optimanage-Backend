@@ -48,6 +48,13 @@ public class User extends BaseEntity implements UserDetails {
     @OneToOne(mappedBy = "ownerUser", orphanRemoval = true, fetch = FetchType.LAZY)
     private UserInfo userInfo;
 
+    @Builder.Default
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Column(nullable = false)
+    private Integer failedAttempts = 0;
+
+    private Instant lockoutExpiry;
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -71,7 +78,7 @@ public class User extends BaseEntity implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return lockoutExpiry == null || lockoutExpiry.isBefore(Instant.now());
     }
 
     @Override

@@ -12,6 +12,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 
 
@@ -43,6 +45,13 @@ public class SecurityConfig {
                                 .requestMatchers("/admin/**").hasAuthority("ADMIN")
                                 .anyRequest().authenticated()
                 )
+                .exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, authException) -> {
+                    if (authException instanceof LockedException) {
+                        response.sendError(HttpStatus.LOCKED.value(), "User account is locked");
+                    } else {
+                        response.sendError(HttpStatus.UNAUTHORIZED.value(), authException.getMessage());
+                    }
+                }))
                 .sessionManagement(
                         sessionManagement -> sessionManagement
                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

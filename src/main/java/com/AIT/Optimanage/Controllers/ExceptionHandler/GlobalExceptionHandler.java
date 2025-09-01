@@ -8,6 +8,7 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -75,6 +76,15 @@ public class GlobalExceptionHandler {
         log.warn("Access denied: {} - correlationId: {}", ex.getMessage(), correlationId);
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.FORBIDDEN.value(),
+                        ex.getMessage(), correlationId, Collections.emptyList()));
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<ErrorResponse> handleLocked(LockedException ex) {
+        String correlationId = MDC.get("correlationId");
+        log.warn("Account locked: {} - correlationId: {}", ex.getMessage(), correlationId);
+        return ResponseEntity.status(HttpStatus.LOCKED)
+                .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.LOCKED.value(),
                         ex.getMessage(), correlationId, Collections.emptyList()));
     }
 
