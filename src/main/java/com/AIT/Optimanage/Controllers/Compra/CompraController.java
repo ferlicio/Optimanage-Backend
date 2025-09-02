@@ -66,7 +66,7 @@ public class CompraController extends V1BaseController {
     @ApiResponse(responseCode = "200", description = "Sucesso")
       public ResponseEntity<Compra> listarUmaCompra(@AuthenticationPrincipal User loggedUser,
                                                     @PathVariable("idCompra") Integer idCompra) {
-          return ok(compraService.listarUmaCompra(loggedUser, idCompra));
+          return ok(compraService.listarUmaCompra(idCompra));
       }
 
     @PostMapping

@@ -68,9 +68,8 @@ public class VendaService {
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuario logado
+        // Realiza a busca no repositório com os filtros definidos
         return vendaRepository.buscarVendas(
-                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getClienteId(),
                 pesquisa.getDataInicial(),
@@ -81,8 +80,8 @@ public class VendaService {
                 pageable);
     }
 
-    public Venda listarUmaVenda(User loggedUser, Integer idVenda) {
-        return vendaRepository.findByIdAndOwnerUser(idVenda, loggedUser)
+    public Venda listarUmaVenda(Integer idVenda) {
+        return vendaRepository.findById(idVenda)
                 .orElseThrow(() -> new EntityNotFoundException("Venda não encontrada"));
     }
 
@@ -153,7 +152,7 @@ public class VendaService {
     public Venda atualizarVenda(User loggedUser, Integer vendaId, VendaDTO vendaDTO) {
         validarVenda(vendaDTO, loggedUser);
 
-        Venda venda = listarUmaVenda(loggedUser, vendaId);
+        Venda venda = listarUmaVenda(vendaId);
         Venda vendaAtualizada = Venda.builder()
                 .ownerUser(loggedUser)
                 .cliente(venda.getCliente())
@@ -219,7 +218,7 @@ public class VendaService {
     }
 
     public Venda confirmarVenda(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
         if (venda.getStatus() == StatusVenda.ORCAMENTO && venda.getVendaServicos().isEmpty()) {
             atualizarStatus(venda, StatusVenda.PENDENTE);
         } else if (venda.getStatus() == StatusVenda.ORCAMENTO) {
@@ -231,7 +230,7 @@ public class VendaService {
     }
 
     public Venda pagarVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
         podePagarVenda(venda);
 
         pagamentoVendaService.registrarPagamento(loggedUser, venda, idPagamento);
@@ -241,7 +240,7 @@ public class VendaService {
     }
 
     public Venda lancarPagamentoVenda(User loggedUser, Integer idVenda, List<PagamentoDTO> pagamentoDTO) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
         podePagarVenda(venda);
 
         for (PagamentoDTO pagamento : pagamentoDTO) {
@@ -259,7 +258,7 @@ public class VendaService {
 
 
     public Venda estornarVendaIntegral(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
         if (venda.getStatus() == StatusVenda.CONCRETIZADA || venda.getStatus() == StatusVenda.PAGA) {
             venda.setStatus(StatusVenda.AGUARDANDO_PAG);
         }
@@ -272,7 +271,7 @@ public class VendaService {
     }
 
     public Venda estornarPagamentoVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
         VendaPagamento pagamento = pagamentoVendaService.listarUmPagamento(loggedUser, idPagamento);
         if (venda.getPagamentos().contains(pagamento)) {
             pagamentoVendaService.estornarPagamento(loggedUser, pagamento);
@@ -294,7 +293,7 @@ public class VendaService {
     }
 
     public Venda agendarVenda(User loggedUser, Integer idVenda, String dataAgendada) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
 
         if (venda.getVendaServicos().isEmpty()){
             throw new IllegalArgumentException("Não é possível agendar uma venda sem serviços.");
@@ -307,7 +306,7 @@ public class VendaService {
     }
 
     public Venda finalizarAgendamentoVenda(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
         if (venda.getStatus() == StatusVenda.AGENDADA) {
             BigDecimal valorPago = venda.getValorFinal().subtract(venda.getValorPendente());
             if (valorPago.compareTo(BigDecimal.ZERO) <= 0) {
@@ -324,7 +323,7 @@ public class VendaService {
     }
 
     public Venda finalizarVenda(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
         if (venda.getStatus() == StatusVenda.ORCAMENTO) {
             throw new IllegalArgumentException("Uma venda orçamento não pode ser finalizada.");
         } else if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
@@ -338,7 +337,7 @@ public class VendaService {
 
     @CacheEvict(value = "vendas", allEntries = true)
     public Venda cancelarVenda(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = listarUmaVenda(idVenda);
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             throw new IllegalArgumentException("Uma venda concretizada não pode ser cancelada.");
         }
@@ -350,7 +349,7 @@ public class VendaService {
     private List<VendaProduto> criarListaProdutos(List<VendaProdutoDTO> produtosDTO, Venda venda) {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
-                    Produto produto = produtoService.buscarProdutoAtivo(venda.getOwnerUser(), produtoDTO.getProdutoId());
+                    Produto produto = produtoService.buscarProdutoAtivo(produtoDTO.getProdutoId());
                     BigDecimal valorProduto = produto.getValorVenda().multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
                     BigDecimal descontoProduto = valorProduto
                             .multiply(produtoDTO.getDesconto().divide(BigDecimal.valueOf(100)));
@@ -371,7 +370,7 @@ public class VendaService {
     private List<VendaServico> criarListaServicos(List<VendaServicoDTO> servicosDTO, Venda venda) {
         return servicosDTO.stream()
             .map(servicoDTO -> {
-                Servico servico = servicoService.buscarServicoAtivo(venda.getOwnerUser(), servicoDTO.getServicoId());
+                Servico servico = servicoService.buscarServicoAtivo(servicoDTO.getServicoId());
                 BigDecimal valorServico = servico.getValorVenda().multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
                 BigDecimal descontoServico = valorServico
                         .multiply(servicoDTO.getDesconto().divide(BigDecimal.valueOf(100)));

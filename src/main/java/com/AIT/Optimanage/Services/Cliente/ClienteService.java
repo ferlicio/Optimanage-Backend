@@ -38,9 +38,8 @@ public class ClienteService {
 
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
+        // Realiza a busca no repositório com os filtros definidos
         return clienteRepository.buscarClientes(
-                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getNome(),
                 pesquisa.getCpfOuCnpj(),
@@ -53,7 +52,7 @@ public class ClienteService {
     }
 
     public Cliente listarUmCliente(User loggedUser, Integer idCliente) {
-        return clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
+        return clienteRepository.findByIdAndAtivoTrue(idCliente)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
     }
 
@@ -91,7 +90,7 @@ public class ClienteService {
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
     public Cliente reativarCliente(User loggedUser, Integer idCliente) {
-        Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
+        Cliente cliente = clienteRepository.findById(idCliente)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         cliente.setAtivo(true);
         return clienteRepository.save(cliente);
@@ -100,7 +99,7 @@ public class ClienteService {
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
     public void removerCliente(User loggedUser, Integer idCliente) {
-        Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
+        Cliente cliente = clienteRepository.findById(idCliente)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         clienteRepository.delete(cliente);
     }

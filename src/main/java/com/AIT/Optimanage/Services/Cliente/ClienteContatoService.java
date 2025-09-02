@@ -18,12 +18,12 @@ public class ClienteContatoService {
     private final ClienteService clienteService;
 
     public List<ClienteContato> listarContatos(User loggedUser, Integer idCliente) {
-        return clienteContatoRepository.findAllByCliente_IdAndClienteOwnerUser(idCliente, loggedUser);
+        return clienteContatoRepository.findAllByCliente_Id(idCliente);
     }
 
     public ClienteContato listarUmContato(User loggedUser, Integer idCliente, Integer idContato) {
         Cliente cliente = clienteService.listarUmCliente(loggedUser, idCliente);
-        return clienteContatoRepository.findByIdAndCliente_IdAndClienteOwnerUser(idContato, cliente.getId(), loggedUser)
+        return clienteContatoRepository.findByIdAndCliente_Id(idContato, cliente.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Contato não encontrado"));
     }
 

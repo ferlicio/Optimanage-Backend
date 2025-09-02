@@ -66,7 +66,7 @@ public class VendaController extends V1BaseController {
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<Venda> listarUmaVenda(@AuthenticationPrincipal User loggedUser,
                                                 @PathVariable("idVenda") Integer idVenda) {
-        return ok(vendaService.listarUmaVenda(loggedUser, idVenda));
+        return ok(vendaService.listarUmaVenda(idVenda));
     }
 
     @PostMapping

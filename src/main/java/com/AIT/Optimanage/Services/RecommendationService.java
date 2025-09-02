@@ -22,7 +22,7 @@ public class RecommendationService {
 
     @Transactional(readOnly = true)
     public List<ProdutoResponse> recomendarProdutos(User loggedUser, Integer clienteId) {
-        List<Object[]> historicoCliente = vendaRepository.findTopProdutosByCliente(clienteId, loggedUser.getId());
+        List<Object[]> historicoCliente = vendaRepository.findTopProdutosByCliente(clienteId);
 
         Set<Integer> produtosCliente = historicoCliente.stream()
                 .map(r -> (Integer) r[0])
@@ -32,7 +32,7 @@ public class RecommendationService {
             return Collections.emptyList();
         }
 
-        List<Venda> vendas = vendaRepository.findAllWithProdutosByOwnerUser(loggedUser.getId());
+        List<Venda> vendas = vendaRepository.findAllWithProdutos();
 
         Map<Integer, Integer> contagemRecomendacoes = new HashMap<>();
         for (Venda venda : vendas) {

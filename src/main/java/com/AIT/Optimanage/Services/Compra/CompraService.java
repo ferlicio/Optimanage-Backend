@@ -67,9 +67,8 @@ public class CompraService {
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
+        // Realiza a busca no repositório com os filtros definidos
         return compraRepository.buscarCompras(
-                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getFornecedorId(),
                 pesquisa.getDataInicial(),
@@ -81,8 +80,8 @@ public class CompraService {
         );
     }
 
-    public Compra listarUmaCompra(User loggedUser, Integer idCompra) {
-        return compraRepository.findByIdAndOwnerUser(idCompra, loggedUser)
+    public Compra listarUmaCompra(Integer idCompra) {
+        return compraRepository.findById(idCompra)
                 .orElseThrow(() -> new RuntimeException("Compra não encontrada"));
     }
 
@@ -142,7 +141,7 @@ public class CompraService {
     public Compra editarCompra(User loggedUser, Integer idCompra, CompraDTO compraDTO) {
         validarCompra(compraDTO, loggedUser);
 
-        Compra compra = listarUmaCompra(loggedUser, idCompra);
+        Compra compra = listarUmaCompra(idCompra);
         Compra compraAtualizada = Compra.builder()
                 .ownerUser(loggedUser)
                 .fornecedor(compra.getFornecedor())
@@ -201,7 +200,7 @@ public class CompraService {
     }
 
     public Compra confirmarCompra(User loggedUser, Integer idCompra) {
-        Compra compra = listarUmaCompra(loggedUser, idCompra);
+        Compra compra = listarUmaCompra(idCompra);
         if (compra.getStatus() == StatusCompra.ORCAMENTO && compra.getCompraServicos().isEmpty()) {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         } else {
@@ -211,7 +210,7 @@ public class CompraService {
     }
 
     public Compra pagarCompra(User loggedUser, Integer idCompra, Integer idPagamento) {
-        Compra compra = listarUmaCompra(loggedUser, idCompra);
+        Compra compra = listarUmaCompra(idCompra);
         podePagarCompra(compra);
 
         pagamentoCompraService.registrarPagamento(loggedUser, compra, idPagamento);
@@ -222,7 +221,7 @@ public class CompraService {
 
     @Transactional
     public Compra lancarPagamentoCompra(User loggedUser, Integer idCompra, List<PagamentoDTO> pagamentoDTO) {
-        Compra compra = listarUmaCompra(loggedUser, idCompra);
+        Compra compra = listarUmaCompra(idCompra);
         podePagarCompra(compra);
 
         for (PagamentoDTO pagamento : pagamentoDTO) {
@@ -241,7 +240,7 @@ public class CompraService {
     }
 
     public Compra estornarCompraIntegral(User loggedUser, Integer idCompra) {
-        Compra compra = listarUmaCompra(loggedUser, idCompra);
+        Compra compra = listarUmaCompra(idCompra);
         if (compra.getStatus() == StatusCompra.CONCRETIZADO || compra.getStatus() == StatusCompra.PAGO) {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         }
@@ -254,7 +253,7 @@ public class CompraService {
     }
 
     public Compra estornarPagamentoCompra(User loggedUser, Integer idCompra, Integer idPagamento) {
-        Compra compra = listarUmaCompra(loggedUser, idCompra);
+        Compra compra = listarUmaCompra(idCompra);
         CompraPagamento pagamento = pagamentoCompraService.listarUmPagamento(loggedUser, idPagamento);
         if (compra.getPagamentos().contains(pagamento) && pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
             pagamentoCompraService.estornarPagamento(loggedUser, pagamento);
@@ -276,14 +275,14 @@ public class CompraService {
     }
 
     public Compra finalizarCompra(User loggedUser, Integer idCompra) {
-        Compra compra = listarUmaCompra(loggedUser, idCompra);
+        Compra compra = listarUmaCompra(idCompra);
         atualizarStatus(compra, StatusCompra.CONCRETIZADO);
         return compraRepository.save(compra);
     }
 
     @CacheEvict(value = "compras", allEntries = true)
     public Compra cancelarCompra(User loggedUser, Integer idCompra) {
-        Compra compra = listarUmaCompra(loggedUser, idCompra);
+        Compra compra = listarUmaCompra(idCompra);
         atualizarStatus(compra, StatusCompra.CANCELADO);
         return compraRepository.save(compra);
     }
@@ -291,7 +290,7 @@ public class CompraService {
     private List<CompraProduto> criarListaProdutos(List<CompraProdutoDTO> produtosDTO, Compra compra) {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
-                    Produto produto = produtoService.buscarProdutoAtivo(compra.getOwnerUser(), produtoDTO.getProdutoId());
+                    Produto produto = produtoService.buscarProdutoAtivo(produtoDTO.getProdutoId());
                     BigDecimal valorFinalProduto = produto.getValorVenda()
                             .multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
 
@@ -309,7 +308,7 @@ public class CompraService {
     private List<CompraServico> criarListaServicos(List<CompraServicoDTO> servicosDTO, Compra compra) {
         return servicosDTO.stream()
                 .map(servicoDTO -> {
-                    Servico servico = servicoService.buscarServicoAtivo(compra.getOwnerUser(), servicoDTO.getServicoId());
+                    Servico servico = servicoService.buscarServicoAtivo(servicoDTO.getServicoId());
                     BigDecimal valorFinalServico = servico.getValorVenda()
                             .multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
 

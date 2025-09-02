@@ -26,6 +26,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final RateLimitingFilter rateLimitingFilter;
     private final TenantFilter tenantFilter;
+    private final OwnerFilter ownerFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -58,7 +59,8 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(tenantFilter, SecurityContextHolderFilter.class)
                 .addFilterAfter(rateLimitingFilter, SecurityContextHolderFilter.class)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(ownerFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

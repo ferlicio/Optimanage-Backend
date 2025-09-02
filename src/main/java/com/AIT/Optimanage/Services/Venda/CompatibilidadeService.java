@@ -22,16 +22,16 @@ public class CompatibilidadeService {
     private final ServicoService servicoService;
 
     public List<Compatibilidade> buscarCompatibilidades(User logedUser, String nomeContexto) {
-        ContextoCompatibilidade contexto = contextoCompatibilidadeService.listarUmContextoPorNome(logedUser, nomeContexto);
+        ContextoCompatibilidade contexto = contextoCompatibilidadeService.listarUmContextoPorNome(nomeContexto);
         return compatibilidadeRepository.findByContexto_IdAndCompativelIsTrue(contexto.getId());
     }
 
     public Compatibilidade adicionarCompatibilidade(User logedUser, CompatibilidadeDTO request) {
-        ContextoCompatibilidade contexto = contextoCompatibilidadeService.listarUmContexto(logedUser, request.getContextoId());
+        ContextoCompatibilidade contexto = contextoCompatibilidadeService.listarUmContexto(request.getContextoId());
 
         Compatibilidade compatibilidade = Compatibilidade.builder()
-                .produto(request.getProdutoId() != null ? produtoService.buscarProdutoAtivo(logedUser, request.getProdutoId()) : null)
-                .servico(request.getServicoId() != null ? servicoService.buscarServicoAtivo(logedUser, request.getServicoId()) : null)
+                .produto(request.getProdutoId() != null ? produtoService.buscarProdutoAtivo(request.getProdutoId()) : null)
+                .servico(request.getServicoId() != null ? servicoService.buscarServicoAtivo(request.getServicoId()) : null)
                 .contexto(contexto)
                 .compativel(request.getCompativel())
                 .build();

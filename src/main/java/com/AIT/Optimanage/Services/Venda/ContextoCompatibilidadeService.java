@@ -13,23 +13,23 @@ public class ContextoCompatibilidadeService {
 
     private final ContextoCompatibilidadeRepository contextoRepository;
 
-    public ContextoCompatibilidade listarContextos(User loggedUser) {
-        return contextoRepository.findByOwnerUser(loggedUser)
+    public ContextoCompatibilidade listarContextos() {
+        return contextoRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
     }
 
-    public ContextoCompatibilidade listarUmContexto(User loggedUser, Integer idContexto) {
+    public ContextoCompatibilidade listarUmContexto(Integer idContexto) {
         return contextoRepository.findById(idContexto)
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
     }
 
-    public ContextoCompatibilidade listarUmContextoPorNome(User loggedUser, String nomeContexto) {
-        return contextoRepository.findByOwnerUserAndNome(loggedUser, nomeContexto)
+    public ContextoCompatibilidade listarUmContextoPorNome(String nomeContexto) {
+        return contextoRepository.findByNome(nomeContexto)
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
     }
 
     public ContextoCompatibilidade criarContexto(User logedUser, ContextoCompatibilidadeDTO request) {
-        ContextoCompatibilidade contexto = listarUmContextoPorNome(logedUser, request.getNome());
+        ContextoCompatibilidade contexto = listarUmContextoPorNome(request.getNome());
         if (contexto != null) {
             throw new RuntimeException("Contexto já existe!");
         } else {
@@ -41,13 +41,13 @@ public class ContextoCompatibilidadeService {
     }
 
     public ContextoCompatibilidade editarContexto(User loggedUser, Integer idContexto, ContextoCompatibilidadeDTO request) {
-        ContextoCompatibilidade contexto = listarUmContexto(loggedUser, idContexto);
+        ContextoCompatibilidade contexto = listarUmContexto(idContexto);
         contexto.setNome(request.getNome());
         return contextoRepository.save(contexto);
     }
 
     public void excluirContexto(User loggedUser, Integer idContexto) {
-        ContextoCompatibilidade contexto = listarUmContexto(loggedUser, idContexto);
+        ContextoCompatibilidade contexto = listarUmContexto(idContexto);
         contextoRepository.delete(contexto);
     }
 }

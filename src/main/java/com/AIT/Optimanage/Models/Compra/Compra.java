@@ -9,6 +9,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import com.AIT.Optimanage.Models.BaseEntity;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,6 +22,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@FilterDef(name = "ownerFilter", parameters = @ParamDef(name = "userId", type = Integer.class))
+@Filter(name = "ownerFilter", condition = "owner_user_id = :userId")
 public class Compra extends BaseEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

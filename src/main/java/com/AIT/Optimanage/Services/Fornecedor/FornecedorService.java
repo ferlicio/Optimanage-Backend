@@ -39,9 +39,8 @@ public class FornecedorService {
 
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
+        // Realiza a busca no repositório com os filtros definidos
         return fornecedorRepository.buscarFornecedores(
-                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getNome(),
                 pesquisa.getCpfOuCnpj(),
@@ -54,7 +53,7 @@ public class FornecedorService {
     }
 
     public Fornecedor listarUmFornecedor(User loggedUser, Integer idFornecedor) {
-        return fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, loggedUser)
+        return fornecedorRepository.findByIdAndAtivoTrue(idFornecedor)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
     }
 
@@ -87,7 +86,7 @@ public class FornecedorService {
 
     @CacheEvict(value = "fornecedores", allEntries = true)
     public Fornecedor reativarFornecedor(User loggedUser, Integer idFornecedor) {
-        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
+        Fornecedor fornecedor = fornecedorRepository.findById(idFornecedor)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(true);
         return fornecedorRepository.save(fornecedor);
@@ -95,7 +94,7 @@ public class FornecedorService {
 
     @CacheEvict(value = "fornecedores", allEntries = true)
     public void removerFornecedor(User loggedUser, Integer idFornecedor) {
-        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
+        Fornecedor fornecedor = fornecedorRepository.findById(idFornecedor)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedorRepository.delete(fornecedor);
     }
