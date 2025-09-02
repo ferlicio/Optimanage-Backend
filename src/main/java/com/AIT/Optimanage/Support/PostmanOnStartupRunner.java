@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.nio.file.Path;
 import java.util.Map;
 
 @Component
+@Profile("dev")
 public class PostmanOnStartupRunner implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(PostmanOnStartupRunner.class);
 
