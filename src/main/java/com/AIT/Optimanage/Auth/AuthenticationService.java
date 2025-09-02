@@ -5,15 +5,19 @@ import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Auth.TokenBlacklistService;
+import com.AIT.Optimanage.Support.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +29,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenBlacklistService tokenBlacklistService;
+    private final EmailService emailService;
 
     @Transactional
     public AuthenticationResponse register(RegisterRequest request) {
@@ -37,7 +42,10 @@ public class AuthenticationService {
                 .ativo(true)
                 .build();
         userRepository.save(user);
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateToken(
+                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                user
+        );
         var refreshToken = createRefreshToken(user);
         return AuthenticationResponse.builder()
                 .token(jwtToken)
@@ -47,21 +55,42 @@ public class AuthenticationService {
 
     @Transactional
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getSenha()
-                )
-        );
-        var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        var optionalUser = userRepository.findByEmail(request.getEmail());
+        var user = optionalUser.orElse(null);
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getSenha()
+                    )
+            );
+        } catch (AuthenticationException ex) {
+            if (ex instanceof BadCredentialsException && user != null) {
+                int attempts = user.getFailedAttempts() + 1;
+                user.setFailedAttempts(attempts);
+                if (attempts >= 5) {
+                    user.setLockoutExpiry(Instant.now().plus(Duration.ofMinutes(15)));
+                }
+                userRepository.save(user);
+            }
+            throw ex;
+        }
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        user.setFailedAttempts(0);
+        user.setLockoutExpiry(null);
+        userRepository.save(user);
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             sendTwoFactorCode(user);
             return AuthenticationResponse.builder()
                     .twoFactorRequired(true)
                     .build();
         }
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateToken(
+                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                user
+        );
         var refreshToken = createRefreshToken(user);
         return AuthenticationResponse.builder()
                 .token(jwtToken)
@@ -80,7 +109,10 @@ public class AuthenticationService {
         user.setTwoFactorCode(null);
         user.setTwoFactorExpiry(null);
         userRepository.save(user);
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateToken(
+                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                user
+        );
         var refreshToken = createRefreshToken(user);
         return AuthenticationResponse.builder()
                 .token(jwtToken)
@@ -126,7 +158,10 @@ public class AuthenticationService {
             refreshTokenRepository.delete(storedToken);
             throw new RuntimeException("Refresh token invalid");
         }
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateToken(
+                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                user
+        );
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .refreshToken(token)
@@ -176,6 +211,6 @@ public class AuthenticationService {
     }
 
     private void sendCode(String destination, String code) {
-        System.out.println("Sending code " + code + " to " + destination);
+        emailService.enviarCodigo(destination, code);
     }
 }

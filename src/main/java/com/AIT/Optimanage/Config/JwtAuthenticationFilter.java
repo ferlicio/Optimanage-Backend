@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import org.springframework.http.HttpStatus;
 
 @Component
 @RequiredArgsConstructor
@@ -46,6 +47,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailService.loadUserByUsername(userEmail);
+            if (!userDetails.isAccountNonLocked()) {
+                response.sendError(HttpStatus.LOCKED.value(), "User account is locked");
+                return;
+            }
             if (jwtService.isTokenValid(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,

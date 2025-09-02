@@ -1,4 +1,4 @@
-package com.AIT.Optimanage.Controllers.Admin;
+package com.AIT.Optimanage.Admin;
 
 import com.AIT.Optimanage.Support.ApiExportService;
 import jakarta.servlet.http.HttpServletRequest;
