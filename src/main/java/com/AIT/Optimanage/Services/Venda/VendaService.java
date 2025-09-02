@@ -64,9 +64,8 @@ public class VendaService {
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuario logado
+        // Realiza a busca no repositório com os filtros definidos
         return vendaRepository.buscarVendas(
-                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getClienteId(),
                 pesquisa.getDataInicial(),
@@ -78,7 +77,7 @@ public class VendaService {
     }
 
     public Venda listarUmaVenda(User loggedUser, Integer idVenda) {
-        return vendaRepository.findByIdAndOwnerUser(idVenda, loggedUser)
+        return vendaRepository.findById(idVenda)
                 .orElseThrow(() -> new EntityNotFoundException("Venda não encontrada"));
     }
 
@@ -319,7 +318,7 @@ public class VendaService {
     private List<VendaProduto> criarListaProdutos(List<VendaProdutoDTO> produtosDTO, Venda venda) {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
-                    Produto produto = produtoService.buscarProdutoAtivo(venda.getOwnerUser(), produtoDTO.getProdutoId());
+                    Produto produto = produtoService.buscarProdutoAtivo(produtoDTO.getProdutoId());
                     BigDecimal valorProduto = produto.getValorVenda().multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
                     BigDecimal descontoProduto = valorProduto
                             .multiply(produtoDTO.getDesconto().divide(BigDecimal.valueOf(100)));
@@ -340,7 +339,7 @@ public class VendaService {
     private List<VendaServico> criarListaServicos(List<VendaServicoDTO> servicosDTO, Venda venda) {
         return servicosDTO.stream()
             .map(servicoDTO -> {
-                Servico servico = servicoService.buscarServicoAtivo(venda.getOwnerUser(), servicoDTO.getServicoId());
+                Servico servico = servicoService.buscarServicoAtivo(servicoDTO.getServicoId());
                 BigDecimal valorServico = servico.getValorVenda().multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
                 BigDecimal descontoServico = valorServico
                         .multiply(servicoDTO.getDesconto().divide(BigDecimal.valueOf(100)));

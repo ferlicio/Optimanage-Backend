@@ -14,6 +14,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.AIT.Optimanage.Config.OwnerUserHibernateFilter;
+
 
 @Configuration
 @EnableWebSecurity
@@ -24,6 +26,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final RateLimitingFilter rateLimitingFilter;
     private final AuthenticationProvider authenticationProvider;
+    private final OwnerUserHibernateFilter ownerUserHibernateFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -51,7 +54,8 @@ public class SecurityConfig {
                 // Place rate limiting early, before authentication processing
                 .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 // JWT authentication runs before username/password auth
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(ownerUserHibernateFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

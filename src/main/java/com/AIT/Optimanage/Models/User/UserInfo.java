@@ -5,6 +5,9 @@ import com.AIT.Optimanage.Models.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +20,8 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@FilterDef(name = "ownerUserFilter", parameters = @ParamDef(name = "ownerUserId", type = Integer.class))
+@Filter(name = "ownerUserFilter", condition = "owner_user_id = :ownerUserId")
 public class UserInfo extends BaseEntity {
     @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)

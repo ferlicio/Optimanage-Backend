@@ -3,14 +3,11 @@ package com.AIT.Optimanage.Repositories.Compra;
 import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
-import com.AIT.Optimanage.Models.User.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import java.util.Optional;
 
 public interface CompraRepository extends JpaRepository<Compra, Integer> {
 
@@ -20,9 +17,7 @@ public interface CompraRepository extends JpaRepository<Compra, Integer> {
             "LEFT JOIN FETCH c.compraServicos vs " +
             "LEFT JOIN FETCH vs.servico s " +
             "LEFT JOIN c.pagamentos pag " +
-            "WHERE " +
-            "((:id IS NOT NULL AND c.ownerUser.id = :userId AND c.sequencialUsuario = :id) " +
-            "OR (:userId IS NULL OR c.ownerUser.id = :userId)) " +
+            "WHERE (:id IS NULL OR c.sequencialUsuario = :id) " +
             "AND (:fornecedorId IS NULL OR c.fornecedor.id = :fornecedorId) " +
             "AND (:dataInicial IS NULL OR c.dataEfetuacao >= :dataInicial) " +
             "AND (:dataFinal IS NULL OR c.dataEfetuacao <= :dataFinal) " +
@@ -30,7 +25,6 @@ public interface CompraRepository extends JpaRepository<Compra, Integer> {
             "AND (:pago IS NULL OR (CASE WHEN c.valorPendente <= 0 THEN TRUE ELSE FALSE END) = :pago) " +
             "AND (:formaPagamento IS NULL OR EXISTS (SELECT 1 FROM CompraPagamento pagSub WHERE pagSub.compra.id = c.id AND pagSub.formaPagamento = :formaPagamento))")
     Page<Compra> buscarCompras(
-            @Param("userId") Integer userId,
             @Param("id") Integer id,
             @Param("fornecedorId") Integer fornecedorId,
             @Param("dataInicial") String dataInicial,
@@ -40,6 +34,5 @@ public interface CompraRepository extends JpaRepository<Compra, Integer> {
             @Param("formaPagamento") FormaPagamento formaPagamento,
             Pageable pageable
     );
-
-    Optional<Compra> findByIdAndOwnerUser(Integer idCompra, User loggedUser);
 }
+

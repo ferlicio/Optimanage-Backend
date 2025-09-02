@@ -63,9 +63,8 @@ public class CompraService {
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
+        // Realiza a busca no repositório com os filtros definidos
         return compraRepository.buscarCompras(
-                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getFornecedorId(),
                 pesquisa.getDataInicial(),
@@ -78,7 +77,7 @@ public class CompraService {
     }
 
     public Compra listarUmaCompra(User loggedUser, Integer idCompra) {
-        return compraRepository.findByIdAndOwnerUser(idCompra, loggedUser)
+        return compraRepository.findById(idCompra)
                 .orElseThrow(() -> new RuntimeException("Compra não encontrada"));
     }
 
@@ -266,7 +265,7 @@ public class CompraService {
     private List<CompraProduto> criarListaProdutos(List<CompraProdutoDTO> produtosDTO, Compra compra) {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
-                    Produto produto = produtoService.buscarProdutoAtivo(compra.getOwnerUser(), produtoDTO.getProdutoId());
+                    Produto produto = produtoService.buscarProdutoAtivo(produtoDTO.getProdutoId());
                     BigDecimal valorFinalProduto = produto.getValorVenda()
                             .multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
 
@@ -284,7 +283,7 @@ public class CompraService {
     private List<CompraServico> criarListaServicos(List<CompraServicoDTO> servicosDTO, Compra compra) {
         return servicosDTO.stream()
                 .map(servicoDTO -> {
-                    Servico servico = servicoService.buscarServicoAtivo(compra.getOwnerUser(), servicoDTO.getServicoId());
+                    Servico servico = servicoService.buscarServicoAtivo(servicoDTO.getServicoId());
                     BigDecimal valorFinalServico = servico.getValorVenda()
                             .multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
 

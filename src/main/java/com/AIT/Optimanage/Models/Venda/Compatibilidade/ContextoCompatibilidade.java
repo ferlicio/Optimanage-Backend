@@ -3,6 +3,9 @@ package com.AIT.Optimanage.Models.Venda.Compatibilidade;
 import com.AIT.Optimanage.Models.User.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +17,8 @@ import com.AIT.Optimanage.Models.BaseEntity;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@FilterDef(name = "ownerUserFilter", parameters = @ParamDef(name = "ownerUserId", type = Integer.class))
+@Filter(name = "ownerUserFilter", condition = "owner_user_id = :ownerUserId")
 public class ContextoCompatibilidade extends BaseEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

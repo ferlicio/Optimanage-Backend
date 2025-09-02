@@ -7,6 +7,9 @@ import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import com.AIT.Optimanage.Models.BaseEntity;
@@ -20,6 +23,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@FilterDef(name = "ownerUserFilter", parameters = @ParamDef(name = "ownerUserId", type = Integer.class))
+@Filter(name = "ownerUserFilter", condition = "owner_user_id = :ownerUserId")
 public class Venda extends BaseEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
