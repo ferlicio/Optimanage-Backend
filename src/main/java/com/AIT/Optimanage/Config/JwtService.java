@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Config;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwt;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -46,6 +47,9 @@ public class JwtService {
     ) {
         return Jwts
                 .builder()
+                .header()
+                    .add("kid", jwtProperties.getPrimaryKeyId())
+                    .and()
                 .claims()
                     .subject(userDetails.getUsername())
                     .add(extraClaims)
@@ -74,16 +78,22 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String token) {
+        Jwt<?, ?> unverified = Jwts.parser().build().parse(token);
+        String kid = (String) unverified.getHeader().get("kid");
         return Jwts
                 .parser()
-                .verifyWith(getSignInKey())
+                .verifyWith(getSignInKey(kid))
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
 
     private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getPrimaryKey());
+        return getSignInKey(jwtProperties.getPrimaryKeyId());
+    }
+
+    private SecretKey getSignInKey(String kid) {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getKey(kid));
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
