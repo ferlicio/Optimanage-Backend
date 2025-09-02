@@ -119,6 +119,17 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 2. Rodar testes: `./mvnw test`
 3. Executar aplicação: `./mvnw spring-boot:run`
 
+### Perfil de desenvolvimento
+Para habilitar o perfil `dev` e gerar a coleção Postman automaticamente na inicialização, execute a aplicação com o perfil de desenvolvimento:
+
+```
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+Ou defina a variável de ambiente `SPRING_PROFILES_ACTIVE=dev` ao executar o JAR.
+
+O arquivo `src/main/resources/application-dev.properties` ativa esse perfil.
+
 ## Migrações de Banco de Dados
 As migrações de esquema são gerenciadas pelo [Flyway](https://flywaydb.org/). Os scripts SQL ficam em `src/main/resources/db/migration` e são aplicados automaticamente na inicialização da aplicação.
 
