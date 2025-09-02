@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -44,4 +45,17 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
     );
 
     Optional<Venda> findByIdAndOwnerUser(Integer idVenda, User loggedUser);
+
+    @Query("SELECT vp.produto.id AS produtoId, SUM(vp.quantidade) AS totalQuantidade " +
+            "FROM Venda v JOIN v.vendaProdutos vp " +
+            "WHERE v.cliente.id = :clienteId AND v.ownerUser.id = :userId " +
+            "GROUP BY vp.produto.id ORDER BY totalQuantidade DESC")
+    List<Object[]> findTopProdutosByCliente(@Param("clienteId") Integer clienteId,
+                                            @Param("userId") Integer userId);
+
+    @Query("SELECT DISTINCT v FROM Venda v " +
+            "JOIN FETCH v.vendaProdutos vp " +
+            "JOIN FETCH vp.produto p " +
+            "WHERE v.ownerUser.id = :userId")
+    List<Venda> findAllWithProdutosByOwnerUser(@Param("userId") Integer userId);
 }
