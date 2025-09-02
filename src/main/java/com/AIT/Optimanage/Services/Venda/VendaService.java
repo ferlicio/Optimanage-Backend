@@ -17,6 +17,7 @@ import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
 import com.AIT.Optimanage.Models.Venda.VendaProduto;
 import com.AIT.Optimanage.Models.Venda.VendaServico;
+import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaServicoRepository;
@@ -26,6 +27,7 @@ import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -43,6 +45,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VendaService {
 
     private final VendaRepository vendaRepository;
@@ -53,6 +56,7 @@ public class VendaService {
     private final VendaServicoRepository vendaServicoRepository;
     private final ContadorService contadorService;
     private final PagamentoVendaService pagamentoVendaService;
+    private final ProdutoRepository produtoRepository;
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -130,6 +134,16 @@ public class VendaService {
         vendaRepository.save(novaVenda);
         vendaProdutoRepository.saveAll(vendaProdutos);
         vendaServicoRepository.saveAll(vendaServicos);
+
+        vendaProdutos.forEach(vp -> {
+            log.info("Reduzindo estoque do produto {} em {} unidades", vp.getProduto().getId(), vp.getQuantidade());
+            int updated = produtoRepository.reduzirEstoque(vp.getProduto().getId(), vp.getQuantidade());
+            if (updated == 0) {
+                log.warn("Estoque insuficiente para o produto {}", vp.getProduto().getId());
+                throw new IllegalArgumentException("Estoque insuficiente para o produto " + vp.getProduto().getNome());
+            }
+        });
+
         contadorService.IncrementarContador(Tabela.VENDA, loggedUser);
         return novaVenda;
     }
@@ -154,7 +168,14 @@ public class VendaService {
                 .observacoes(vendaDTO.getObservacoes())
                 .build();
 
-        // Remove os produtos e serviços antigos
+        // Devolve estoque dos produtos antigos e remove os registros
+        venda.getVendaProdutos().forEach(vp -> {
+            log.info("Restaurando estoque do produto {} em {} unidades", vp.getProduto().getId(), vp.getQuantidade());
+            int updated = produtoRepository.incrementarEstoque(vp.getProduto().getId(), vp.getQuantidade());
+            if (updated == 0) {
+                log.warn("Falha ao restaurar estoque do produto {}", vp.getProduto().getId());
+            }
+        });
         vendaProdutoRepository.deleteByVenda(venda);
         vendaServicoRepository.deleteByVenda(venda);
 
@@ -184,6 +205,16 @@ public class VendaService {
 
         vendaProdutoRepository.saveAll(vendaProdutos);
         vendaServicoRepository.saveAll(vendaServicos);
+
+        vendaProdutos.forEach(vp -> {
+            log.info("Reduzindo estoque do produto {} em {} unidades", vp.getProduto().getId(), vp.getQuantidade());
+            int updated = produtoRepository.reduzirEstoque(vp.getProduto().getId(), vp.getQuantidade());
+            if (updated == 0) {
+                log.warn("Estoque insuficiente para o produto {}", vp.getProduto().getId());
+                throw new IllegalArgumentException("Estoque insuficiente para o produto " + vp.getProduto().getNome());
+            }
+        });
+
         return vendaRepository.save(venda);
     }
 

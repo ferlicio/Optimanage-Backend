@@ -20,11 +20,13 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Compra.CompraProdutoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
+import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -42,6 +44,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CompraService {
 
     private final CompraRepository compraRepository;
@@ -52,6 +55,7 @@ public class CompraService {
     private final CompraProdutoRepository compraProdutoRepository;
     private final CompraServicoRepository compraServicoRepository;
     private final PagamentoCompraService pagamentoCompraService;
+    private final ProdutoRepository produtoRepository;
 
     @Cacheable(value = "compras", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -123,6 +127,12 @@ public class CompraService {
         compraRepository.save(novaCompra);
         compraProdutoRepository.saveAll(compraProdutos);
         compraServicoRepository.saveAll(compraServicos);
+
+        compraProdutos.forEach(cp -> {
+            log.info("Incrementando estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
+            produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+        });
+
         contadorService.IncrementarContador(Tabela.COMPRA, loggedUser);
         return novaCompra;
     }
@@ -145,6 +155,15 @@ public class CompraService {
                 .status(compraDTO.getStatus())
                 .observacoes(compraDTO.getObservacoes())
                 .build();
+
+        compra.getCompraProdutos().forEach(cp -> {
+            log.info("Revertendo estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
+            int updated = produtoRepository.reduzirEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            if (updated == 0) {
+                log.warn("Estoque insuficiente para reverter produto {}", cp.getProduto().getId());
+                throw new IllegalArgumentException("Estoque insuficiente para reverter produto " + cp.getProduto().getNome());
+            }
+        });
 
         compraProdutoRepository.deleteAll(compra.getCompraProdutos());
         compraServicoRepository.deleteAll(compra.getCompraServicos());
@@ -172,6 +191,12 @@ public class CompraService {
 
         compraProdutoRepository.saveAll(compraProdutos);
         compraServicoRepository.saveAll(compraServicos);
+
+        compraProdutos.forEach(cp -> {
+            log.info("Incrementando estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
+            produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+        });
+
         return compraRepository.save(compra);
     }
 
