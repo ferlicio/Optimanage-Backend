@@ -134,4 +134,7 @@ Para executar as migrações manualmente, utilize o Maven especificando a conex�
 ## Monitoramento
 - `GET /actuator/health` – verificar status da aplicação.
 - `GET /actuator/info` – informações adicionais incluindo contagem de clientes e produtos.
+- `GET /actuator/metrics` – métricas do sistema e da JVM.
+- `GET /actuator/prometheus` – métricas no formato Prometheus.
+- Traces são exportados via OpenTelemetry OTLP para `http://localhost:4317` por padrão.
 
