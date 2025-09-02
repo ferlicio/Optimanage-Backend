@@ -14,6 +14,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceState;
+import io.opentelemetry.context.Scope;
+
 /**
  * Filter that generates a correlation id for each request and stores it in the MDC.
  */
@@ -29,9 +35,18 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        String correlationId = UUID.randomUUID().toString();
+        String correlationId = request.getHeader(CORRELATION_ID_KEY);
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = UUID.randomUUID().toString();
+        }
         MDC.put(CORRELATION_ID_KEY, correlationId);
-        try {
+        response.setHeader(CORRELATION_ID_KEY, correlationId);
+
+        String traceId = correlationId.replace("-", "");
+        String spanId = traceId.substring(0, 16);
+        SpanContext spanContext = SpanContext.create(traceId, spanId, TraceFlags.getSampled(), TraceState.getDefault());
+        Span span = Span.wrap(spanContext);
+        try (Scope scope = span.makeCurrent()) {
             filterChain.doFilter(request, response);
             log.info("Request {} {} completed successfully - correlationId: {}", request.getMethod(), request.getRequestURI(), correlationId);
         } finally {
