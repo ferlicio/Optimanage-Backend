@@ -6,12 +6,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import com.AIT.Optimanage.Models.BaseEntity;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@FilterDef(name = "ownerFilter", parameters = @ParamDef(name = "userId", type = Integer.class))
+@Filter(name = "ownerFilter", condition = "owner_user_id = :userId")
 public class Funcionario extends BaseEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

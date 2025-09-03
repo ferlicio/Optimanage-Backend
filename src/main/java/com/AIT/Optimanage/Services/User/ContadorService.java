@@ -14,7 +14,7 @@ public class ContadorService {
     private final ContadorRepository contadorRepository;
 
     public Contador BuscarContador(Tabela tabela, User loggedUser) {
-        Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, loggedUser);
+        Contador contador = contadorRepository.getByNomeTabela(tabela);
         if (contador == null) {
             return contadorRepository.save(Contador.builder()
                     .ownerUser(loggedUser)
@@ -27,7 +27,7 @@ public class ContadorService {
     }
 
     public void IncrementarContador(Tabela tabela, User ownerUser) {
-        Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, ownerUser);
+        Contador contador = contadorRepository.getByNomeTabela(tabela);
         contador.setContagemAtual(contador.getContagemAtual() + 1);
         contadorRepository.save(contador);
     }

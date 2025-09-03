@@ -9,6 +9,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 
 import java.time.LocalDate;
 
@@ -17,6 +20,8 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@FilterDef(name = "ownerFilter", parameters = @ParamDef(name = "userId", type = Integer.class))
+@Filter(name = "ownerFilter", condition = "owner_user_id = :userId")
 public class UserInfo extends BaseEntity {
     @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)

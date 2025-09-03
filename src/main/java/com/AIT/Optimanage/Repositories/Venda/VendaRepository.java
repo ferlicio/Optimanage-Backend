@@ -1,6 +1,5 @@
 package com.AIT.Optimanage.Repositories.Venda;
 
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Models.Venda.Venda;
@@ -24,8 +23,7 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
             "LEFT JOIN FETCH vs.servico s " +
             "LEFT JOIN v.pagamentos pag " +
             "WHERE " +
-            "((:id IS NOT NULL AND v.ownerUser.id = :userId AND v.sequencialUsuario = :id) " +
-            "OR (:userId IS NULL OR v.ownerUser.id = :userId)) " +
+            "(:id IS NULL OR v.sequencialUsuario = :id) " +
             "AND (:clienteId IS NULL OR v.cliente.id = :clienteId) " +
             "AND (:dataInicial IS NULL OR v.dataEfetuacao >= :dataInicial) " +
             "AND (:dataFinal IS NULL OR v.dataEfetuacao <= :dataFinal) " +
@@ -33,7 +31,6 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
             "AND (:pago IS NULL OR (CASE WHEN v.valorPendente <= 0 THEN TRUE ELSE FALSE END) = :pago) " +
             "AND (:formaPagamento IS NULL OR EXISTS (SELECT 1 FROM VendaPagamento pagSub WHERE pagSub.venda.id = v.id AND pagSub.formaPagamento = :formaPagamento))")
     Page<Venda> buscarVendas(
-            @Param("userId") Integer userId,
             @Param("id") Integer id,
             @Param("clienteId") Integer clienteId,
             @Param("dataInicial") String dataInicial,
@@ -44,18 +41,16 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
             Pageable pageable
     );
 
-    Optional<Venda> findByIdAndOwnerUser(Integer idVenda, User loggedUser);
+    Optional<Venda> findById(Integer idVenda);
 
     @Query("SELECT vp.produto.id AS produtoId, SUM(vp.quantidade) AS totalQuantidade " +
             "FROM Venda v JOIN v.vendaProdutos vp " +
-            "WHERE v.cliente.id = :clienteId AND v.ownerUser.id = :userId " +
+            "WHERE v.cliente.id = :clienteId " +
             "GROUP BY vp.produto.id ORDER BY totalQuantidade DESC")
-    List<Object[]> findTopProdutosByCliente(@Param("clienteId") Integer clienteId,
-                                            @Param("userId") Integer userId);
+    List<Object[]> findTopProdutosByCliente(@Param("clienteId") Integer clienteId);
 
     @Query("SELECT DISTINCT v FROM Venda v " +
             "JOIN FETCH v.vendaProdutos vp " +
-            "JOIN FETCH vp.produto p " +
-            "WHERE v.ownerUser.id = :userId")
-    List<Venda> findAllWithProdutosByOwnerUser(@Param("userId") Integer userId);
+            "JOIN FETCH vp.produto p")
+    List<Venda> findAllWithProdutos();
 }

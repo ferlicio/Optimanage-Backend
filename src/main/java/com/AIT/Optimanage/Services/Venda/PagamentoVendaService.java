@@ -1,11 +1,12 @@
 package com.AIT.Optimanage.Services.Venda;
 
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
+import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Venda.PagamentoVendaRepository;
+import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,27 +18,31 @@ import java.util.List;
 public class PagamentoVendaService {
 
     private final PagamentoVendaRepository pagamentoVendaRepository;
+    private final VendaRepository vendaRepository;
 
     public List<VendaPagamento> listarPagamentosVenda(User loggedUser, Integer idVenda) {
-        return pagamentoVendaRepository.findAllByVendaIdAndVendaOwnerUser(idVenda, loggedUser);
+        Venda venda = vendaRepository.findById(idVenda)
+                .orElseThrow(() -> new RuntimeException("Venda não encontrada"));
+        return pagamentoVendaRepository.findAllByVenda(venda);
     }
 
     public List<VendaPagamento> listarPagamentosRealizadosVenda(User loggedUser, Integer idVenda) {
-        return pagamentoVendaRepository.findAllByVendaIdAndVendaOwnerUserAndStatusPagamento(idVenda, loggedUser, StatusPagamento.PAGO);
+        Venda venda = vendaRepository.findById(idVenda)
+                .orElseThrow(() -> new RuntimeException("Venda não encontrada"));
+        return pagamentoVendaRepository.findAllByVendaAndStatusPagamento(venda, StatusPagamento.PAGO);
     }
 
-    private VendaPagamento listarUmPagamentoVenda(User loggedUser, Venda venda, Integer idPagamento) {
-        return pagamentoVendaRepository.findByIdAndVendaAndVendaOwnerUser(idPagamento, venda, loggedUser)
+    private VendaPagamento listarUmPagamentoVenda(Venda venda, Integer idPagamento) {
+        return pagamentoVendaRepository.findByIdAndVenda(idPagamento, venda)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 
-    public VendaPagamento listarUmPagamento(User loggedUser, Integer idPagamento) {
-        return pagamentoVendaRepository.findByIdAndVendaOwnerUser(idPagamento, loggedUser)
-                .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
+    public VendaPagamento listarUmPagamento(Venda venda, Integer idPagamento) {
+        return listarUmPagamentoVenda(venda, idPagamento);
     }
 
-    public void registrarPagamento(User logedUser, Venda venda, Integer idPagamento) {
-        VendaPagamento pagamento = listarUmPagamentoVenda(logedUser, venda, idPagamento);
+    public void registrarPagamento(Venda venda, Integer idPagamento) {
+        VendaPagamento pagamento = listarUmPagamentoVenda(venda, idPagamento);
 
         pagamento.setDataPagamento(LocalDate.now());
         pagamento.setStatusPagamento(StatusPagamento.PAGO);
@@ -59,17 +64,8 @@ public class PagamentoVendaService {
         pagamentoVendaRepository.save(pagamento);
     }
 
-    public void estornarPagamento(User logedUser, Integer idPagamento){
-        VendaPagamento vendaPagamento = listarUmPagamento(logedUser, idPagamento);
-        if (vendaPagamento.getStatusPagamento() != StatusPagamento.PAGO) {
-            throw new RuntimeException("O pagamento não pode ser estornado");
-        }
-        vendaPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
-        pagamentoVendaRepository.save(vendaPagamento);
-    }
-
-    public void estornarPagamento(User logedUser, VendaPagamento pagamento) {
-        VendaPagamento vendaPagamento = listarUmPagamento(logedUser, pagamento.getId());
+    public void estornarPagamento(VendaPagamento pagamento) {
+        VendaPagamento vendaPagamento = listarUmPagamento(pagamento.getVenda(), pagamento.getId());
         if (vendaPagamento.getStatusPagamento() != StatusPagamento.PAGO) {
             throw new RuntimeException("O pagamento não pode ser estornado");
         }

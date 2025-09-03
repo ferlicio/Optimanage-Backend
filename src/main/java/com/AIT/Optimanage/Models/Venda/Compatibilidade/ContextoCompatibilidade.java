@@ -8,12 +8,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import com.AIT.Optimanage.Models.BaseEntity;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@FilterDef(name = "ownerFilter", parameters = @ParamDef(name = "userId", type = Integer.class))
+@Filter(name = "ownerFilter", condition = "owner_user_id = :userId")
 public class ContextoCompatibilidade extends BaseEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

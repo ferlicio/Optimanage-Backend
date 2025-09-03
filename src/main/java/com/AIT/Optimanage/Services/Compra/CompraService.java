@@ -67,9 +67,8 @@ public class CompraService {
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
+        // Realiza a busca no repositório com os filtros definidos
         return compraRepository.buscarCompras(
-                loggedUser.getId(),
                 pesquisa.getId(),
                 pesquisa.getFornecedorId(),
                 pesquisa.getDataInicial(),
@@ -82,7 +81,7 @@ public class CompraService {
     }
 
     public Compra listarUmaCompra(User loggedUser, Integer idCompra) {
-        return compraRepository.findByIdAndOwnerUser(idCompra, loggedUser)
+        return compraRepository.findById(idCompra)
                 .orElseThrow(() -> new RuntimeException("Compra não encontrada"));
     }
 
@@ -214,7 +213,7 @@ public class CompraService {
         Compra compra = listarUmaCompra(loggedUser, idCompra);
         podePagarCompra(compra);
 
-        pagamentoCompraService.registrarPagamento(loggedUser, compra, idPagamento);
+        pagamentoCompraService.registrarPagamento(compra, idPagamento);
 
         atualizarCompraPosPagamento(compra);
         return compraRepository.save(compra);
@@ -248,16 +247,16 @@ public class CompraService {
         compra.setValorPendente(compra.getValorFinal());
         compra.getPagamentos().forEach(pagamento
                 -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
-                        { pagamentoCompraService.estornarPagamento(loggedUser, pagamento); }
+                        { pagamentoCompraService.estornarPagamento(pagamento); }
                     });
         return compraRepository.save(compra);
     }
 
     public Compra estornarPagamentoCompra(User loggedUser, Integer idCompra, Integer idPagamento) {
         Compra compra = listarUmaCompra(loggedUser, idCompra);
-        CompraPagamento pagamento = pagamentoCompraService.listarUmPagamento(loggedUser, idPagamento);
+        CompraPagamento pagamento = pagamentoCompraService.listarUmPagamento(compra, idPagamento);
         if (compra.getPagamentos().contains(pagamento) && pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
-            pagamentoCompraService.estornarPagamento(loggedUser, pagamento);
+            pagamentoCompraService.estornarPagamento(pagamento);
         } else {
             throw new IllegalArgumentException("O pagamento informado não pode ser estornado");
         }
@@ -291,7 +290,7 @@ public class CompraService {
     private List<CompraProduto> criarListaProdutos(List<CompraProdutoDTO> produtosDTO, Compra compra) {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
-                    Produto produto = produtoService.buscarProdutoAtivo(compra.getOwnerUser(), produtoDTO.getProdutoId());
+                    Produto produto = produtoService.buscarProdutoAtivo(produtoDTO.getProdutoId());
                     BigDecimal valorFinalProduto = produto.getValorVenda()
                             .multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
 
@@ -309,7 +308,7 @@ public class CompraService {
     private List<CompraServico> criarListaServicos(List<CompraServicoDTO> servicosDTO, Compra compra) {
         return servicosDTO.stream()
                 .map(servicoDTO -> {
-                    Servico servico = servicoService.buscarServicoAtivo(compra.getOwnerUser(), servicoDTO.getServicoId());
+                    Servico servico = servicoService.buscarServicoAtivo(servicoDTO.getServicoId());
                     BigDecimal valorFinalServico = servico.getValorVenda()
                             .multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
 
@@ -415,7 +414,7 @@ public class CompraService {
     }
 
     public void atualizarCompraPosPagamento(Compra compra) {
-        List<CompraPagamento> pagamentos = pagamentoCompraService.listarPagamentosRealizadosCompra(compra.getOwnerUser(), compra.getId());
+        List<CompraPagamento> pagamentos = pagamentoCompraService.listarPagamentosRealizadosCompra(compra.getId());
 
         BigDecimal valorPago = pagamentos.stream().map(CompraPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
         compra.setValorPendente(compra.getValorFinal().subtract(valorPago));

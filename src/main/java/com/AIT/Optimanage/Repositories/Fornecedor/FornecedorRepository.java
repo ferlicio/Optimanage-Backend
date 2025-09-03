@@ -2,7 +2,6 @@ package com.AIT.Optimanage.Repositories.Fornecedor;
 
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
-import com.AIT.Optimanage.Models.User.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,9 +18,7 @@ public interface FornecedorRepository extends JpaRepository<Fornecedor, Integer>
     @Query("SELECT DISTINCT f FROM Fornecedor f " +
             "LEFT JOIN f.enderecos e " +
             "WHERE " +
-            "(:userId IS NULL OR f.ownerUser.id = :userId) AND " +
-            "(:id IS NULL OR f.id = :id) OR " +
-            "(:userId IS NULL OR f.ownerUser.id = :userId) AND " +
+            "(:id IS NULL OR f.id = :id) AND " +
             "(:nome IS NULL OR LOWER(f.nome) LIKE LOWER(CONCAT('%', :nome, '%')) " +
             "OR LOWER(f.nomeFantasia) LIKE LOWER(CONCAT('%', :nome, '%'))) AND " +
             "(:cpfOuCnpj IS NULL OR " +
@@ -32,7 +29,6 @@ public interface FornecedorRepository extends JpaRepository<Fornecedor, Integer>
             "(:tipoPessoa IS NULL OR f.tipoPessoa = :tipoPessoa) AND " +
             "(:ativo IS NULL OR f.ativo = :ativo)")
     Page<Fornecedor> buscarFornecedores(
-            @Param("userId") Integer userId,
             @Param("id") Integer id,
             @Param("nome") String nome,
             @Param("cpfOuCnpj") String cpfOuCnpj,
@@ -43,7 +39,5 @@ public interface FornecedorRepository extends JpaRepository<Fornecedor, Integer>
             Pageable pageable
     );
 
-    Optional<Fornecedor> findByIdAndOwnerUserAndAtivoTrue(Integer idFornecedor, User loggedUser);
-
-    Optional<Fornecedor> findByIdAndOwnerUser(Integer idFornecedor, User loggedUser);
+    Optional<Fornecedor> findByIdAndAtivoTrue(Integer idFornecedor);
 }
