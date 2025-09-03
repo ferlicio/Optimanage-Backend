@@ -34,7 +34,6 @@ public class ContextoCompatibilidadeService {
             throw new RuntimeException("Contexto já existe!");
         } else {
             return contextoRepository.save(ContextoCompatibilidade.builder()
-                    .ownerUser(logedUser)
                     .nome(request.getNome())
                     .build());
             }

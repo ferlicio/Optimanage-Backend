@@ -62,7 +62,6 @@ public class ClienteService {
     public Cliente criarCliente(User loggedUser, ClienteRequest request) {
         Cliente cliente = fromRequest(request);
         cliente.setId(null);
-        cliente.setOwnerUser(loggedUser);
         cliente.setDataCadastro(LocalDate.now());
         validarCliente(loggedUser, cliente);
         return clienteRepository.save(cliente);
@@ -74,7 +73,6 @@ public class ClienteService {
         Cliente clienteSalvo = listarUmCliente(loggedUser, idCliente);
         Cliente cliente = fromRequest(request);
         cliente.setId(clienteSalvo.getId());
-        cliente.setOwnerUser(clienteSalvo.getOwnerUser());
         cliente.setDataCadastro(clienteSalvo.getDataCadastro());
         validarCliente(loggedUser, cliente);
         return clienteRepository.save(cliente);

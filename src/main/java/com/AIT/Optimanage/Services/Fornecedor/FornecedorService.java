@@ -61,7 +61,6 @@ public class FornecedorService {
     @CacheEvict(value = "fornecedores", allEntries = true)
     public Fornecedor criarFornecedor(User loggedUser, FornecedorRequest request) {
         Fornecedor fornecedor = fromRequest(request);
-        fornecedor.setOwnerUser(loggedUser);
         fornecedor.setDataCadastro(LocalDate.now());
         validarFornecedor(loggedUser, fornecedor);
         return fornecedorRepository.save(fornecedor);
@@ -72,7 +71,6 @@ public class FornecedorService {
         Fornecedor fornecedorSalvo = listarUmFornecedor(loggedUser, idFornecedor);
         Fornecedor fornecedor = fromRequest(request);
         fornecedor.setId(fornecedorSalvo.getId());
-        fornecedor.setOwnerUser(fornecedorSalvo.getOwnerUser());
         fornecedor.setDataCadastro(fornecedorSalvo.getDataCadastro());
         validarFornecedor(loggedUser, fornecedor);
         return fornecedorRepository.save(fornecedor);
