@@ -19,20 +19,20 @@ public class PagamentoVendaService {
     private final PagamentoVendaRepository pagamentoVendaRepository;
 
     public List<VendaPagamento> listarPagamentosVenda(User loggedUser, Integer idVenda) {
-        return pagamentoVendaRepository.findAllByVendaId(idVenda);
+        return pagamentoVendaRepository.findAllByVendaIdAndVendaOwnerUser(idVenda, loggedUser);
     }
 
     public List<VendaPagamento> listarPagamentosRealizadosVenda(User loggedUser, Integer idVenda) {
-        return pagamentoVendaRepository.findAllByVendaIdAndStatusPagamento(idVenda, StatusPagamento.PAGO);
+        return pagamentoVendaRepository.findAllByVendaIdAndVendaOwnerUserAndStatusPagamento(idVenda, loggedUser, StatusPagamento.PAGO);
     }
 
     private VendaPagamento listarUmPagamentoVenda(User loggedUser, Venda venda, Integer idPagamento) {
-        return pagamentoVendaRepository.findByIdAndVenda(idPagamento, venda)
+        return pagamentoVendaRepository.findByIdAndVendaAndVendaOwnerUser(idPagamento, venda, loggedUser)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 
     public VendaPagamento listarUmPagamento(User loggedUser, Integer idPagamento) {
-        return pagamentoVendaRepository.findById(idPagamento)
+        return pagamentoVendaRepository.findByIdAndVendaOwnerUser(idPagamento, loggedUser)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 

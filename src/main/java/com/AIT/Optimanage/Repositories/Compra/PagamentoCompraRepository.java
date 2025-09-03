@@ -3,18 +3,19 @@ package com.AIT.Optimanage.Repositories.Compra;
 import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Compra.CompraPagamento;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
+import com.AIT.Optimanage.Models.User.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface PagamentoCompraRepository extends JpaRepository<CompraPagamento, Integer> {
-    Optional<CompraPagamento> findById(Integer idPagamento);
+    Optional<CompraPagamento> findByIdAndCompraOwnerUser(Integer idPagamento, User loggedUser);
 
-    Optional<CompraPagamento> findByIdAndCompra(Integer id, Compra compra);
+    Optional<CompraPagamento> findByIdAndCompraAndCompraOwnerUser(Integer id, Compra compra, User loggedUser);
 
-    List<CompraPagamento> findAllByCompraId(Integer idCompra);
+    List<CompraPagamento> findAllByCompraIdAndCompraOwnerUser(Integer idCompra, User loggedUser);
 
-    List<CompraPagamento> findAllByCompraIdAndStatusPagamento(Integer idCompra, StatusPagamento statusPagamento);
+    List<CompraPagamento> findAllByCompraIdAndCompraOwnerUserAndStatusPagamento(Integer idCompra, User loggedUser, StatusPagamento statusPagamento);
 
 }

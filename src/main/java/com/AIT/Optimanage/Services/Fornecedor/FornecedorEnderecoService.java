@@ -18,12 +18,12 @@ public class FornecedorEnderecoService {
     private final FornecedorService fornecedorService;
 
     public List<FornecedorEndereco> listarEnderecos(User loggedUser, Integer idFornecedor) {
-        return fornecedorEnderecoRepository.findAllByFornecedor_Id(idFornecedor);
+        return fornecedorEnderecoRepository.findAllByFornecedor_IdAndFornecedorOwnerUser(idFornecedor, loggedUser);
     }
 
     public FornecedorEndereco listarUmEndereco(User loggedUser, Integer idFornecedor, Integer idEndereco) {
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
-        return fornecedorEnderecoRepository.findByIdAndFornecedor_Id(idEndereco, fornecedor.getId())
+        return fornecedorEnderecoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idEndereco, fornecedor.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
     }
 

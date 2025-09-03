@@ -18,12 +18,12 @@ public class ClienteEnderecoService {
     private final ClienteService clienteService;
 
     public List<ClienteEndereco> listarEnderecos(User loggedUser, Integer idCliente) {
-        return clienteEnderecoRepository.findAllByCliente_Id(idCliente);
+        return clienteEnderecoRepository.findAllByCliente_IdAndClienteOwnerUser(idCliente, loggedUser);
     }
 
     public ClienteEndereco listarUmEndereco(User loggedUser, Integer idCliente, Integer idEndereco) {
         Cliente cliente = clienteService.listarUmCliente(loggedUser, idCliente);
-        return clienteEnderecoRepository.findByIdAndCliente_Id(idEndereco, cliente.getId())
+        return clienteEnderecoRepository.findByIdAndCliente_IdAndClienteOwnerUser(idEndereco, cliente.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
     }
 
