@@ -24,12 +24,10 @@ public class AnalyticsService {
 
     public ResumoDTO obterResumo(User user) {
         BigDecimal totalVendas = vendaRepository.findAll().stream()
-                .filter(v -> v.getOwnerUser().getId().equals(user.getId()))
                 .map(Venda::getValorFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalCompras = compraRepository.findAll().stream()
-                .filter(c -> c.getOwnerUser().getId().equals(user.getId()))
                 .map(Compra::getValorFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -39,7 +37,6 @@ public class AnalyticsService {
 
     public PrevisaoDTO preverDemanda(User user) {
         List<Venda> vendas = vendaRepository.findAll().stream()
-                .filter(v -> v.getOwnerUser().getId().equals(user.getId()))
                 .sorted(Comparator.comparing(Venda::getDataEfetuacao))
                 .toList();
 

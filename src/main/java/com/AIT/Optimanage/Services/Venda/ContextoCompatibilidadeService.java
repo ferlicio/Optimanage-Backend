@@ -13,8 +13,8 @@ public class ContextoCompatibilidadeService {
 
     private final ContextoCompatibilidadeRepository contextoRepository;
 
-    public ContextoCompatibilidade listarContextos(User loggedUser) {
-        return contextoRepository.findByOwnerUser(loggedUser)
+    public ContextoCompatibilidade listarContextos() {
+        return contextoRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
     }
 
@@ -23,13 +23,13 @@ public class ContextoCompatibilidadeService {
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
     }
 
-    public ContextoCompatibilidade listarUmContextoPorNome(User loggedUser, String nomeContexto) {
-        return contextoRepository.findByOwnerUserAndNome(loggedUser, nomeContexto)
+    public ContextoCompatibilidade listarUmContextoPorNome(String nomeContexto) {
+        return contextoRepository.findByNome(nomeContexto)
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
     }
 
     public ContextoCompatibilidade criarContexto(User logedUser, ContextoCompatibilidadeDTO request) {
-        ContextoCompatibilidade contexto = listarUmContextoPorNome(logedUser, request.getNome());
+        ContextoCompatibilidade contexto = listarUmContextoPorNome(request.getNome());
         if (contexto != null) {
             throw new RuntimeException("Contexto já existe!");
         } else {

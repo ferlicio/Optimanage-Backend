@@ -4,7 +4,6 @@ import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.FornecedorContato;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorContatoRepository;
-import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,12 +18,13 @@ public class FornecedorContatoService {
     private final FornecedorService fornecedorService;
 
     public List<FornecedorContato> listarContatos(User loggedUser, Integer idFornecedor) {
-        return fornecedorContatoRepository.findAllByFornecedor_IdAndFornecedorOwnerUser(idFornecedor, loggedUser);
+        fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
+        return fornecedorContatoRepository.findAllByFornecedorId(idFornecedor);
     }
 
     public FornecedorContato listarUmContato(User loggedUser, Integer idFornecedor, Integer idContato) {
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
-        return fornecedorContatoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idContato, fornecedor.getId(), loggedUser)
+        return fornecedorContatoRepository.findByIdAndFornecedorId(idContato, fornecedor.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Contato não encontrado"));
     }
 
