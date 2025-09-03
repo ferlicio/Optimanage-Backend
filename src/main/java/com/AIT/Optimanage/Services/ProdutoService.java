@@ -49,7 +49,6 @@ public class ProdutoService {
     public ProdutoResponse cadastrarProduto(User loggedUser, ProdutoRequest request) {
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(null);
-        produto.setOwnerUser(loggedUser);
         Produto salvo = produtoRepository.save(produto);
         return toResponse(salvo);
     }
@@ -60,7 +59,6 @@ public class ProdutoService {
         Produto produtoSalvo = buscarProdutoAtivo(loggedUser, idProduto);
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(produtoSalvo.getId());
-        produto.setOwnerUser(produtoSalvo.getOwnerUser());
         Produto atualizado = produtoRepository.save(produto);
         return toResponse(atualizado);
     }

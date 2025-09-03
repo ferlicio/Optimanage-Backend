@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Models.Venda.Compatibilidade;
 import com.AIT.Optimanage.Models.User.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +15,7 @@ import com.AIT.Optimanage.Models.BaseEntity;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@EntityListeners(OwnerEntityListener.class)
 public class ContextoCompatibilidade extends BaseEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

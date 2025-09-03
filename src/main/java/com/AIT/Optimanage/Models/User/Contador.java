@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Models.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import lombok.*;
 import com.AIT.Optimanage.Models.BaseEntity;
 
@@ -11,6 +12,7 @@ import com.AIT.Optimanage.Models.BaseEntity;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@EntityListeners(OwnerEntityListener.class)
 public class Contador extends BaseEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

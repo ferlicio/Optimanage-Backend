@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Models.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@EntityListeners(OwnerEntityListener.class)
 public class UserInfo extends BaseEntity {
     @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)

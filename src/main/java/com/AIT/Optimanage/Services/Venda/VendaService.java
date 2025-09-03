@@ -94,7 +94,6 @@ public class VendaService {
         Cliente cliente = clienteService.listarUmCliente(loggedUser, vendaDTO.getClienteId());
         Contador contador = contadorService.BuscarContador(Tabela.VENDA, loggedUser);
         Venda novaVenda = Venda.builder()
-                .ownerUser(loggedUser)
                 .cliente(cliente)
                 .sequencialUsuario(contador.getContagemAtual())
                 .dataEfetuacao(vendaDTO.getDataEfetuacao())
@@ -155,7 +154,6 @@ public class VendaService {
 
         Venda venda = listarUmaVenda(loggedUser, vendaId);
         Venda vendaAtualizada = Venda.builder()
-                .ownerUser(loggedUser)
                 .cliente(venda.getCliente())
                 .sequencialUsuario(venda.getSequencialUsuario())
                 .dataEfetuacao(vendaDTO.getDataEfetuacao())

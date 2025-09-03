@@ -17,7 +17,6 @@ public class ContadorService {
         Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, loggedUser);
         if (contador == null) {
             return contadorRepository.save(Contador.builder()
-                    .ownerUser(loggedUser)
                     .nomeTabela(tabela)
                     .contagemAtual(1)
                     .build()

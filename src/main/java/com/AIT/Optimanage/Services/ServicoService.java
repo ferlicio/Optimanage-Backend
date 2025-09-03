@@ -49,7 +49,6 @@ public class ServicoService {
     public ServicoResponse cadastrarServico(User loggedUser, ServicoRequest request) {
         Servico servico = servicoMapper.toEntity(request);
         servico.setId(null);
-        servico.setOwnerUser(loggedUser);
         Servico salvo = servicoRepository.save(servico);
         return servicoMapper.toResponse(salvo);
     }
@@ -60,7 +59,6 @@ public class ServicoService {
         Servico servicoSalvo = buscarServicoAtivo(loggedUser, idServico);
         Servico servico = servicoMapper.toEntity(request);
         servico.setId(servicoSalvo.getId());
-        servico.setOwnerUser(servicoSalvo.getOwnerUser());
         Servico atualizado = servicoRepository.save(servico);
         return servicoMapper.toResponse(atualizado);
     }

@@ -94,7 +94,6 @@ public class CompraService {
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, compraDTO.getFornecedorId());
         Contador contador = contadorService.BuscarContador(Tabela.COMPRA, loggedUser);
         Compra novaCompra = Compra.builder()
-                .ownerUser(loggedUser)
                 .fornecedor(fornecedor)
                 .sequencialUsuario(contador.getContagemAtual())
                 .dataEfetuacao(compraDTO.getDataEfetuacao())
@@ -144,7 +143,6 @@ public class CompraService {
 
         Compra compra = listarUmaCompra(loggedUser, idCompra);
         Compra compraAtualizada = Compra.builder()
-                .ownerUser(loggedUser)
                 .fornecedor(compra.getFornecedor())
                 .sequencialUsuario(compra.getSequencialUsuario())
                 .dataEfetuacao(compraDTO.getDataEfetuacao())

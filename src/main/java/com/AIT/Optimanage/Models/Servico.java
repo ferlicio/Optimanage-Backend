@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import lombok.*;
 import com.AIT.Optimanage.Models.BaseEntity;
 
@@ -17,6 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@EntityListeners(OwnerEntityListener.class)
 public class Servico extends BaseEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
