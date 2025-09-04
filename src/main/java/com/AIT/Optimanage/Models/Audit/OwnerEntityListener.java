@@ -1,7 +1,7 @@
 package com.AIT.Optimanage.Models.Audit;
 
 import com.AIT.Optimanage.Models.User.User;
-import com.AIT.Optimanage.Support.CurrentUser;
+import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 
