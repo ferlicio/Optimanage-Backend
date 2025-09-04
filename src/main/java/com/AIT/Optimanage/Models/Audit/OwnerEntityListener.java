@@ -1,11 +1,10 @@
 package com.AIT.Optimanage.Models.Audit;
 
+import com.AIT.Optimanage.Models.OwnableEntity;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Support.CurrentUser;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
-
-import java.lang.reflect.Method;
 
 public class OwnerEntityListener {
 
@@ -20,18 +19,14 @@ public class OwnerEntityListener {
     }
 
     private void setOwnerUser(Object entity) {
-        try {
-            Method getOwner = entity.getClass().getMethod("getOwnerUser");
-            Object owner = getOwner.invoke(entity);
-            if (owner == null) {
-                Method setOwner = entity.getClass().getMethod("setOwnerUser", User.class);
+        if (entity instanceof OwnableEntity) {
+            OwnableEntity ownable = (OwnableEntity) entity;
+            if (ownable.getOwnerUser() == null) {
                 User current = CurrentUser.get();
                 if (current != null) {
-                    setOwner.invoke(entity, current);
+                    ownable.setOwnerUser(current);
                 }
             }
-        } catch (Exception e) {
-            // ignore entities without ownerUser or reflection issues
         }
     }
 }
