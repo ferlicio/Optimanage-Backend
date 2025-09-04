@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Mappers.ProdutoMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -26,8 +27,9 @@ public class ProdutoService {
     private final ProdutoRepository produtoRepository;
     private final ProdutoMapper produtoMapper;
 
-    @Cacheable(value = "produtos", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
-    public Page<ProdutoResponse> listarProdutos(User loggedUser, Search pesquisa) {
+    @Cacheable(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    public Page<ProdutoResponse> listarProdutos(Search pesquisa) {
+        User loggedUser = CurrentUser.get();
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
 
@@ -39,14 +41,16 @@ public class ProdutoService {
                 .map(this::toResponse);
     }
 
-    public ProdutoResponse listarUmProduto(User loggedUser, Integer idProduto) {
+    public ProdutoResponse listarUmProduto(Integer idProduto) {
+        User loggedUser = CurrentUser.get();
         Produto produto = buscarProdutoAtivo(loggedUser, idProduto);
         return toResponse(produto);
     }
 
     @Transactional
-    @CacheEvict(value = "produtos", key = "#loggedUser.id")
-    public ProdutoResponse cadastrarProduto(User loggedUser, ProdutoRequest request) {
+    @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    public ProdutoResponse cadastrarProduto(ProdutoRequest request) {
+        User loggedUser = CurrentUser.get();
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(null);
         Produto salvo = produtoRepository.save(produto);
@@ -54,8 +58,9 @@ public class ProdutoService {
     }
 
     @Transactional
-    @CacheEvict(value = "produtos", key = "#loggedUser.id")
-    public ProdutoResponse editarProduto(User loggedUser, Integer idProduto, ProdutoRequest request) {
+    @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    public ProdutoResponse editarProduto(Integer idProduto, ProdutoRequest request) {
+        User loggedUser = CurrentUser.get();
         Produto produtoSalvo = buscarProdutoAtivo(loggedUser, idProduto);
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(produtoSalvo.getId());
@@ -64,21 +69,24 @@ public class ProdutoService {
     }
 
     @Transactional
-    @CacheEvict(value = "produtos", key = "#loggedUser.id")
-    public void excluirProduto(User loggedUser, Integer idProduto) {
+    @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    public void excluirProduto(Integer idProduto) {
+        User loggedUser = CurrentUser.get();
         Produto produto = buscarProdutoAtivo(loggedUser, idProduto);
         produto.setAtivo(false);
         produtoRepository.save(produto);
     }
 
-    public ProdutoResponse restaurarProduto(User loggedUser, Integer idProduto) {
+    public ProdutoResponse restaurarProduto(Integer idProduto) {
+        User loggedUser = CurrentUser.get();
         Produto produto = buscarProduto(loggedUser, idProduto);
         produto.setAtivo(true);
         Produto atualizado = produtoRepository.save(produto);
         return toResponse(atualizado);
     }
 
-    public void removerProduto(User loggedUser, Integer idProduto) {
+    public void removerProduto(Integer idProduto) {
+        User loggedUser = CurrentUser.get();
         Produto produto = buscarProduto(loggedUser, idProduto);
         produtoRepository.delete(produto);
     }

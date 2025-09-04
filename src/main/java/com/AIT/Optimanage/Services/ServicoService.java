@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Mappers.ServicoMapper;
 import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Repositories.ServicoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +27,9 @@ public class ServicoService {
     private final ServicoRepository servicoRepository;
     private final ServicoMapper servicoMapper;
 
-    @Cacheable(value = "servicos", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
-    public Page<ServicoResponse> listarServicos(User loggedUser, Search pesquisa) {
+    @Cacheable(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    public Page<ServicoResponse> listarServicos(Search pesquisa) {
+        User loggedUser = CurrentUser.get();
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
 
@@ -39,14 +41,15 @@ public class ServicoService {
                 .map(servicoMapper::toResponse);
     }
 
-    public ServicoResponse listarUmServico(User loggedUser, Integer idServico) {
-        Servico servico = buscarServicoAtivo(loggedUser, idServico);
+    public ServicoResponse listarUmServico(Integer idServico) {
+        Servico servico = buscarServicoAtivo(idServico);
         return servicoMapper.toResponse(servico);
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "#loggedUser.id")
-    public ServicoResponse cadastrarServico(User loggedUser, ServicoRequest request) {
+    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    public ServicoResponse cadastrarServico(ServicoRequest request) {
+        User loggedUser = CurrentUser.get();
         Servico servico = servicoMapper.toEntity(request);
         servico.setId(null);
         Servico salvo = servicoRepository.save(servico);
@@ -54,9 +57,10 @@ public class ServicoService {
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "#loggedUser.id")
-    public ServicoResponse editarServico(User loggedUser, Integer idServico, ServicoRequest request) {
-        Servico servicoSalvo = buscarServicoAtivo(loggedUser, idServico);
+    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    public ServicoResponse editarServico(Integer idServico, ServicoRequest request) {
+        User loggedUser = CurrentUser.get();
+        Servico servicoSalvo = buscarServicoAtivo(idServico);
         Servico servico = servicoMapper.toEntity(request);
         servico.setId(servicoSalvo.getId());
         Servico atualizado = servicoRepository.save(servico);
@@ -64,31 +68,36 @@ public class ServicoService {
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "#loggedUser.id")
-    public void excluirServico(User loggedUser, Integer idServico) {
-        Servico servico = buscarServicoAtivo(loggedUser, idServico);
+    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    public void excluirServico(Integer idServico) {
+        User loggedUser = CurrentUser.get();
+        Servico servico = buscarServicoAtivo(idServico);
         servico.setAtivo(false);
         servicoRepository.save(servico);
     }
 
-    public ServicoResponse restaurarServico(User loggedUser, Integer idServico) {
-        Servico servico = buscarServico(loggedUser, idServico);
+    public ServicoResponse restaurarServico(Integer idServico) {
+        User loggedUser = CurrentUser.get();
+        Servico servico = buscarServico(idServico);
         servico.setAtivo(true);
         Servico atualizado = servicoRepository.save(servico);
         return servicoMapper.toResponse(atualizado);
     }
 
-    public void removerServico(User loggedUser, Integer idServico) {
-        Servico servico = buscarServico(loggedUser, idServico);
+    public void removerServico(Integer idServico) {
+        User loggedUser = CurrentUser.get();
+        Servico servico = buscarServico(idServico);
         servicoRepository.delete(servico);
     }
 
-    private Servico buscarServico(User loggedUser, Integer idServico) {
+    private Servico buscarServico(Integer idServico) {
+        User loggedUser = CurrentUser.get();
         return servicoRepository.findByIdAndOwnerUser(idServico, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
     }
 
-    public Servico buscarServicoAtivo(User loggedUser, Integer idServico) {
+    public Servico buscarServicoAtivo(Integer idServico) {
+        User loggedUser = CurrentUser.get();
         return servicoRepository.findByIdAndOwnerUserAndAtivoTrue(idServico, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
     }

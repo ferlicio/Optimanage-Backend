@@ -6,13 +6,11 @@ import com.AIT.Optimanage.Models.Compra.DTOs.CompraDTO;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Compra.Search.CompraSearch;
 import com.AIT.Optimanage.Models.PagamentoDTO;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Services.Compra.CompraService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
@@ -33,8 +31,7 @@ public class CompraController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar compras", description = "Retorna uma página de compras")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Page<Compra>> listarCompras(@AuthenticationPrincipal User loggedUser,
-                                      @RequestParam(value = "id", required = false) Integer id,
+    public ResponseEntity<Page<Compra>> listarCompras(@RequestParam(value = "id", required = false) Integer id,
                                       @RequestParam(value = "fornecedor_id", required = false) Integer fornecedorId,
                                       @RequestParam(value = "data_inicial", required = false) String data_inicial,
                                       @RequestParam(value = "data_final", required = false) String data_final,
@@ -58,90 +55,80 @@ public class CompraController extends V1BaseController {
                 .sort(sort)
                 .order(order)
                 .build();
-        return ok(compraService.listarCompras(loggedUser, pesquisa));
+        return ok(compraService.listarCompras(pesquisa));
     }
 
     @GetMapping("/{idCompra}")
     @Operation(summary = "Listar compra", description = "Retorna uma compra pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> listarUmaCompra(@AuthenticationPrincipal User loggedUser,
-                                                    @PathVariable("idCompra") Integer idCompra) {
-          return ok(compraService.listarUmaCompra(loggedUser, idCompra));
+      public ResponseEntity<Compra> listarUmaCompra(@PathVariable("idCompra") Integer idCompra) {
+          return ok(compraService.listarUmaCompra(idCompra));
       }
 
     @PostMapping
     @Operation(summary = "Criar compra", description = "Cria uma nova compra")
     @ApiResponse(responseCode = "201", description = "Criado")
-      public ResponseEntity<Compra> criarCompra(@AuthenticationPrincipal User loggedUser,
-                               @RequestBody @Valid CompraDTO compra) {
-          return created(compraService.criarCompra(loggedUser, compra));
+      public ResponseEntity<Compra> criarCompra(@RequestBody @Valid CompraDTO compra) {
+          return created(compraService.criarCompra(compra));
       }
 
     @PutMapping("/{idCompra}")
     @Operation(summary = "Editar compra", description = "Atualiza uma compra existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> editarCompra(@AuthenticationPrincipal User loggedUser,
-                                                 @PathVariable("idCompra") Integer idCompra,
+      public ResponseEntity<Compra> editarCompra(@PathVariable("idCompra") Integer idCompra,
                                                  @RequestBody @Valid CompraDTO compra) {
-          return ok(compraService.editarCompra(loggedUser, idCompra, compra));
+          return ok(compraService.editarCompra(idCompra, compra));
       }
 
     @PutMapping("/{idCompra}/confirmar")
     @Operation(summary = "Confirmar compra", description = "Confirma uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> confirmarCompra(@AuthenticationPrincipal User loggedUser,
-                                                   @PathVariable("idCompra") Integer idCompra) {
-          return ok(compraService.confirmarCompra(loggedUser, idCompra));
+      public ResponseEntity<Compra> confirmarCompra(@PathVariable("idCompra") Integer idCompra) {
+          return ok(compraService.confirmarCompra(idCompra));
       }
 
     @PutMapping("/{idCompra}/pagar/{idPagamento}")
     @Operation(summary = "Pagar compra", description = "Realiza pagamento de uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> pagarCompra(@AuthenticationPrincipal User loggedUser,
-                                                @PathVariable("idCompra") Integer idCompra,
+      public ResponseEntity<Compra> pagarCompra(@PathVariable("idCompra") Integer idCompra,
                                                 @PathVariable("idPagamento") Integer idPagamento) {
-          return ok(compraService.pagarCompra(loggedUser, idCompra, idPagamento));
+          return ok(compraService.pagarCompra(idCompra, idPagamento));
       }
 
     @PutMapping("/{idCompra}/lancar-pagamento")
     @Operation(summary = "Lançar pagamento", description = "Registra pagamento de uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> lancarPagamentoCompra(@AuthenticationPrincipal User loggedUser,
-                                                          @PathVariable("idCompra") Integer idCompra,
+      public ResponseEntity<Compra> lancarPagamentoCompra(@PathVariable("idCompra") Integer idCompra,
                                                           @RequestBody List<@Valid PagamentoDTO> pagamentoDTO) {
-          return ok(compraService.lancarPagamentoCompra(loggedUser, idCompra, pagamentoDTO));
+          return ok(compraService.lancarPagamentoCompra(idCompra, pagamentoDTO));
       }
 
     @PutMapping("/{idCompra}/estornar")
     @Operation(summary = "Estornar compra", description = "Estorna uma compra integralmente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> estornarCompraIntegral(@AuthenticationPrincipal User loggedUser,
-                                                           @PathVariable("idCompra") Integer idCompra) {
-          return ok(compraService.estornarCompraIntegral(loggedUser, idCompra));
+      public ResponseEntity<Compra> estornarCompraIntegral(@PathVariable("idCompra") Integer idCompra) {
+          return ok(compraService.estornarCompraIntegral(idCompra));
       }
 
     @PutMapping("/{idCompra}/estornar/{idPagamento}")
     @Operation(summary = "Estornar pagamento", description = "Estorna pagamento de uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> estornarPagamentoCompra(@AuthenticationPrincipal User loggedUser,
-                                                            @PathVariable("idCompra") Integer idCompra,
+      public ResponseEntity<Compra> estornarPagamentoCompra(@PathVariable("idCompra") Integer idCompra,
                                                             @PathVariable("idPagamento") Integer idPagamento) {
-          return ok(compraService.estornarPagamentoCompra(loggedUser, idCompra, idPagamento));
+          return ok(compraService.estornarPagamentoCompra(idCompra, idPagamento));
       }
 
     @PutMapping("/{idCompra}/finalizar")
     @Operation(summary = "Finalizar compra", description = "Finaliza uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> finalizarCompra(@AuthenticationPrincipal User loggedUser,
-                                                   @PathVariable("idCompra") Integer idCompra) {
-          return ok(compraService.finalizarCompra(loggedUser, idCompra));
+      public ResponseEntity<Compra> finalizarCompra(@PathVariable("idCompra") Integer idCompra) {
+          return ok(compraService.finalizarCompra(idCompra));
       }
 
     @PutMapping("/{idCompra}/cancelar")
     @Operation(summary = "Cancelar compra", description = "Cancela uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> cancelarCompra(@AuthenticationPrincipal User loggedUser,
-                                                   @PathVariable("idCompra") Integer idCompra) {
-          return ok(compraService.cancelarCompra(loggedUser, idCompra));
+      public ResponseEntity<Compra> cancelarCompra(@PathVariable("idCompra") Integer idCompra) {
+          return ok(compraService.cancelarCompra(idCompra));
       }
 }

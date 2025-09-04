@@ -8,6 +8,7 @@ import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.Search.FornecedorSearch;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -28,9 +29,10 @@ public class FornecedorService {
 
     private final FornecedorRepository fornecedorRepository;
 
-    @Cacheable(value = "fornecedores", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public Page<Fornecedor> listarFornecedores(User loggedUser, FornecedorSearch pesquisa) {
+    public Page<Fornecedor> listarFornecedores(FornecedorSearch pesquisa) {
+        User loggedUser = CurrentUser.get();
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -53,38 +55,42 @@ public class FornecedorService {
         );
     }
 
-    public Fornecedor listarUmFornecedor(User loggedUser, Integer idFornecedor) {
+    public Fornecedor listarUmFornecedor(Integer idFornecedor) {
+        User loggedUser = CurrentUser.get();
         return fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
-    public Fornecedor criarFornecedor(User loggedUser, FornecedorRequest request) {
+    public Fornecedor criarFornecedor(FornecedorRequest request) {
+        User loggedUser = CurrentUser.get();
         Fornecedor fornecedor = fromRequest(request);
         fornecedor.setDataCadastro(LocalDate.now());
-        validarFornecedor(loggedUser, fornecedor);
+        validarFornecedor(fornecedor);
         return fornecedorRepository.save(fornecedor);
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
-    public Fornecedor editarFornecedor(User loggedUser, Integer idFornecedor, FornecedorRequest request) {
-        Fornecedor fornecedorSalvo = listarUmFornecedor(loggedUser, idFornecedor);
+    public Fornecedor editarFornecedor(Integer idFornecedor, FornecedorRequest request) {
+        User loggedUser = CurrentUser.get();
+        Fornecedor fornecedorSalvo = listarUmFornecedor(idFornecedor);
         Fornecedor fornecedor = fromRequest(request);
         fornecedor.setId(fornecedorSalvo.getId());
         fornecedor.setDataCadastro(fornecedorSalvo.getDataCadastro());
-        validarFornecedor(loggedUser, fornecedor);
+        validarFornecedor(fornecedor);
         return fornecedorRepository.save(fornecedor);
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
-    public void inativarFornecedor(User loggedUser, Integer idFornecedor) {
-        Fornecedor fornecedor = listarUmFornecedor(loggedUser, idFornecedor);
+    public void inativarFornecedor(Integer idFornecedor) {
+        Fornecedor fornecedor = listarUmFornecedor(idFornecedor);
         fornecedor.setAtivo(false);
         fornecedorRepository.save(fornecedor);
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
-    public Fornecedor reativarFornecedor(User loggedUser, Integer idFornecedor) {
+    public Fornecedor reativarFornecedor(Integer idFornecedor) {
+        User loggedUser = CurrentUser.get();
         Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(true);
@@ -92,13 +98,14 @@ public class FornecedorService {
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
-    public void removerFornecedor(User loggedUser, Integer idFornecedor) {
+    public void removerFornecedor(Integer idFornecedor) {
+        User loggedUser = CurrentUser.get();
         Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedorRepository.delete(fornecedor);
     }
 
-    public void validarFornecedor(User loggedUser, Fornecedor fornecedor) {
+    public void validarFornecedor(Fornecedor fornecedor) {
         if (fornecedor.getTipoPessoa() == TipoPessoa.PF) {
             fornecedor.setNomeFantasia(null);
             fornecedor.setRazaoSocial(null);
