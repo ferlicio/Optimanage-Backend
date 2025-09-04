@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
 import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
@@ -22,7 +23,8 @@ public class AnalyticsService {
     private final VendaRepository vendaRepository;
     private final CompraRepository compraRepository;
 
-    public ResumoDTO obterResumo(User user) {
+    public ResumoDTO obterResumo() {
+        User user = CurrentUser.get();
         BigDecimal totalVendas = vendaRepository.findAll().stream()
                 .filter(v -> v.getOwnerUser().getId().equals(user.getId()))
                 .map(Venda::getValorFinal)
@@ -37,7 +39,8 @@ public class AnalyticsService {
         return new ResumoDTO(totalVendas, totalCompras, lucro);
     }
 
-    public PrevisaoDTO preverDemanda(User user) {
+    public PrevisaoDTO preverDemanda() {
+        User user = CurrentUser.get();
         List<Venda> vendas = vendaRepository.findAll().stream()
                 .filter(v -> v.getOwnerUser().getId().equals(user.getId()))
                 .sorted(Comparator.comparing(Venda::getDataEfetuacao))

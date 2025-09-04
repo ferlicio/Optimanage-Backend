@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +22,8 @@ public class RecommendationService {
     private final ProdutoRepository produtoRepository;
 
     @Transactional(readOnly = true)
-    public List<ProdutoResponse> recomendarProdutos(User loggedUser, Integer clienteId) {
+    public List<ProdutoResponse> recomendarProdutos(Integer clienteId) {
+        User loggedUser = CurrentUser.get();
         List<Object[]> historicoCliente = vendaRepository.findTopProdutosByCliente(clienteId, loggedUser.getId());
 
         Set<Integer> produtosCliente = historicoCliente.stream()

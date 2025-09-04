@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Compra.PagamentoCompraRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,26 +19,30 @@ public class PagamentoCompraService {
 
     private final PagamentoCompraRepository pagamentoCompraRepository;
 
-    public List<CompraPagamento> listarPagamentosCompra(User loggedUser, Integer idCompra) {
+    public List<CompraPagamento> listarPagamentosCompra(Integer idCompra) {
+        User loggedUser = CurrentUser.get();
         return pagamentoCompraRepository.findAllByCompraIdAndCompraOwnerUser(idCompra, loggedUser);
     }
 
-    public List<CompraPagamento> listarPagamentosRealizadosCompra(User loggedUser, Integer idCompra) {
+    public List<CompraPagamento> listarPagamentosRealizadosCompra(Integer idCompra) {
+        User loggedUser = CurrentUser.get();
         return pagamentoCompraRepository.findAllByCompraIdAndCompraOwnerUserAndStatusPagamento(idCompra, loggedUser, StatusPagamento.PAGO);
     }
 
-    private CompraPagamento listarUmPagamentoCompra(User loggedUser, Compra compra, Integer id) {
+    private CompraPagamento listarUmPagamentoCompra(Compra compra, Integer id) {
+        User loggedUser = CurrentUser.get();
         return pagamentoCompraRepository.findByIdAndCompraAndCompraOwnerUser(id, compra, loggedUser)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 
-    public CompraPagamento listarUmPagamento(User loggedUser, Integer idPagamento) {
+    public CompraPagamento listarUmPagamento(Integer idPagamento) {
+        User loggedUser = CurrentUser.get();
         return pagamentoCompraRepository.findByIdAndCompraOwnerUser(idPagamento, loggedUser)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 
-    public void registrarPagamento(User loggedUser, Compra compra, Integer idPagamento) {
-        CompraPagamento pagamento = listarUmPagamentoCompra(loggedUser, compra , idPagamento);
+    public void registrarPagamento(Compra compra, Integer idPagamento) {
+        CompraPagamento pagamento = listarUmPagamentoCompra(compra , idPagamento);
 
         pagamento.setDataPagamento(LocalDate.now());
         pagamento.setStatusPagamento(StatusPagamento.PAGO);
@@ -59,8 +64,8 @@ public class PagamentoCompraService {
         pagamentoCompraRepository.save(compraPagamento);
     }
 
-    public CompraPagamento editarPagamento(User loggedUser, Compra compra, PagamentoDTO pagamento, Integer idPagamento) {
-        CompraPagamento compraPagamento = listarUmPagamentoCompra(loggedUser, compra, idPagamento);
+    public CompraPagamento editarPagamento(Compra compra, PagamentoDTO pagamento, Integer idPagamento) {
+        CompraPagamento compraPagamento = listarUmPagamentoCompra(compra, idPagamento);
 
         compraPagamento.setValorPago(pagamento.getValorPago());
         compraPagamento.setDataPagamento(pagamento.getDataPagamento());
@@ -71,8 +76,8 @@ public class PagamentoCompraService {
         return pagamentoCompraRepository.save(compraPagamento);
     }
 
-    public void estornarPagamento(User loggedUser, Integer idPagamento) {
-        CompraPagamento compraPagamento = listarUmPagamento(loggedUser, idPagamento);
+    public void estornarPagamento(Integer idPagamento) {
+        CompraPagamento compraPagamento = listarUmPagamento(idPagamento);
         if (compraPagamento.getStatusPagamento() != StatusPagamento.PAGO) {
             throw new RuntimeException("Pagamento não pode ser estornado");
         }
@@ -80,8 +85,8 @@ public class PagamentoCompraService {
         pagamentoCompraRepository.save(compraPagamento);
     }
 
-    public void estornarPagamento(User loggedUser, CompraPagamento pagamento) {
-        CompraPagamento compraPagamento = listarUmPagamento(loggedUser, pagamento.getId());
+    public void estornarPagamento(CompraPagamento pagamento) {
+        CompraPagamento compraPagamento = listarUmPagamento(pagamento.getId());
         if (compraPagamento.getStatusPagamento() != StatusPagamento.PAGO) {
             throw new RuntimeException("Pagamento não pode ser estornado");
         }

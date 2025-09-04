@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.Cliente.Search.ClienteSearch;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -27,9 +28,10 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
 
-    @Cacheable(value = "clientes", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "clientes", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public Page<Cliente> listarClientes(User loggedUser, ClienteSearch pesquisa) {
+    public Page<Cliente> listarClientes(ClienteSearch pesquisa) {
+        User loggedUser = CurrentUser.get();
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -52,43 +54,47 @@ public class ClienteService {
         );
     }
 
-    public Cliente listarUmCliente(User loggedUser, Integer idCliente) {
+    public Cliente listarUmCliente(Integer idCliente) {
+        User loggedUser = CurrentUser.get();
         return clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public Cliente criarCliente(User loggedUser, ClienteRequest request) {
+    public Cliente criarCliente(ClienteRequest request) {
+        User loggedUser = CurrentUser.get();
         Cliente cliente = fromRequest(request);
         cliente.setId(null);
         cliente.setDataCadastro(LocalDate.now());
-        validarCliente(loggedUser, cliente);
+        validarCliente(cliente);
         return clienteRepository.save(cliente);
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public Cliente editarCliente(User loggedUser, Integer idCliente, ClienteRequest request) {
-        Cliente clienteSalvo = listarUmCliente(loggedUser, idCliente);
+    public Cliente editarCliente(Integer idCliente, ClienteRequest request) {
+        User loggedUser = CurrentUser.get();
+        Cliente clienteSalvo = listarUmCliente(idCliente);
         Cliente cliente = fromRequest(request);
         cliente.setId(clienteSalvo.getId());
         cliente.setDataCadastro(clienteSalvo.getDataCadastro());
-        validarCliente(loggedUser, cliente);
+        validarCliente(cliente);
         return clienteRepository.save(cliente);
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public void inativarCliente(User loggedUser, Integer idCliente) {
-        Cliente cliente = listarUmCliente(loggedUser, idCliente);
+    public void inativarCliente(Integer idCliente) {
+        Cliente cliente = listarUmCliente(idCliente);
         cliente.setAtivo(false);
         clienteRepository.save(cliente);
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public Cliente reativarCliente(User loggedUser, Integer idCliente) {
+    public Cliente reativarCliente(Integer idCliente) {
+        User loggedUser = CurrentUser.get();
         Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         cliente.setAtivo(true);
@@ -97,14 +103,15 @@ public class ClienteService {
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public void removerCliente(User loggedUser, Integer idCliente) {
+    public void removerCliente(Integer idCliente) {
+        User loggedUser = CurrentUser.get();
         Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         clienteRepository.delete(cliente);
     }
 
 
-    public void validarCliente(User loggedUser, Cliente cliente) {
+    public void validarCliente(Cliente cliente) {
         if (cliente.getTipoPessoa() == TipoPessoa.PF) {
             cliente.setNomeFantasia(null);
             cliente.setRazaoSocial(null);
