@@ -5,6 +5,8 @@ import com.AIT.Optimanage.Models.Fornecedor.FornecedorContato;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorContatoRepository;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
+
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,34 +20,36 @@ public class FornecedorContatoService {
     private final FornecedorContatoRepository fornecedorContatoRepository;
     private final FornecedorService fornecedorService;
 
-    public List<FornecedorContato> listarContatos(User loggedUser, Integer idFornecedor) {
+    public List<FornecedorContato> listarContatos(Integer idFornecedor) {
+        User loggedUser = CurrentUser.get();
         return fornecedorContatoRepository.findAllByFornecedor_IdAndFornecedorOwnerUser(idFornecedor, loggedUser);
     }
 
-    public FornecedorContato listarUmContato(User loggedUser, Integer idFornecedor, Integer idContato) {
-        Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
+    public FornecedorContato listarUmContato(Integer idFornecedor, Integer idContato) {
+        User loggedUser = CurrentUser.get();
+        Fornecedor fornecedor = fornecedorService.listarUmFornecedor(idFornecedor);
         return fornecedorContatoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idContato, fornecedor.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Contato não encontrado"));
     }
 
-    public FornecedorContato cadastrarContato(User loggedUser, Integer idFornecedor, FornecedorContato contato) {
-        Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
+    public FornecedorContato cadastrarContato(Integer idFornecedor, FornecedorContato contato) {
+        Fornecedor fornecedor = fornecedorService.listarUmFornecedor(idFornecedor);
 
         contato.setId(null);
         contato.setFornecedor(fornecedor);
         return fornecedorContatoRepository.save(contato);
     }
 
-    public FornecedorContato editarContato(User loggedUser, Integer idFornecedor, Integer idContato, FornecedorContato contato) {
-        FornecedorContato contatoExistente = listarUmContato(loggedUser, idFornecedor, idContato);
+    public FornecedorContato editarContato(Integer idFornecedor, Integer idContato, FornecedorContato contato) {
+        FornecedorContato contatoExistente = listarUmContato(idFornecedor, idContato);
 
         contato.setId(contatoExistente.getId());
         contato.setFornecedor(contatoExistente.getFornecedor());
         return fornecedorContatoRepository.save(contatoExistente);
     }
 
-    public void excluirContato(User loggedUser, Integer idFornecedor, Integer idContato) {
-        FornecedorContato contato = listarUmContato(loggedUser, idFornecedor, idContato);
+    public void excluirContato(Integer idFornecedor, Integer idContato) {
+        FornecedorContato contato = listarUmContato(idFornecedor, idContato);
         fornecedorContatoRepository.delete(contato);
     }
 }

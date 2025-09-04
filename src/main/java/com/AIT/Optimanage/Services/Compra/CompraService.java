@@ -419,7 +419,7 @@ public class CompraService {
     }
 
     public void atualizarCompraPosPagamento(Compra compra) {
-        List<CompraPagamento> pagamentos = pagamentoCompraService.listarPagamentosRealizadosCompra(compra.getOwnerUser(), compra.getId());
+        List<CompraPagamento> pagamentos = pagamentoCompraService.listarPagamentosRealizadosCompra(compra.getId());
 
         BigDecimal valorPago = pagamentos.stream().map(CompraPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
         compra.setValorPendente(compra.getValorFinal().subtract(valorPago));

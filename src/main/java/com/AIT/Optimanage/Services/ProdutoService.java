@@ -42,8 +42,7 @@ public class ProdutoService {
     }
 
     public ProdutoResponse listarUmProduto(Integer idProduto) {
-        User loggedUser = CurrentUser.get();
-        Produto produto = buscarProdutoAtivo(loggedUser, idProduto);
+        Produto produto = buscarProdutoAtivo(idProduto);
         return toResponse(produto);
     }
 
@@ -60,8 +59,7 @@ public class ProdutoService {
     @Transactional
     @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
     public ProdutoResponse editarProduto(Integer idProduto, ProdutoRequest request) {
-        User loggedUser = CurrentUser.get();
-        Produto produtoSalvo = buscarProdutoAtivo(loggedUser, idProduto);
+        Produto produtoSalvo = buscarProdutoAtivo(idProduto);
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(produtoSalvo.getId());
         Produto atualizado = produtoRepository.save(produto);
@@ -71,33 +69,30 @@ public class ProdutoService {
     @Transactional
     @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
     public void excluirProduto(Integer idProduto) {
-        User loggedUser = CurrentUser.get();
-        Produto produto = buscarProdutoAtivo(loggedUser, idProduto);
+        Produto produto = buscarProdutoAtivo(idProduto);
         produto.setAtivo(false);
         produtoRepository.save(produto);
     }
 
     public ProdutoResponse restaurarProduto(Integer idProduto) {
-        User loggedUser = CurrentUser.get();
-        Produto produto = buscarProduto(loggedUser, idProduto);
+        Produto produto = buscarProduto(idProduto);
         produto.setAtivo(true);
         Produto atualizado = produtoRepository.save(produto);
         return toResponse(atualizado);
     }
 
     public void removerProduto(Integer idProduto) {
-        User loggedUser = CurrentUser.get();
-        Produto produto = buscarProduto(loggedUser, idProduto);
+        Produto produto = buscarProduto(idProduto);
         produtoRepository.delete(produto);
     }
 
-    private Produto buscarProduto(User loggedUser, Integer idProduto) {
-        return produtoRepository.findByIdAndOwnerUser(idProduto, loggedUser)
+    private Produto buscarProduto(Integer idProduto) {
+        return produtoRepository.findByIdAndOwnerUser(idProduto, CurrentUser.get())
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
 
-    public Produto buscarProdutoAtivo(User loggedUser, Integer idProduto) {
-        return produtoRepository.findByIdAndOwnerUserAndAtivoTrue(idProduto, loggedUser)
+    public Produto buscarProdutoAtivo(Integer idProduto) {
+        return produtoRepository.findByIdAndOwnerUserAndAtivoTrue(idProduto, CurrentUser.get())
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
 

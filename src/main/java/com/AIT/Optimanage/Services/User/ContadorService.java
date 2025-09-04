@@ -2,8 +2,9 @@ package com.AIT.Optimanage.Services.User;
 
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.User.ContadorRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,8 +14,8 @@ public class ContadorService {
 
     private final ContadorRepository contadorRepository;
 
-    public Contador BuscarContador(Tabela tabela, User loggedUser) {
-        Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, loggedUser);
+    public Contador BuscarContador(Tabela tabela) {
+        Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, CurrentUser.get());
         if (contador == null) {
             return contadorRepository.save(Contador.builder()
                     .nomeTabela(tabela)
@@ -25,8 +26,8 @@ public class ContadorService {
         return contador;
     }
 
-    public void IncrementarContador(Tabela tabela, User ownerUser) {
-        Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, ownerUser);
+    public void IncrementarContador(Tabela tabela) {
+        Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, CurrentUser.get());
         contador.setContagemAtual(contador.getContagemAtual() + 1);
         contadorRepository.save(contador);
     }
