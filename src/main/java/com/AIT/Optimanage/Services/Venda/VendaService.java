@@ -21,6 +21,9 @@ import com.AIT.Optimanage.Payments.PaymentConfirmationDTO;
 import com.AIT.Optimanage.Payments.PaymentRequestDTO;
 import com.AIT.Optimanage.Payments.PaymentResponseDTO;
 import com.AIT.Optimanage.Payments.PaymentService;
+import com.AIT.Optimanage.Models.Payment.PaymentProvider;
+import com.AIT.Optimanage.Models.Payment.PaymentConfig;
+import com.AIT.Optimanage.Services.Payment.PaymentConfigService;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
@@ -62,6 +65,7 @@ public class VendaService {
     private final PagamentoVendaService pagamentoVendaService;
     private final ProdutoRepository produtoRepository;
     private final PaymentService paymentService;
+    private final PaymentConfigService paymentConfigService;
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -250,14 +254,20 @@ public class VendaService {
                 .amount(venda.getValorPendente())
                 .currency("brl")
                 .description("Venda " + idVenda)
+                .provider(PaymentProvider.STRIPE)
                 .build();
-        return paymentService.createPayment(req);
+        PaymentProvider provider = req.getProvider() != null ? req.getProvider() : PaymentProvider.STRIPE;
+        PaymentConfig config = paymentConfigService.getConfig(loggedUser, provider);
+        req.setProvider(provider);
+        return paymentService.createPayment(req, config);
     }
 
     public Venda confirmarPagamentoExterno(User loggedUser, Integer idVenda, PaymentConfirmationDTO confirmDTO) {
         Venda venda = listarUmaVenda(loggedUser, idVenda);
         podePagarVenda(venda);
-        PagamentoDTO pagamentoDTO = paymentService.confirmPayment(confirmDTO.getPaymentIntentId());
+        PaymentProvider provider = confirmDTO.getProvider() != null ? confirmDTO.getProvider() : PaymentProvider.STRIPE;
+        PaymentConfig config = paymentConfigService.getConfig(loggedUser, provider);
+        PagamentoDTO pagamentoDTO = paymentService.confirmPayment(confirmDTO.getPaymentIntentId(), config);
         pagamentoVendaService.lancarPagamento(venda, pagamentoDTO);
         atualizarVendaPosPagamento(venda);
         return vendaRepository.save(venda);
