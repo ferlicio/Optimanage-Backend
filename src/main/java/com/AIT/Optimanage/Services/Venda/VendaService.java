@@ -17,6 +17,10 @@ import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
 import com.AIT.Optimanage.Models.Venda.VendaProduto;
 import com.AIT.Optimanage.Models.Venda.VendaServico;
+import com.AIT.Optimanage.Payments.PaymentConfirmationDTO;
+import com.AIT.Optimanage.Payments.PaymentRequestDTO;
+import com.AIT.Optimanage.Payments.PaymentResponseDTO;
+import com.AIT.Optimanage.Payments.PaymentService;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
@@ -57,6 +61,7 @@ public class VendaService {
     private final ContadorService contadorService;
     private final PagamentoVendaService pagamentoVendaService;
     private final ProdutoRepository produtoRepository;
+    private final PaymentService paymentService;
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -234,6 +239,26 @@ public class VendaService {
 
         pagamentoVendaService.registrarPagamento(loggedUser, venda, idPagamento);
 
+        atualizarVendaPosPagamento(venda);
+        return vendaRepository.save(venda);
+    }
+
+    public PaymentResponseDTO iniciarPagamentoExterno(User loggedUser, Integer idVenda, PaymentRequestDTO request) {
+        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        podePagarVenda(venda);
+        PaymentRequestDTO req = request != null ? request : PaymentRequestDTO.builder()
+                .amount(venda.getValorPendente())
+                .currency("brl")
+                .description("Venda " + idVenda)
+                .build();
+        return paymentService.createPayment(req);
+    }
+
+    public Venda confirmarPagamentoExterno(User loggedUser, Integer idVenda, PaymentConfirmationDTO confirmDTO) {
+        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        podePagarVenda(venda);
+        PagamentoDTO pagamentoDTO = paymentService.confirmPayment(confirmDTO.getPaymentIntentId());
+        pagamentoVendaService.lancarPagamento(venda, pagamentoDTO);
         atualizarVendaPosPagamento(venda);
         return vendaRepository.save(venda);
     }
