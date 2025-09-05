@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import com.AIT.Optimanage.Models.Payment.PaymentProvider;
 
 @Data
 @Builder
@@ -19,4 +20,5 @@ public class PaymentRequestDTO {
     private BigDecimal amount;
     private String currency;
     private String description;
+    private PaymentProvider provider;
 }
