@@ -24,7 +24,6 @@ import org.springframework.security.web.context.SecurityContextHolderFilter;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
-    private final RateLimitingFilter rateLimitingFilter;
     private final TenantFilter tenantFilter;
 
     @Bean
@@ -57,7 +56,6 @@ public class SecurityConfig {
                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .addFilterBefore(tenantFilter, SecurityContextHolderFilter.class)
-                .addFilterAfter(rateLimitingFilter, SecurityContextHolderFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
