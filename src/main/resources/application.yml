@@ -1,0 +1,5 @@
+auth:
+  max-failed-attempts: 5
+  lockout-minutes: 15
+  two-factor-expiry-seconds: 300
+  reset-code-expiry-seconds: 600

@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import jakarta.validation.ConstraintViolationException;
 
 import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
+import com.AIT.Optimanage.Exceptions.UserNotFoundException;
+import com.AIT.Optimanage.Exceptions.InvalidTwoFactorCodeException;
+import com.AIT.Optimanage.Exceptions.InvalidResetCodeException;
+import com.AIT.Optimanage.Exceptions.RefreshTokenNotFoundException;
+import com.AIT.Optimanage.Exceptions.RefreshTokenInvalidException;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -85,6 +90,42 @@ public class GlobalExceptionHandler {
         log.warn("Account locked: {} - correlationId: {}", ex.getMessage(), correlationId);
         return ResponseEntity.status(HttpStatus.LOCKED)
                 .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.LOCKED.value(),
+                        ex.getMessage(), correlationId, Collections.emptyList()));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+        String correlationId = MDC.get("correlationId");
+        log.warn("User not found: {} - correlationId: {}", ex.getMessage(), correlationId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.NOT_FOUND.value(),
+                        ex.getMessage(), correlationId, Collections.emptyList()));
+    }
+
+    @ExceptionHandler({InvalidTwoFactorCodeException.class, InvalidResetCodeException.class})
+    public ResponseEntity<ErrorResponse> handleInvalidCode(CustomRuntimeException ex) {
+        String correlationId = MDC.get("correlationId");
+        log.warn("Invalid code: {} - correlationId: {}", ex.getMessage(), correlationId);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.BAD_REQUEST.value(),
+                        ex.getMessage(), correlationId, Collections.emptyList()));
+    }
+
+    @ExceptionHandler(RefreshTokenNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRefreshTokenNotFound(RefreshTokenNotFoundException ex) {
+        String correlationId = MDC.get("correlationId");
+        log.warn("Refresh token not found: {} - correlationId: {}", ex.getMessage(), correlationId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.NOT_FOUND.value(),
+                        ex.getMessage(), correlationId, Collections.emptyList()));
+    }
+
+    @ExceptionHandler(RefreshTokenInvalidException.class)
+    public ResponseEntity<ErrorResponse> handleRefreshTokenInvalid(RefreshTokenInvalidException ex) {
+        String correlationId = MDC.get("correlationId");
+        log.warn("Refresh token invalid: {} - correlationId: {}", ex.getMessage(), correlationId);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.value(),
                         ex.getMessage(), correlationId, Collections.emptyList()));
     }
 
