@@ -67,7 +67,7 @@ public class VendaService {
     private final PaymentService paymentService;
     private final PaymentConfigService paymentConfigService;
 
-    @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "vendas", key = "T(com.AIT.Optimanage.Support.CacheKeyUtils).generateKey(#pesquisa)")
     @Transactional(readOnly = true)
     public Page<Venda> listarVendas(User loggedUser, VendaSearch pesquisa) {
         // Configuração de paginação e ordenação

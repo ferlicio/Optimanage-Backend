@@ -58,7 +58,7 @@ public class CompraService {
     private final PagamentoCompraService pagamentoCompraService;
     private final ProdutoRepository produtoRepository;
 
-    @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Support.CacheKeyUtils).generateKey(#pesquisa)")
     @Transactional(readOnly = true)
     public Page<Compra> listarCompras(CompraSearch pesquisa) {
         User loggedUser = CurrentUser.get();

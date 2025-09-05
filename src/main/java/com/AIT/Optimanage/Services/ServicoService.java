@@ -27,7 +27,7 @@ public class ServicoService {
     private final ServicoRepository servicoRepository;
     private final ServicoMapper servicoMapper;
 
-    @Cacheable(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "servicos", key = "T(com.AIT.Optimanage.Support.CacheKeyUtils).generateKey(#pesquisa)")
     public Page<ServicoResponse> listarServicos(Search pesquisa) {
         User loggedUser = CurrentUser.get();
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
@@ -47,7 +47,7 @@ public class ServicoService {
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Support.CacheKeyUtils).generateKey()")
     public ServicoResponse cadastrarServico(ServicoRequest request) {
         User loggedUser = CurrentUser.get();
         Servico servico = servicoMapper.toEntity(request);
@@ -57,7 +57,7 @@ public class ServicoService {
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Support.CacheKeyUtils).generateKey()")
     public ServicoResponse editarServico(Integer idServico, ServicoRequest request) {
         User loggedUser = CurrentUser.get();
         Servico servicoSalvo = buscarServicoAtivo(idServico);
@@ -68,7 +68,7 @@ public class ServicoService {
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Support.CacheKeyUtils).generateKey()")
     public void excluirServico(Integer idServico) {
         User loggedUser = CurrentUser.get();
         Servico servico = buscarServicoAtivo(idServico);

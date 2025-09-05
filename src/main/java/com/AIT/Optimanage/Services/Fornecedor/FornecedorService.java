@@ -29,7 +29,7 @@ public class FornecedorService {
 
     private final FornecedorRepository fornecedorRepository;
 
-    @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Support.CacheKeyUtils).generateKey(#pesquisa)")
     @Transactional(readOnly = true)
     public Page<Fornecedor> listarFornecedores(FornecedorSearch pesquisa) {
         User loggedUser = CurrentUser.get();
