@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
+import com.AIT.Optimanage.Models.OwnableEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +17,7 @@ import com.AIT.Optimanage.Models.BaseEntity;
 @AllArgsConstructor
 @Entity
 @EntityListeners(OwnerEntityListener.class)
-public class ContextoCompatibilidade extends BaseEntity {
+public class ContextoCompatibilidade extends BaseEntity implements OwnableEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)

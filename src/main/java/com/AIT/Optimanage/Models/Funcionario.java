@@ -14,7 +14,7 @@ import com.AIT.Optimanage.Models.BaseEntity;
 @AllArgsConstructor
 @Entity
 @EntityListeners(OwnerEntityListener.class)
-public class Funcionario extends BaseEntity {
+public class Funcionario extends BaseEntity implements OwnableEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)

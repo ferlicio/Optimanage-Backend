@@ -65,6 +65,7 @@ public class FornecedorService {
     public Fornecedor criarFornecedor(FornecedorRequest request) {
         User loggedUser = CurrentUser.get();
         Fornecedor fornecedor = fromRequest(request);
+        fornecedor.setOwnerUser(loggedUser);
         fornecedor.setDataCadastro(LocalDate.now());
         validarFornecedor(fornecedor);
         return fornecedorRepository.save(fornecedor);
@@ -72,7 +73,6 @@ public class FornecedorService {
 
     @CacheEvict(value = "fornecedores", allEntries = true)
     public Fornecedor editarFornecedor(Integer idFornecedor, FornecedorRequest request) {
-        User loggedUser = CurrentUser.get();
         Fornecedor fornecedorSalvo = listarUmFornecedor(idFornecedor);
         Fornecedor fornecedor = fromRequest(request);
         fornecedor.setId(fornecedorSalvo.getId());
@@ -90,8 +90,7 @@ public class FornecedorService {
 
     @CacheEvict(value = "fornecedores", allEntries = true)
     public Fornecedor reativarFornecedor(Integer idFornecedor) {
-        User loggedUser = CurrentUser.get();
-        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoFalse(idFornecedor, CurrentUser.get())
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(true);
         return fornecedorRepository.save(fornecedor);

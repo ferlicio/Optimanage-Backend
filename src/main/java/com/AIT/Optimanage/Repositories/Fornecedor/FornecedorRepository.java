@@ -44,6 +44,8 @@ public interface FornecedorRepository extends JpaRepository<Fornecedor, Integer>
     );
 
     Optional<Fornecedor> findByIdAndOwnerUserAndAtivoTrue(Integer idFornecedor, User loggedUser);
-
+    
+    Optional<Fornecedor> findByIdAndOwnerUserAndAtivoFalse(Integer idFornecedor, User loggedUser);
+    
     Optional<Fornecedor> findByIdAndOwnerUser(Integer idFornecedor, User loggedUser);
 }

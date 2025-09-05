@@ -4,6 +4,8 @@ import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.FornecedorEndereco;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorEnderecoRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
+
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,34 +19,35 @@ public class FornecedorEnderecoService {
     private final FornecedorEnderecoRepository fornecedorEnderecoRepository;
     private final FornecedorService fornecedorService;
 
-    public List<FornecedorEndereco> listarEnderecos(User loggedUser, Integer idFornecedor) {
+    public List<FornecedorEndereco> listarEnderecos(Integer idFornecedor) {
+        User loggedUser = CurrentUser.get();
         return fornecedorEnderecoRepository.findAllByFornecedor_IdAndFornecedorOwnerUser(idFornecedor, loggedUser);
     }
 
-    public FornecedorEndereco listarUmEndereco(User loggedUser, Integer idFornecedor, Integer idEndereco) {
-        Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
-        return fornecedorEnderecoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idEndereco, fornecedor.getId(), loggedUser)
+    public FornecedorEndereco listarUmEndereco(Integer idFornecedor, Integer idEndereco) {
+        Fornecedor fornecedor = fornecedorService.listarUmFornecedor(idFornecedor);
+        return fornecedorEnderecoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idEndereco, fornecedor.getId(), CurrentUser.get())
                 .orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
     }
 
-    public FornecedorEndereco cadastrarEndereco(User loggedUser, Integer idFornecedor, FornecedorEndereco endereco) {
-        Fornecedor fornecedor = fornecedorService.listarUmFornecedor(loggedUser, idFornecedor);
+    public FornecedorEndereco cadastrarEndereco(Integer idFornecedor, FornecedorEndereco endereco) {
+        Fornecedor fornecedor = fornecedorService.listarUmFornecedor(idFornecedor);
 
         endereco.setId(null);
         endereco.setFornecedor(fornecedor);
         return fornecedorEnderecoRepository.save(endereco);
     }
 
-    public FornecedorEndereco editarEndereco(User loggedUser, Integer idFornecedor, Integer idEndereco, FornecedorEndereco endereco) {
-        FornecedorEndereco enderecoExistente = listarUmEndereco(loggedUser, idFornecedor, idEndereco);
+    public FornecedorEndereco editarEndereco(Integer idFornecedor, Integer idEndereco, FornecedorEndereco endereco) {
+        FornecedorEndereco enderecoExistente = listarUmEndereco(idFornecedor, idEndereco);
 
         endereco.setId(enderecoExistente.getId());
         endereco.setFornecedor(enderecoExistente.getFornecedor());
         return fornecedorEnderecoRepository.save(endereco);
     }
 
-    public void excluirEndereco(User loggedUser, Integer idFornecedor, Integer idEndereco) {
-        FornecedorEndereco endereco = listarUmEndereco(loggedUser, idFornecedor, idEndereco);
+    public void excluirEndereco(Integer idFornecedor, Integer idEndereco) {
+        FornecedorEndereco endereco = listarUmEndereco(idFornecedor, idEndereco);
         fornecedorEnderecoRepository.delete(endereco);
     }
 }

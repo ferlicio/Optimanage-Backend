@@ -30,8 +30,8 @@ public class CompatibilidadeService {
         ContextoCompatibilidade contexto = contextoCompatibilidadeService.listarUmContexto(logedUser, request.getContextoId());
 
         Compatibilidade compatibilidade = Compatibilidade.builder()
-                .produto(request.getProdutoId() != null ? produtoService.buscarProdutoAtivo(logedUser, request.getProdutoId()) : null)
-                .servico(request.getServicoId() != null ? servicoService.buscarServicoAtivo(logedUser, request.getServicoId()) : null)
+                .produto(request.getProdutoId() != null ? produtoService.buscarProdutoAtivo(request.getProdutoId()) : null)
+                .servico(request.getServicoId() != null ? servicoService.buscarServicoAtivo(request.getServicoId()) : null)
                 .contexto(contexto)
                 .compativel(request.getCompativel())
                 .build();
