@@ -34,9 +34,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.AIT.Optimanage.Repositories.Compra.CompraFilters;
+import com.AIT.Optimanage.Repositories.FilterBuilder;
 import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.util.List;
@@ -69,18 +72,18 @@ public class CompraService {
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
-        return compraRepository.buscarCompras(
-                loggedUser.getId(),
-                pesquisa.getId(),
-                pesquisa.getFornecedorId(),
-                pesquisa.getDataInicial(),
-                pesquisa.getDataFinal(),
-                pesquisa.getStatus(),
-                pesquisa.getPago(),
-                pesquisa.getFormaPagamento(),
-                pageable
-        );
+        Specification<Compra> spec = FilterBuilder
+                .of(CompraFilters.hasOwner(loggedUser.getId()))
+                .and(pesquisa.getId(), CompraFilters::hasSequencialUsuario)
+                .and(pesquisa.getFornecedorId(), CompraFilters::hasFornecedor)
+                .and(pesquisa.getDataInicial(), d -> CompraFilters.dataEfetuacaoAfter(LocalDate.parse(d)))
+                .and(pesquisa.getDataFinal(), d -> CompraFilters.dataEfetuacaoBefore(LocalDate.parse(d)))
+                .and(pesquisa.getStatus(), CompraFilters::hasStatus)
+                .and(pesquisa.getPago(), CompraFilters::isPago)
+                .and(pesquisa.getFormaPagamento(), CompraFilters::hasFormaPagamento)
+                .build();
+
+        return compraRepository.findAll(spec, pageable);
     }
 
     public Compra listarUmaCompra(Integer idCompra) {
