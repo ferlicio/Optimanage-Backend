@@ -22,7 +22,7 @@ public class PaymentService {
     }
 
     public PaymentResponseDTO createPayment(PaymentRequestDTO request, PaymentConfig config) {
-        return getProvider(config.getProvider()).createPayment(request, config);
+        return getProvider(request.getProvider()).createPayment(request, config);
     }
 
     public PagamentoDTO confirmPayment(String paymentIntentId, PaymentConfig config) {
