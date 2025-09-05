@@ -9,6 +9,9 @@ import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Models.Venda.Search.VendaSearch;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Services.Venda.VendaService;
+import com.AIT.Optimanage.Payments.PaymentConfirmationDTO;
+import com.AIT.Optimanage.Payments.PaymentRequestDTO;
+import com.AIT.Optimanage.Payments.PaymentResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -101,6 +104,24 @@ public class VendaController extends V1BaseController {
                                             @PathVariable("idVenda") Integer idVenda,
                                             @PathVariable("idPagamento") Integer idPagamento) {
         return ok(vendaService.pagarVenda(loggedUser, idVenda, idPagamento));
+    }
+
+    @PostMapping("/{idVenda}/pagamento-externo")
+    @Operation(summary = "Iniciar pagamento externo", description = "Cria cobrança em provedor externo")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public ResponseEntity<PaymentResponseDTO> iniciarPagamentoExterno(@AuthenticationPrincipal User loggedUser,
+                                                                      @PathVariable("idVenda") Integer idVenda,
+                                                                      @RequestBody(required = false) @Valid PaymentRequestDTO request) {
+        return ok(vendaService.iniciarPagamentoExterno(loggedUser, idVenda, request));
+    }
+
+    @PostMapping("/{idVenda}/pagamento-externo/confirmar")
+    @Operation(summary = "Confirmar pagamento externo", description = "Confirma pagamento no provedor externo")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public ResponseEntity<Venda> confirmarPagamentoExterno(@AuthenticationPrincipal User loggedUser,
+                                                           @PathVariable("idVenda") Integer idVenda,
+                                                           @RequestBody @Valid PaymentConfirmationDTO confirmDTO) {
+        return ok(vendaService.confirmarPagamentoExterno(loggedUser, idVenda, confirmDTO));
     }
 
     @PutMapping("/{idVenda}/lancar-pagamento")
