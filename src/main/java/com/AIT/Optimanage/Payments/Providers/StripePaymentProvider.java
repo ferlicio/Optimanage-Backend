@@ -7,7 +7,7 @@ import com.AIT.Optimanage.Models.Payment.PaymentConfig;
 import com.AIT.Optimanage.Models.Payment.PaymentProvider;
 import com.AIT.Optimanage.Payments.PaymentRequestDTO;
 import com.AIT.Optimanage.Payments.PaymentResponseDTO;
-import com.stripe.Stripe;
+import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
@@ -28,14 +28,14 @@ public class StripePaymentProvider implements PaymentProviderStrategy {
 
     @Override
     public PaymentResponseDTO createPayment(PaymentRequestDTO request, PaymentConfig config) {
-        Stripe.apiKey = config.getApiKey();
+        StripeClient client = new StripeClient(config.getApiKey());
         try {
             PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                     .setAmount(request.getAmount().multiply(BigDecimal.valueOf(100)).longValue())
                     .setCurrency(request.getCurrency() == null ? "brl" : request.getCurrency())
                     .setDescription(request.getDescription())
                     .build();
-            PaymentIntent intent = PaymentIntent.create(params);
+            PaymentIntent intent = client.paymentIntents().create(params);
             return new PaymentResponseDTO(intent.getId(), intent.getClientSecret(), PaymentProvider.STRIPE);
         } catch (StripeException e) {
             throw new RuntimeException("Erro ao criar pagamento", e);
@@ -44,11 +44,11 @@ public class StripePaymentProvider implements PaymentProviderStrategy {
 
     @Override
     public PagamentoDTO confirmPayment(String paymentIntentId, PaymentConfig config) {
-        Stripe.apiKey = config.getApiKey();
+        StripeClient client = new StripeClient(config.getApiKey());
         try {
-            PaymentIntent intent = PaymentIntent.retrieve(paymentIntentId);
+            PaymentIntent intent = client.paymentIntents().retrieve(paymentIntentId);
             if ("requires_confirmation".equals(intent.getStatus())) {
-                intent = intent.confirm();
+                intent = client.paymentIntents().confirm(paymentIntentId);
             }
             StatusPagamento status = "succeeded".equals(intent.getStatus()) ? StatusPagamento.PAGO : StatusPagamento.PENDENTE;
             BigDecimal amount = BigDecimal.valueOf(intent.getAmountReceived()).divide(BigDecimal.valueOf(100));
