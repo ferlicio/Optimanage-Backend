@@ -2,6 +2,7 @@ package com.AIT.Optimanage.Models.User;
 
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.OwnableEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -19,7 +20,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Entity
 @EntityListeners(OwnerEntityListener.class)
-public class UserInfo extends BaseEntity {
+public class UserInfo extends BaseEntity implements OwnableEntity {
     @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)
