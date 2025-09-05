@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Support.EmailService;
 import com.AIT.Optimanage.Config.JwtService;
+import com.AIT.Optimanage.Config.AuthProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,8 @@ class AuthenticationServiceTest {
     private TokenBlacklistService tokenBlacklistService;
     @Mock
     private EmailService emailService;
+    @Mock
+    private AuthProperties authProperties;
 
     private AuthenticationService authenticationService;
 
@@ -45,7 +48,8 @@ class AuthenticationServiceTest {
                 authenticationManager,
                 refreshTokenRepository,
                 tokenBlacklistService,
-                emailService);
+                emailService,
+                authProperties);
     }
 
     @Test
