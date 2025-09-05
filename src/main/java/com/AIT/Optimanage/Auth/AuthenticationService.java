@@ -195,7 +195,7 @@ public class AuthenticationService {
         user.setTwoFactorCode(code);
         user.setTwoFactorExpiry(Instant.now().plusSeconds(300));
         userRepository.save(user);
-        sendCode(user.getEmail(), code);
+        sendCodeAsync(user.getEmail(), code);
     }
 
     private void sendResetCode(User user) {
@@ -203,14 +203,14 @@ public class AuthenticationService {
         user.setResetCode(code);
         user.setResetCodeExpiry(Instant.now().plusSeconds(600));
         userRepository.save(user);
-        sendCode(user.getEmail(), code);
+        sendCodeAsync(user.getEmail(), code);
     }
 
     private String generateCode() {
         return String.format("%06d", new SecureRandom().nextInt(1_000_000));
     }
 
-    private void sendCode(String destination, String code) {
+    private void sendCodeAsync(String destination, String code) {
         emailService.enviarCodigo(destination, code);
     }
 }
