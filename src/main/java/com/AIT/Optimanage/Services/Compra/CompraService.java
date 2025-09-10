@@ -7,6 +7,10 @@ import com.AIT.Optimanage.Models.Compra.CompraServico;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraDTO;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraProdutoDTO;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoDTO;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraResponseDTO;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraProdutoResponseDTO;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoResponseDTO;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraPagamentoResponseDTO;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Compra.Search.CompraSearch;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
@@ -34,9 +38,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.AIT.Optimanage.Repositories.Compra.CompraFilters;
+import com.AIT.Optimanage.Repositories.FilterBuilder;
 import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.util.List;
@@ -60,7 +67,7 @@ public class CompraService {
 
     @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public Page<Compra> listarCompras(CompraSearch pesquisa) {
+    public Page<CompraResponseDTO> listarCompras(CompraSearch pesquisa) {
         User loggedUser = CurrentUser.get();
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
@@ -69,18 +76,65 @@ public class CompraService {
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
-        return compraRepository.buscarCompras(
-                loggedUser.getId(),
-                pesquisa.getId(),
-                pesquisa.getFornecedorId(),
-                pesquisa.getDataInicial(),
-                pesquisa.getDataFinal(),
-                pesquisa.getStatus(),
-                pesquisa.getPago(),
-                pesquisa.getFormaPagamento(),
-                pageable
-        );
+        Specification<Compra> spec = FilterBuilder
+                .of(CompraFilters.hasOwner(loggedUser.getId()))
+                .and(pesquisa.getId(), CompraFilters::hasSequencialUsuario)
+                .and(pesquisa.getFornecedorId(), CompraFilters::hasFornecedor)
+                .and(pesquisa.getDataInicial(), d -> CompraFilters.dataEfetuacaoAfter(LocalDate.parse(d)))
+                .and(pesquisa.getDataFinal(), d -> CompraFilters.dataEfetuacaoBefore(LocalDate.parse(d)))
+                .and(pesquisa.getStatus(), CompraFilters::hasStatus)
+                .and(pesquisa.getPago(), CompraFilters::isPago)
+                .and(pesquisa.getFormaPagamento(), CompraFilters::hasFormaPagamento)
+                .build();
+
+        Page<Compra> compras = compraRepository.findAll(spec, pageable);
+        return compras.map(this::toResponse);
+    }
+
+    private CompraResponseDTO toResponse(Compra compra) {
+        return CompraResponseDTO.builder()
+                .id(compra.getId())
+                .fornecedorId(compra.getFornecedorId())
+                .sequencialUsuario(compra.getSequencialUsuario())
+                .dataEfetuacao(compra.getDataEfetuacao())
+                .dataAgendada(compra.getDataAgendada())
+                .valorFinal(compra.getValorFinal())
+                .condicaoPagamento(compra.getCondicaoPagamento())
+                .valorPendente(compra.getValorPendente())
+                .status(compra.getStatus())
+                .observacoes(compra.getObservacoes())
+                .produtos(Optional.ofNullable(compra.getCompraProdutos()).orElse(List.of())
+                        .stream()
+                        .map(cp -> CompraProdutoResponseDTO.builder()
+                                .id(cp.getId())
+                                .produtoId(cp.getProdutoId())
+                                .valorUnitario(cp.getValorUnitario())
+                                .quantidade(cp.getQuantidade())
+                                .valorTotal(cp.getValorTotal())
+                                .build())
+                        .collect(Collectors.toList()))
+                .servicos(Optional.ofNullable(compra.getCompraServicos()).orElse(List.of())
+                        .stream()
+                        .map(cs -> CompraServicoResponseDTO.builder()
+                                .id(cs.getId())
+                                .servicoId(cs.getServicoId())
+                                .valorUnitario(cs.getValorUnitario())
+                                .quantidade(cs.getQuantidade())
+                                .valorTotal(cs.getValorTotal())
+                                .build())
+                        .collect(Collectors.toList()))
+                .pagamentos(Optional.ofNullable(compra.getPagamentos()).orElse(List.of())
+                        .stream()
+                        .map(pg -> CompraPagamentoResponseDTO.builder()
+                                .id(pg.getId())
+                                .valorPago(pg.getValorPago())
+                                .dataPagamento(pg.getDataPagamento())
+                                .formaPagamento(pg.getFormaPagamento())
+                                .statusPagamento(pg.getStatusPagamento())
+                                .observacoes(pg.getObservacoes())
+                                .build())
+                        .collect(Collectors.toList()))
+                .build();
     }
 
     public Compra listarUmaCompra(Integer idCompra) {

@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Controllers.Compra;
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
 import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraDTO;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraResponseDTO;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Compra.Search.CompraSearch;
 import com.AIT.Optimanage.Models.PagamentoDTO;
@@ -31,7 +32,7 @@ public class CompraController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar compras", description = "Retorna uma página de compras")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Page<Compra>> listarCompras(@RequestParam(value = "id", required = false) Integer id,
+    public ResponseEntity<Page<CompraResponseDTO>> listarCompras(@RequestParam(value = "id", required = false) Integer id,
                                       @RequestParam(value = "fornecedor_id", required = false) Integer fornecedorId,
                                       @RequestParam(value = "data_inicial", required = false) String data_inicial,
                                       @RequestParam(value = "data_final", required = false) String data_final,
