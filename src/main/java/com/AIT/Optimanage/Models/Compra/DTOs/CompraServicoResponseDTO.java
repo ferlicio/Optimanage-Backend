@@ -1,0 +1,19 @@
+package com.AIT.Optimanage.Models.Compra.DTOs;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CompraServicoResponseDTO {
+    private Integer id;
+    private Integer servicoId;
+    private BigDecimal valorUnitario;
+    private Integer quantidade;
+    private BigDecimal valorTotal;
+}
