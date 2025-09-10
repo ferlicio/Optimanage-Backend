@@ -1,5 +1,6 @@
 package com.AIT.Optimanage.Models.Compra.DTOs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +13,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CompraServicoResponseDTO {
     private Integer id;
+    @JsonProperty("servico_id")
     private Integer servicoId;
     private BigDecimal valorUnitario;
     private Integer quantidade;
