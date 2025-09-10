@@ -24,5 +24,7 @@ public class PaymentConfig extends BaseEntity {
     private PaymentProvider provider;
 
     private String apiKey;
+    private String clientId;
+    private String clientSecret;
     private String environment;
 }
