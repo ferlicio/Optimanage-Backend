@@ -250,13 +250,15 @@ public class VendaService {
     public PaymentResponseDTO iniciarPagamentoExterno(User loggedUser, Integer idVenda, PaymentRequestDTO request) {
         Venda venda = listarUmaVenda(loggedUser, idVenda);
         podePagarVenda(venda);
+        PaymentProvider provider = request != null && request.getProvider() != null
+                ? request.getProvider()
+                : PaymentProvider.STRIPE;
         PaymentRequestDTO req = request != null ? request : PaymentRequestDTO.builder()
                 .amount(venda.getValorPendente())
                 .currency("brl")
                 .description("Venda " + idVenda)
-                .provider(PaymentProvider.STRIPE)
+                .provider(provider)
                 .build();
-        PaymentProvider provider = req.getProvider() != null ? req.getProvider() : PaymentProvider.STRIPE;
         PaymentConfig config = paymentConfigService.getConfig(loggedUser, provider);
         req.setProvider(provider);
         return paymentService.createPayment(req, config);
