@@ -86,7 +86,7 @@ public class AuthenticationController extends com.AIT.Optimanage.Controllers.Bas
             return ResponseEntity.badRequest().build();
         }
         if (!authHeader.startsWith("Bearer ")) {
-            log.warn("Logout attempt with malformed Authorization header: {}", authHeader);
+            log.warn("Logout attempt with malformed Authorization header");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         String token = authHeader.substring(7);
