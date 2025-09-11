@@ -8,9 +8,7 @@ import com.AIT.Optimanage.Models.Compra.DTOs.CompraDTO;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraProdutoDTO;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoDTO;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraResponseDTO;
-import com.AIT.Optimanage.Models.Compra.DTOs.CompraProdutoResponseDTO;
-import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoResponseDTO;
-import com.AIT.Optimanage.Models.Compra.DTOs.CompraPagamentoResponseDTO;
+import com.AIT.Optimanage.Mappers.CompraMapper;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Compra.Search.CompraSearch;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
@@ -64,6 +62,7 @@ public class CompraService {
     private final CompraServicoRepository compraServicoRepository;
     private final PagamentoCompraService pagamentoCompraService;
     private final ProdutoRepository produtoRepository;
+    private final CompraMapper compraMapper;
 
     @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -88,65 +87,22 @@ public class CompraService {
                 .build();
 
         Page<Compra> compras = compraRepository.findAll(spec, pageable);
-        return compras.map(this::toResponse);
+        return compras.map(compraMapper::toResponse);
     }
 
-    private CompraResponseDTO toResponse(Compra compra) {
-        return CompraResponseDTO.builder()
-                .id(compra.getId())
-                .fornecedorId(compra.getFornecedorId())
-                .sequencialUsuario(compra.getSequencialUsuario())
-                .dataEfetuacao(compra.getDataEfetuacao())
-                .dataAgendada(compra.getDataAgendada())
-                .valorFinal(compra.getValorFinal())
-                .condicaoPagamento(compra.getCondicaoPagamento())
-                .valorPendente(compra.getValorPendente())
-                .status(compra.getStatus())
-                .observacoes(compra.getObservacoes())
-                .produtos(Optional.ofNullable(compra.getCompraProdutos()).orElse(List.of())
-                        .stream()
-                        .map(cp -> CompraProdutoResponseDTO.builder()
-                                .id(cp.getId())
-                                .produtoId(cp.getProdutoId())
-                                .valorUnitario(cp.getValorUnitario())
-                                .quantidade(cp.getQuantidade())
-                                .valorTotal(cp.getValorTotal())
-                                .build())
-                        .collect(Collectors.toList()))
-                .servicos(Optional.ofNullable(compra.getCompraServicos()).orElse(List.of())
-                        .stream()
-                        .map(cs -> CompraServicoResponseDTO.builder()
-                                .id(cs.getId())
-                                .servicoId(cs.getServicoId())
-                                .valorUnitario(cs.getValorUnitario())
-                                .quantidade(cs.getQuantidade())
-                                .valorTotal(cs.getValorTotal())
-                                .build())
-                        .collect(Collectors.toList()))
-                .pagamentos(Optional.ofNullable(compra.getPagamentos()).orElse(List.of())
-                        .stream()
-                        .map(pg -> CompraPagamentoResponseDTO.builder()
-                                .id(pg.getId())
-                                .valorPago(pg.getValorPago())
-                                .dataPagamento(pg.getDataPagamento())
-                                .formaPagamento(pg.getFormaPagamento())
-                                .statusPagamento(pg.getStatusPagamento())
-                                .observacoes(pg.getObservacoes())
-                                .build())
-                        .collect(Collectors.toList()))
-                .build();
-    }
-
-    public Compra listarUmaCompra(Integer idCompra) {
+    private Compra getCompra(Integer idCompra) {
         User loggedUser = CurrentUser.get();
         return compraRepository.findByIdAndOwnerUser(idCompra, loggedUser)
                 .orElseThrow(() -> new RuntimeException("Compra não encontrada"));
     }
 
+    public CompraResponseDTO listarUmaCompra(Integer idCompra) {
+        return compraMapper.toResponse(getCompra(idCompra));
+    }
+
     @Transactional
     @CacheEvict(value = "compras", allEntries = true)
-    public Compra criarCompra(CompraDTO compraDTO) {
-        User loggedUser = CurrentUser.get();
+    public CompraResponseDTO criarCompra(CompraDTO compraDTO) {
         validarCompra(compraDTO);
 
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(compraDTO.getFornecedorId());
@@ -191,16 +147,15 @@ public class CompraService {
         });
 
         contadorService.IncrementarContador(Tabela.COMPRA);
-        return novaCompra;
+        return compraMapper.toResponse(novaCompra);
     }
 
     @Transactional
     @CacheEvict(value = "compras", allEntries = true)
-    public Compra editarCompra(Integer idCompra, CompraDTO compraDTO) {
-        User loggedUser = CurrentUser.get();
+    public CompraResponseDTO editarCompra(Integer idCompra, CompraDTO compraDTO) {
         validarCompra(compraDTO);
 
-        Compra compra = listarUmaCompra(idCompra);
+        Compra compra = getCompra(idCompra);
         Compra compraAtualizada = Compra.builder()
                 .fornecedor(compra.getFornecedor())
                 .sequencialUsuario(compra.getSequencialUsuario())
@@ -254,32 +209,35 @@ public class CompraService {
             produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
         });
 
-        return compraRepository.save(compra);
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
     }
 
-    public Compra confirmarCompra(Integer idCompra) {
-        Compra compra = listarUmaCompra(idCompra);
+    public CompraResponseDTO confirmarCompra(Integer idCompra) {
+        Compra compra = getCompra(idCompra);
         if (compra.getStatus() == StatusCompra.ORCAMENTO && compra.getCompraServicos().isEmpty()) {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         } else {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_EXECUCAO);
         }
-        return compraRepository.save(compra);
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
     }
 
-    public Compra pagarCompra(Integer idCompra, Integer idPagamento) {
-        Compra compra = listarUmaCompra(idCompra);
+    public CompraResponseDTO pagarCompra(Integer idCompra, Integer idPagamento) {
+        Compra compra = getCompra(idCompra);
         podePagarCompra(compra);
 
         pagamentoCompraService.registrarPagamento(compra, idPagamento);
 
         atualizarCompraPosPagamento(compra);
-        return compraRepository.save(compra);
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
     }
 
     @Transactional
-    public Compra lancarPagamentoCompra(Integer idCompra, List<PagamentoDTO> pagamentoDTO) {
-        Compra compra = listarUmaCompra(idCompra);
+    public CompraResponseDTO lancarPagamentoCompra(Integer idCompra, List<PagamentoDTO> pagamentoDTO) {
+        Compra compra = getCompra(idCompra);
         podePagarCompra(compra);
 
         for (PagamentoDTO pagamento : pagamentoDTO) {
@@ -294,11 +252,12 @@ public class CompraService {
         }
 
         atualizarCompraPosPagamento(compra);
-        return compraRepository.save(compra);
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
     }
 
-    public Compra estornarCompraIntegral(Integer idCompra) {
-        Compra compra = listarUmaCompra(idCompra);
+    public CompraResponseDTO estornarCompraIntegral(Integer idCompra) {
+        Compra compra = getCompra(idCompra);
         if (compra.getStatus() == StatusCompra.CONCRETIZADO || compra.getStatus() == StatusCompra.PAGO) {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         }
@@ -307,11 +266,12 @@ public class CompraService {
                 -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
                         { pagamentoCompraService.estornarPagamento(pagamento); }
                     });
-        return compraRepository.save(compra);
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
     }
 
-    public Compra estornarPagamentoCompra(Integer idCompra, Integer idPagamento) {
-        Compra compra = listarUmaCompra(idCompra);
+    public CompraResponseDTO estornarPagamentoCompra(Integer idCompra, Integer idPagamento) {
+        Compra compra = getCompra(idCompra);
         CompraPagamento pagamento = pagamentoCompraService.listarUmPagamento(idPagamento);
         if (compra.getPagamentos().contains(pagamento) && pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
             pagamentoCompraService.estornarPagamento(pagamento);
@@ -329,20 +289,23 @@ public class CompraService {
         } else if (valorPago.compareTo(BigDecimal.ZERO) < 0) {
             atualizarStatus(compra, StatusCompra.PARCIALMENTE_PAGO);
         }
-        return compraRepository.save(compra);
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
     }
 
-    public Compra finalizarCompra(Integer idCompra) {
-        Compra compra = listarUmaCompra(idCompra);
+    public CompraResponseDTO finalizarCompra(Integer idCompra) {
+        Compra compra = getCompra(idCompra);
         atualizarStatus(compra, StatusCompra.CONCRETIZADO);
-        return compraRepository.save(compra);
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
     }
 
     @CacheEvict(value = "compras", allEntries = true)
-    public Compra cancelarCompra(Integer idCompra) {
-        Compra compra = listarUmaCompra(idCompra);
+    public CompraResponseDTO cancelarCompra(Integer idCompra) {
+        Compra compra = getCompra(idCompra);
         atualizarStatus(compra, StatusCompra.CANCELADO);
-        return compraRepository.save(compra);
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
     }
 
     private List<CompraProduto> criarListaProdutos(List<CompraProdutoDTO> produtosDTO, Compra compra) {

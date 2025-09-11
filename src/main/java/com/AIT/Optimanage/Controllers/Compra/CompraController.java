@@ -1,7 +1,6 @@
 package com.AIT.Optimanage.Controllers.Compra;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
-import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraDTO;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraResponseDTO;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
@@ -62,21 +61,21 @@ public class CompraController extends V1BaseController {
     @GetMapping("/{idCompra}")
     @Operation(summary = "Listar compra", description = "Retorna uma compra pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> listarUmaCompra(@PathVariable("idCompra") Integer idCompra) {
+      public ResponseEntity<CompraResponseDTO> listarUmaCompra(@PathVariable("idCompra") Integer idCompra) {
           return ok(compraService.listarUmaCompra(idCompra));
       }
 
     @PostMapping
     @Operation(summary = "Criar compra", description = "Cria uma nova compra")
     @ApiResponse(responseCode = "201", description = "Criado")
-      public ResponseEntity<Compra> criarCompra(@RequestBody @Valid CompraDTO compra) {
+      public ResponseEntity<CompraResponseDTO> criarCompra(@RequestBody @Valid CompraDTO compra) {
           return created(compraService.criarCompra(compra));
       }
 
     @PutMapping("/{idCompra}")
     @Operation(summary = "Editar compra", description = "Atualiza uma compra existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> editarCompra(@PathVariable("idCompra") Integer idCompra,
+      public ResponseEntity<CompraResponseDTO> editarCompra(@PathVariable("idCompra") Integer idCompra,
                                                  @RequestBody @Valid CompraDTO compra) {
           return ok(compraService.editarCompra(idCompra, compra));
       }
@@ -84,14 +83,14 @@ public class CompraController extends V1BaseController {
     @PutMapping("/{idCompra}/confirmar")
     @Operation(summary = "Confirmar compra", description = "Confirma uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> confirmarCompra(@PathVariable("idCompra") Integer idCompra) {
+      public ResponseEntity<CompraResponseDTO> confirmarCompra(@PathVariable("idCompra") Integer idCompra) {
           return ok(compraService.confirmarCompra(idCompra));
       }
 
     @PutMapping("/{idCompra}/pagar/{idPagamento}")
     @Operation(summary = "Pagar compra", description = "Realiza pagamento de uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> pagarCompra(@PathVariable("idCompra") Integer idCompra,
+      public ResponseEntity<CompraResponseDTO> pagarCompra(@PathVariable("idCompra") Integer idCompra,
                                                 @PathVariable("idPagamento") Integer idPagamento) {
           return ok(compraService.pagarCompra(idCompra, idPagamento));
       }
@@ -99,7 +98,7 @@ public class CompraController extends V1BaseController {
     @PutMapping("/{idCompra}/lancar-pagamento")
     @Operation(summary = "Lançar pagamento", description = "Registra pagamento de uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> lancarPagamentoCompra(@PathVariable("idCompra") Integer idCompra,
+      public ResponseEntity<CompraResponseDTO> lancarPagamentoCompra(@PathVariable("idCompra") Integer idCompra,
                                                           @RequestBody List<@Valid PagamentoDTO> pagamentoDTO) {
           return ok(compraService.lancarPagamentoCompra(idCompra, pagamentoDTO));
       }
@@ -107,14 +106,14 @@ public class CompraController extends V1BaseController {
     @PutMapping("/{idCompra}/estornar")
     @Operation(summary = "Estornar compra", description = "Estorna uma compra integralmente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> estornarCompraIntegral(@PathVariable("idCompra") Integer idCompra) {
+      public ResponseEntity<CompraResponseDTO> estornarCompraIntegral(@PathVariable("idCompra") Integer idCompra) {
           return ok(compraService.estornarCompraIntegral(idCompra));
       }
 
     @PutMapping("/{idCompra}/estornar/{idPagamento}")
     @Operation(summary = "Estornar pagamento", description = "Estorna pagamento de uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> estornarPagamentoCompra(@PathVariable("idCompra") Integer idCompra,
+      public ResponseEntity<CompraResponseDTO> estornarPagamentoCompra(@PathVariable("idCompra") Integer idCompra,
                                                             @PathVariable("idPagamento") Integer idPagamento) {
           return ok(compraService.estornarPagamentoCompra(idCompra, idPagamento));
       }
@@ -122,14 +121,14 @@ public class CompraController extends V1BaseController {
     @PutMapping("/{idCompra}/finalizar")
     @Operation(summary = "Finalizar compra", description = "Finaliza uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> finalizarCompra(@PathVariable("idCompra") Integer idCompra) {
+      public ResponseEntity<CompraResponseDTO> finalizarCompra(@PathVariable("idCompra") Integer idCompra) {
           return ok(compraService.finalizarCompra(idCompra));
       }
 
     @PutMapping("/{idCompra}/cancelar")
     @Operation(summary = "Cancelar compra", description = "Cancela uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<Compra> cancelarCompra(@PathVariable("idCompra") Integer idCompra) {
+      public ResponseEntity<CompraResponseDTO> cancelarCompra(@PathVariable("idCompra") Integer idCompra) {
           return ok(compraService.cancelarCompra(idCompra));
       }
 }

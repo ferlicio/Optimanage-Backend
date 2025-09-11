@@ -38,12 +38,12 @@ public class ProdutoService {
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
         return produtoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser, pageable)
-                .map(this::toResponse);
+                .map(produtoMapper::toResponse);
     }
 
     public ProdutoResponse listarUmProduto(Integer idProduto) {
         Produto produto = buscarProdutoAtivo(idProduto);
-        return toResponse(produto);
+        return produtoMapper.toResponse(produto);
     }
 
     @Transactional
@@ -53,7 +53,7 @@ public class ProdutoService {
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(null);
         Produto salvo = produtoRepository.save(produto);
-        return toResponse(salvo);
+        return produtoMapper.toResponse(salvo);
     }
 
     @Transactional
@@ -63,7 +63,7 @@ public class ProdutoService {
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(produtoSalvo.getId());
         Produto atualizado = produtoRepository.save(produto);
-        return toResponse(atualizado);
+        return produtoMapper.toResponse(atualizado);
     }
 
     @Transactional
@@ -78,7 +78,7 @@ public class ProdutoService {
         Produto produto = buscarProduto(idProduto);
         produto.setAtivo(true);
         Produto atualizado = produtoRepository.save(produto);
-        return toResponse(atualizado);
+        return produtoMapper.toResponse(atualizado);
     }
 
     public void removerProduto(Integer idProduto) {
@@ -96,21 +96,5 @@ public class ProdutoService {
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
 
-    private ProdutoResponse toResponse(Produto produto) {
-        return ProdutoResponse.builder()
-                .id(produto.getId())
-                .ownerUserId(produto.getOwnerUser() != null ? produto.getOwnerUser().getId() : null)
-                .fornecedorId(produto.getFornecedor() != null ? produto.getFornecedor().getId() : null)
-                .sequencialUsuario(produto.getSequencialUsuario())
-                .codigoReferencia(produto.getCodigoReferencia())
-                .nome(produto.getNome())
-                .descricao(produto.getDescricao())
-                .custo(produto.getCusto())
-                .disponivelVenda(produto.getDisponivelVenda())
-                .valorVenda(produto.getValorVenda())
-                .qtdEstoque(produto.getQtdEstoque())
-                .terceirizado(produto.getTerceirizado())
-                .ativo(produto.getAtivo())
-                .build();
-    }
+    // Mapping handled by ProdutoMapper
 }

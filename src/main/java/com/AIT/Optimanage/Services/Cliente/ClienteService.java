@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Services.Cliente;
 
 import com.AIT.Optimanage.Controllers.dto.ClienteRequest;
+import com.AIT.Optimanage.Controllers.dto.ClienteResponse;
 import com.AIT.Optimanage.Mappers.ClienteMapper;
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.Search.ClienteSearch;
@@ -31,7 +32,7 @@ public class ClienteService {
 
     @Cacheable(value = "clientes", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public Page<Cliente> listarClientes(ClienteSearch pesquisa) {
+    public Page<ClienteResponse> listarClientes(ClienteSearch pesquisa) {
         User loggedUser = CurrentUser.get();
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
@@ -52,54 +53,61 @@ public class ClienteService {
                 pesquisa.getTipoPessoa(),
                 pesquisa.getAtivo() != null ? pesquisa.getAtivo() : true,
                 pageable
-        );
+        ).map(clienteMapper::toResponse);
     }
 
-    public Cliente listarUmCliente(Integer idCliente) {
+    public ClienteResponse listarUmCliente(Integer idCliente) {
         User loggedUser = CurrentUser.get();
-        return clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
+        Cliente cliente = clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
+        return clienteMapper.toResponse(cliente);
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public Cliente criarCliente(ClienteRequest request) {
+    public ClienteResponse criarCliente(ClienteRequest request) {
         User loggedUser = CurrentUser.get();
         Cliente cliente = clienteMapper.toEntity(request);
         cliente.setId(null);
         cliente.setDataCadastro(LocalDate.now());
         validarCliente(cliente);
-        return clienteRepository.save(cliente);
+        Cliente salvo = clienteRepository.save(cliente);
+        return clienteMapper.toResponse(salvo);
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public Cliente editarCliente(Integer idCliente, ClienteRequest request) {
+    public ClienteResponse editarCliente(Integer idCliente, ClienteRequest request) {
         User loggedUser = CurrentUser.get();
-        Cliente clienteSalvo = listarUmCliente(idCliente);
+        Cliente clienteSalvo = clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         Cliente cliente = clienteMapper.toEntity(request);
         cliente.setId(clienteSalvo.getId());
         cliente.setDataCadastro(clienteSalvo.getDataCadastro());
         validarCliente(cliente);
-        return clienteRepository.save(cliente);
+        Cliente atualizado = clienteRepository.save(cliente);
+        return clienteMapper.toResponse(atualizado);
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
     public void inativarCliente(Integer idCliente) {
-        Cliente cliente = listarUmCliente(idCliente);
+        User loggedUser = CurrentUser.get();
+        Cliente cliente = clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         cliente.setAtivo(false);
         clienteRepository.save(cliente);
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public Cliente reativarCliente(Integer idCliente) {
+    public ClienteResponse reativarCliente(Integer idCliente) {
         User loggedUser = CurrentUser.get();
         Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         cliente.setAtivo(true);
-        return clienteRepository.save(cliente);
+        Cliente atualizado = clienteRepository.save(cliente);
+        return clienteMapper.toResponse(atualizado);
     }
 
     @CacheEvict(value = "clientes", allEntries = true)

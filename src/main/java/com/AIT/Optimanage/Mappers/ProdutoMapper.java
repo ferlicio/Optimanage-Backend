@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Mappers;
 
 import com.AIT.Optimanage.Controllers.dto.ProdutoRequest;
+import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Produto;
 import org.mapstruct.Mapper;
@@ -17,6 +18,10 @@ public interface ProdutoMapper {
 
     @Mapping(target = "fornecedorId", source = "fornecedor.id")
     ProdutoRequest toRequest(Produto produto);
+
+    @Mapping(target = "fornecedorId", source = "fornecedor.id")
+    @Mapping(target = "ownerUserId", source = "ownerUser.id")
+    ProdutoResponse toResponse(Produto produto);
 
     @Named("idToFornecedor")
     default Fornecedor mapFornecedor(Integer fornecedorId) {

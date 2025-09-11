@@ -2,7 +2,7 @@ package com.AIT.Optimanage.Controllers.Cliente;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
 import com.AIT.Optimanage.Controllers.dto.ClienteRequest;
-import com.AIT.Optimanage.Models.Cliente.Cliente;
+import com.AIT.Optimanage.Controllers.dto.ClienteResponse;
 import com.AIT.Optimanage.Models.Cliente.Search.ClienteSearch;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 
@@ -36,7 +36,7 @@ public class ClienteController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar clientes", description = "Retorna uma página de clientes")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Page<Cliente>> listarClientes(@RequestParam(value = "id", required = false) Integer id,
+    public ResponseEntity<Page<ClienteResponse>> listarClientes(@RequestParam(value = "id", required = false) Integer id,
                                         @RequestParam(value = "nome", required = false) String nome,
                                         @RequestParam(value = "estado", required = false) String estado,
                                         @RequestParam(value = "cpfOuCnpj", required = false) String cpfOuCnpj,
@@ -66,22 +66,22 @@ public class ClienteController extends V1BaseController {
     @GetMapping("/{idCliente}")
     @Operation(summary = "Listar cliente", description = "Retorna um cliente pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Cliente> listarUmCliente(@PathVariable("idCliente") Integer idCliente) {
+    public ResponseEntity<ClienteResponse> listarUmCliente(@PathVariable("idCliente") Integer idCliente) {
         return ok(clienteService.listarUmCliente(idCliente));
     }
 
     @PostMapping
     @Operation(summary = "Criar cliente", description = "Cria um novo cliente")
     @ApiResponse(responseCode = "201", description = "Criado")
-    public ResponseEntity<Cliente> criarCliente(@RequestBody @Valid ClienteRequest request) {
+    public ResponseEntity<ClienteResponse> criarCliente(@RequestBody @Valid ClienteRequest request) {
         return created(clienteService.criarCliente(request));
     }
 
     @PutMapping("/{idCliente}")
     @Operation(summary = "Editar cliente", description = "Atualiza um cliente existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Cliente> editarCliente(@PathVariable("idCliente") Integer idCliente,
-                                                 @RequestBody @Valid ClienteRequest request) {
+    public ResponseEntity<ClienteResponse> editarCliente(@PathVariable("idCliente") Integer idCliente,
+                                                         @RequestBody @Valid ClienteRequest request) {
         return ok(clienteService.editarCliente(idCliente, request));
     }
 
@@ -97,7 +97,7 @@ public class ClienteController extends V1BaseController {
     @PutMapping("/{idCliente}/restaurar")
     @Operation(summary = "Restaurar cliente", description = "Reativa um cliente inativo")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Cliente> restaurarCliente(@PathVariable("idCliente") Integer idCliente) {
+    public ResponseEntity<ClienteResponse> restaurarCliente(@PathVariable("idCliente") Integer idCliente) {
         return ok(clienteService.reativarCliente(idCliente));
     }
 

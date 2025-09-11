@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Services.Fornecedor;
 
 import com.AIT.Optimanage.Controllers.dto.FornecedorRequest;
+import com.AIT.Optimanage.Controllers.dto.FornecedorResponse;
 import com.AIT.Optimanage.Mappers.FornecedorMapper;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
@@ -31,7 +32,7 @@ public class FornecedorService {
 
     @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public Page<Fornecedor> listarFornecedores(FornecedorSearch pesquisa) {
+    public Page<FornecedorResponse> listarFornecedores(FornecedorSearch pesquisa) {
         User loggedUser = CurrentUser.get();
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
@@ -52,48 +53,51 @@ public class FornecedorService {
                 pesquisa.getTipoPessoa(),
                 pesquisa.getAtivo() != null ? pesquisa.getAtivo() : true,
                 pageable
-        );
+        ).map(fornecedorMapper::toResponse);
     }
 
-    public Fornecedor listarUmFornecedor(Integer idFornecedor) {
+    public FornecedorResponse listarUmFornecedor(Integer idFornecedor) {
         User loggedUser = CurrentUser.get();
-        return fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, loggedUser)
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
+        return fornecedorMapper.toResponse(fornecedor);
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
-    public Fornecedor criarFornecedor(FornecedorRequest request) {
+    public FornecedorResponse criarFornecedor(FornecedorRequest request) {
         User loggedUser = CurrentUser.get();
         Fornecedor fornecedor = fornecedorMapper.toEntity(request);
         fornecedor.setOwnerUser(loggedUser);
         fornecedor.setDataCadastro(LocalDate.now());
         validarFornecedor(fornecedor);
-        return fornecedorRepository.save(fornecedor);
+        return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
-    public Fornecedor editarFornecedor(Integer idFornecedor, FornecedorRequest request) {
-        Fornecedor fornecedorSalvo = listarUmFornecedor(idFornecedor);
+    public FornecedorResponse editarFornecedor(Integer idFornecedor, FornecedorRequest request) {
+        Fornecedor fornecedorSalvo = fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, CurrentUser.get())
+                .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         Fornecedor fornecedor = fornecedorMapper.toEntity(request);
         fornecedor.setId(fornecedorSalvo.getId());
         fornecedor.setDataCadastro(fornecedorSalvo.getDataCadastro());
         validarFornecedor(fornecedor);
-        return fornecedorRepository.save(fornecedor);
+        return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
     public void inativarFornecedor(Integer idFornecedor) {
-        Fornecedor fornecedor = listarUmFornecedor(idFornecedor);
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, CurrentUser.get())
+                .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(false);
         fornecedorRepository.save(fornecedor);
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
-    public Fornecedor reativarFornecedor(Integer idFornecedor) {
+    public FornecedorResponse reativarFornecedor(Integer idFornecedor) {
         Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoFalse(idFornecedor, CurrentUser.get())
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(true);
-        return fornecedorRepository.save(fornecedor);
+        return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
