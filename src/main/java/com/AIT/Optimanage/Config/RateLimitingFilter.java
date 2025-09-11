@@ -21,6 +21,7 @@ import java.time.Duration;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
 
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
@@ -32,8 +33,8 @@ import com.AIT.Optimanage.Support.TenantContext;
  * Requests are tracked per user (if authenticated) or per remote IP address.
  * Metrics are recorded through Micrometer so limits can be monitored via the
  * Actuator metrics endpoint. Buckets are stored in a Caffeine cache that
- * expires entries after {@link #BUCKET_CACHE_EXPIRY} of inactivity to prevent
- * unbounded memory usage.
+ * expires entries after the rate-limit window to prevent unbounded memory
+ * usage while ensuring limits cannot be bypassed by short idle periods.
  */
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
@@ -42,15 +43,27 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final long DEFAULT_CAPACITY = 5;
     /** Default length of the rate‑limit window. */
     private static final Duration DEFAULT_DURATION = Duration.ofMinutes(1);
-    /**
-     * Idle buckets are evicted after this period, keeping the cache size bounded
-     * while allowing active clients to retain their rate limits.
-     */
-    private static final Duration BUCKET_CACHE_EXPIRY = Duration.ofMinutes(10);
+    /** Container for a bucket and the time after which it may be evicted. */
+    private record BucketEntry(Bucket bucket, Duration expiry) {}
 
     /** Cache holding buckets for each user/IP and tenant combination. */
-    private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
-            .expireAfterAccess(BUCKET_CACHE_EXPIRY)
+    private final Cache<String, BucketEntry> buckets = Caffeine.newBuilder()
+            .expireAfter(new Expiry<String, BucketEntry>() {
+                @Override
+                public long expireAfterCreate(String key, BucketEntry value, long currentTime) {
+                    return value.expiry().toNanos();
+                }
+
+                @Override
+                public long expireAfterUpdate(String key, BucketEntry value, long currentTime, long currentDuration) {
+                    return value.expiry().toNanos();
+                }
+
+                @Override
+                public long expireAfterRead(String key, BucketEntry value, long currentTime, long currentDuration) {
+                    return value.expiry().toNanos();
+                }
+            })
             .build();
     private final MeterRegistry meterRegistry;
     private final PlanoService planoService;
@@ -81,10 +94,14 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             long capacity = plano != null ? plano.getQtdAcessos() : DEFAULT_CAPACITY;
             Duration duration = plano != null ? Duration.ofDays(plano.getDuracaoDias()) : DEFAULT_DURATION;
             planTag = plano != null ? plano.getNome() : "none";
-            bucket = buckets.get(key, k -> newBucket(capacity, duration));
+            bucket = buckets
+                    .get(key, k -> new BucketEntry(newBucket(capacity, duration), duration))
+                    .bucket();
         } else {
             planTag = "anonymous";
-            bucket = buckets.get(key, k -> newBucket(DEFAULT_CAPACITY, DEFAULT_DURATION));
+            bucket = buckets
+                    .get(key, k -> new BucketEntry(newBucket(DEFAULT_CAPACITY, DEFAULT_DURATION), DEFAULT_DURATION))
+                    .bucket();
         }
 
         if (bucket.tryConsume(1)) {
