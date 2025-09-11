@@ -10,14 +10,17 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -29,7 +32,7 @@ import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Support.TenantContext;
 
 /**
- * Filter that limits requests hitting authentication endpoints.
+ * Filter that limits requests hitting configured endpoints.
  * Requests are tracked per user (if authenticated) or per remote IP address.
  * Metrics are recorded through Micrometer so limits can be monitored via the
  * Actuator metrics endpoint. Buckets are stored in a Caffeine cache that
@@ -67,10 +70,17 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             .build();
     private final MeterRegistry meterRegistry;
     private final PlanoService planoService;
+    private final List<String> protectedPatterns;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    public RateLimitingFilter(MeterRegistry meterRegistry, PlanoService planoService) {
+    public RateLimitingFilter(MeterRegistry meterRegistry,
+                              PlanoService planoService,
+                              @Value("${rate-limiting.protected-patterns:/auth/**}") List<String> protectedPatterns) {
         this.meterRegistry = meterRegistry;
         this.planoService = planoService;
+        this.protectedPatterns = (protectedPatterns == null || protectedPatterns.isEmpty())
+                ? List.of("/auth/**")
+                : protectedPatterns;
     }
 
     @Override
@@ -79,7 +89,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getServletPath();
-        if (!path.startsWith("/auth")) {
+        boolean match = protectedPatterns.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
+        if (!match) {
             filterChain.doFilter(request, response);
             return;
         }

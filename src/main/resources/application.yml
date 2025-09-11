@@ -3,3 +3,8 @@ auth:
   lockout-minutes: 15
   two-factor-expiry-seconds: 300
   reset-code-expiry-seconds: 600
+rate-limiting:
+  protected-patterns:
+    - /auth/authenticate
+    - /auth/reset-password
+    - /auth/register
