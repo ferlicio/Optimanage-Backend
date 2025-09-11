@@ -2,6 +2,8 @@ package com.AIT.Optimanage.Exceptions;
 
 import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
 import com.AIT.Optimanage.Exceptions.GlobalExceptionHandler;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.MDC;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -50,6 +53,16 @@ class GlobalExceptionHandlerTest {
     static class DummyRequest {
         @NotBlank
         public String name;
+    }
+
+    @BeforeEach
+    void setup() {
+        MDC.put("correlationId", "test-correlation-id");
+    }
+
+    @AfterEach
+    void cleanup() {
+        MDC.remove("correlationId");
     }
 
     @Test
