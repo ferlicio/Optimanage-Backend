@@ -1,6 +1,7 @@
-package com.AIT.Optimanage.Controllers.ExceptionHandler;
+package com.AIT.Optimanage.Exceptions;
 
 import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
+import com.AIT.Optimanage.Exceptions.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -57,21 +58,27 @@ class GlobalExceptionHandlerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.errors[0]").exists());
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0]").exists())
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 
     @Test
     void whenAccessDenied_thenReturnsForbidden() throws Exception {
         mockMvc.perform(get("/access-denied"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value(403));
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.detail").value("Forbidden"))
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 
     @Test
     void whenCustomRuntime_thenReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/runtime"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(400));
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detail").value("Custom error"))
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 }

@@ -1,6 +1,6 @@
 package com.AIT.Optimanage.Controllers.Cliente;
 
-import com.AIT.Optimanage.Controllers.ExceptionHandler.GlobalExceptionHandler;
+import com.AIT.Optimanage.Exceptions.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -32,7 +32,9 @@ class ClienteControllerValidationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0]").exists());
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0]").exists())
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 
     @Test
@@ -42,6 +44,8 @@ class ClienteControllerValidationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0]").exists());
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0]").exists())
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 }
