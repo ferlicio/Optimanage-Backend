@@ -145,6 +145,21 @@ Para executar as migrações manualmente, utilize o Maven especificando a conex�
     -Dflyway.password=<senha>
 ```
 
+## Limitação de taxa
+A lista de endpoints protegidos pelo `RateLimitingFilter` é configurada pela propriedade
+`rate-limiting.protected-patterns` no `application.yml`. Ela aceita padrões de URL no formato Ant.
+
+Exemplo para proteger os endpoints de redefinição de senha e criação de conta:
+
+```yaml
+rate-limiting:
+  protected-patterns:
+    - /auth/reset-password
+    - /auth/register
+```
+
+Com essa configuração, as rotas de redefinição de senha e criação de conta ficam sujeitas ao controle de limite de requisições.
+
 ## Monitoramento
 - `GET /actuator/health` – verificar status da aplicação.
 - `GET /actuator/info` – informações adicionais incluindo contagem de clientes e produtos.
