@@ -24,6 +24,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 @RequiredArgsConstructor
@@ -87,6 +91,34 @@ public class PayPalPaymentProvider implements PaymentProviderStrategy {
                     .build();
         } catch (Exception e) {
             throw new RuntimeException("Erro ao confirmar pagamento", e);
+        }
+    }
+
+    @Override
+    public PagamentoDTO handleWebhook(String payload, Map<String, String> headers, PaymentConfig config) {
+        if (!headers.containsKey("paypal-transmission-sig")) {
+            throw new RuntimeException("Cabeçalhos do PayPal inválidos");
+        }
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(payload);
+            JsonNode resource = node.path("resource");
+            String status = resource.path("status").asText();
+            JsonNode amountNode = resource.path("amount");
+            BigDecimal amount = BigDecimal.ZERO;
+            if (amountNode.has("value")) {
+                amount = new BigDecimal(amountNode.path("value").asText("0"));
+            }
+            boolean completed = "COMPLETED".equalsIgnoreCase(status);
+            return PagamentoDTO.builder()
+                    .valorPago(amount)
+                    .dataPagamento(LocalDate.now())
+                    .formaPagamento(FormaPagamento.CARTAO_CREDITO)
+                    .statusPagamento(completed ? StatusPagamento.PAGO : StatusPagamento.PENDENTE)
+                    .observacoes("PayPal webhook " + node.path("id").asText())
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Evento PayPal inválido", e);
         }
     }
 }

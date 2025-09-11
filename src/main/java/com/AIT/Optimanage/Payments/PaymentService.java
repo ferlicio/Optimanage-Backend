@@ -28,6 +28,10 @@ public class PaymentService {
         return getProvider(config.getProvider()).confirmPayment(paymentIntentId, config);
     }
 
+    public PagamentoDTO handleWebhook(PaymentProvider provider, String payload, Map<String, String> headers, PaymentConfig config) {
+        return getProvider(provider).handleWebhook(payload, headers, config);
+    }
+
     private PaymentProviderStrategy getProvider(PaymentProvider provider) {
         PaymentProviderStrategy strategy = providers.get(provider);
         if (strategy == null) {
