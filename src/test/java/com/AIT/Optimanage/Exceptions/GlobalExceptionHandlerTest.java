@@ -1,5 +1,6 @@
 package com.AIT.Optimanage.Exceptions;
 
+import com.AIT.Optimanage.Config.LocaleConfig;
 import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
 import com.AIT.Optimanage.Exceptions.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -27,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = GlobalExceptionHandlerTest.TestController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, LocaleConfig.class})
 class GlobalExceptionHandlerTest {
 
     @Autowired
@@ -72,7 +73,7 @@ class GlobalExceptionHandlerTest {
                 .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.detail").value("Falha na validação"))
                 .andExpect(jsonPath("$.errors[0]").exists())
                 .andExpect(jsonPath("$.correlationId").exists());
     }
