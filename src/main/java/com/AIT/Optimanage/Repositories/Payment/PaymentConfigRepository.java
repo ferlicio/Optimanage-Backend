@@ -11,4 +11,5 @@ import java.util.Optional;
 @Repository
 public interface PaymentConfigRepository extends JpaRepository<PaymentConfig, Integer> {
     Optional<PaymentConfig> findByUserAndProvider(User user, PaymentProvider provider);
+    Optional<PaymentConfig> findFirstByProvider(PaymentProvider provider);
 }

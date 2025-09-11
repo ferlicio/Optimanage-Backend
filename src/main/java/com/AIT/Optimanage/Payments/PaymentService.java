@@ -6,10 +6,9 @@ import com.AIT.Optimanage.Models.Payment.PaymentProvider;
 import com.AIT.Optimanage.Payments.Providers.PaymentProviderStrategy;
 import org.springframework.stereotype.Service;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 public class PaymentService {
@@ -17,8 +16,8 @@ public class PaymentService {
     private final Map<PaymentProvider, PaymentProviderStrategy> providers;
 
     public PaymentService(List<PaymentProviderStrategy> strategies) {
-        this.providers = strategies.stream()
-                .collect(Collectors.toMap(PaymentProviderStrategy::getProvider, Function.identity()));
+        this.providers = new EnumMap<>(PaymentProvider.class);
+        strategies.forEach(s -> this.providers.put(s.getProvider(), s));
     }
 
     public PaymentResponseDTO createPayment(PaymentRequestDTO request, PaymentConfig config) {

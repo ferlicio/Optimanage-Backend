@@ -39,7 +39,8 @@ public class SecurityConfig {
                                         "/auth/refresh",
                                         "/auth/forgot-password",
                                         "/auth/reset-password",
-                                        "/auth/verify-2fa"
+                                        "/auth/verify-2fa",
+                                        "/payments/webhook"
                                 ).permitAll()
                                 .requestMatchers("/usuarios/**").hasAuthority("ADMIN")
                                 .requestMatchers("/admin/**").hasAuthority("ADMIN")

@@ -17,4 +17,9 @@ public class PaymentConfigService {
         return repository.findByUserAndProvider(user, provider)
                 .orElseThrow(() -> new IllegalArgumentException("Configuração de pagamento não encontrada"));
     }
+
+    public PaymentConfig getConfig(PaymentProvider provider) {
+        return repository.findFirstByProvider(provider)
+                .orElseThrow(() -> new IllegalArgumentException("Configuração de pagamento não encontrada"));
+    }
 }
