@@ -167,20 +167,31 @@ public class AuthenticationService {
 
     @Transactional
     public AuthenticationResponse refreshToken(String token) {
+        if (!refreshTokenRepository.existsByTokenAndRevokedFalse(token)) {
+            throw new RefreshTokenInvalidException();
+        }
         var storedToken = refreshTokenRepository.findByToken(token)
                 .orElseThrow(RefreshTokenNotFoundException::new);
         var user = storedToken.getUser();
         if (storedToken.getExpiryDate().isBefore(Instant.now()) || !jwtService.isTokenValid(token, user)) {
-            refreshTokenRepository.delete(storedToken);
+            refreshTokenRepository.markAsRevoked(token);
             throw new RefreshTokenInvalidException();
         }
+        refreshTokenRepository.markAsRevoked(token);
+        var newRefreshToken = jwtService.generateRefreshToken(user);
+        var newTokenEntity = RefreshToken.builder()
+                .user(user)
+                .token(newRefreshToken)
+                .expiryDate(Instant.now().plusMillis(jwtService.getRefreshExpiration()))
+                .build();
+        refreshTokenRepository.save(newTokenEntity);
         var jwtToken = jwtService.generateToken(
                 java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
                 user
         );
         return AuthenticationResponse.builder()
                 .token(jwtToken)
-                .refreshToken(token)
+                .refreshToken(newRefreshToken)
                 .build();
     }
 
@@ -191,6 +202,7 @@ public class AuthenticationService {
                 .user(user)
                 .token(refreshToken)
                 .expiryDate(Instant.now().plusMillis(jwtService.getRefreshExpiration()))
+                .revoked(false)
                 .build();
         refreshTokenRepository.save(token);
         return refreshToken;
