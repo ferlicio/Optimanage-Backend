@@ -93,19 +93,22 @@ public class AuthenticationService {
         user.setLockoutExpiry(null);
         userRepository.save(user);
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            String code = request.getTwoFactorCode();
-            if (code == null) {
-                throw new InvalidTwoFactorCodeException();
-            }
-            int codeInt;
-            try {
-                codeInt = Integer.parseInt(code);
-            } catch (NumberFormatException e) {
-                throw new InvalidTwoFactorCodeException();
-            }
-            GoogleAuthenticator gAuth = new GoogleAuthenticator();
-            if (!gAuth.authorize(user.getTwoFactorSecret(), codeInt)) {
-                throw new InvalidTwoFactorCodeException();
+            String secret = user.getTwoFactorSecret();
+            if (secret != null) {
+                String code = request.getTwoFactorCode();
+                if (code == null) {
+                    throw new InvalidTwoFactorCodeException();
+                }
+                int codeInt;
+                try {
+                    codeInt = Integer.parseInt(code);
+                } catch (NumberFormatException e) {
+                    throw new InvalidTwoFactorCodeException();
+                }
+                GoogleAuthenticator gAuth = new GoogleAuthenticator();
+                if (!gAuth.authorize(secret, codeInt)) {
+                    throw new InvalidTwoFactorCodeException();
+                }
             }
         }
         var jwtToken = jwtService.generateToken(
