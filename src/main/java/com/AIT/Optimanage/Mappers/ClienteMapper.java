@@ -13,6 +13,7 @@ public interface ClienteMapper {
 
     @Mapping(target = "atividade", source = "atividadeId", qualifiedByName = "idToAtividade")
     @Mapping(target = "ownerUser", ignore = true)
+    @Mapping(target = "ativo", source = "ativo", defaultValue = "true")
     Cliente toEntity(ClienteRequest request);
 
     @Mapping(target = "atividadeId", source = "atividade.id")
