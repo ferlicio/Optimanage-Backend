@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -92,5 +93,32 @@ class AuthenticationServiceTest {
 
         assertEquals("jwt", response.getToken());
         assertEquals("refresh", response.getRefreshToken());
+    }
+
+    @Test
+    void refreshTokenGeneratesNewTokenAndRevokesOld() {
+        String oldToken = "oldRefresh";
+        User user = new User();
+        user.setTenantId(1);
+        RefreshToken storedToken = RefreshToken.builder()
+                .token(oldToken)
+                .user(user)
+                .expiryDate(Instant.now().plusSeconds(60))
+                .revoked(false)
+                .build();
+
+        when(refreshTokenRepository.revokeIfNotRevoked(oldToken)).thenReturn(1);
+        when(refreshTokenRepository.findByToken(oldToken)).thenReturn(Optional.of(storedToken));
+        when(jwtService.isTokenValid(oldToken, user)).thenReturn(true);
+        when(jwtService.generateToken(anyMap(), eq(user))).thenReturn("newJwt");
+        when(jwtService.generateRefreshToken(user)).thenReturn("newRefresh");
+        when(jwtService.getRefreshExpiration()).thenReturn(1000L);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AuthenticationResponse response = authenticationService.refreshToken(oldToken);
+
+        assertEquals("newJwt", response.getToken());
+        assertEquals("newRefresh", response.getRefreshToken());
+        verify(refreshTokenRepository).revokeIfNotRevoked(oldToken);
     }
 }
