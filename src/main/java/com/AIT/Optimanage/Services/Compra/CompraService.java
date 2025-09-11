@@ -302,10 +302,14 @@ public class CompraService {
             throw new IllegalArgumentException("Não é possível agendar uma compra sem produtos ou serviços.");
         }
 
-        if (compra.getStatus() == StatusCompra.AGUARDANDO_EXECUCAO || compra.getStatus() == StatusCompra.PAGO) {
-            compra.setDataAgendada(LocalDate.parse(dataAgendada));
-            compra.setStatus(StatusCompra.AGENDADA);
+        if (compra.getStatus() != StatusCompra.AGUARDANDO_EXECUCAO && compra.getStatus() != StatusCompra.PAGO) {
+            throw new IllegalStateException(
+                    "Não é possível agendar uma compra com status " + compra.getStatus() + ".");
         }
+
+        compra.setDataAgendada(LocalDate.parse(dataAgendada));
+        atualizarStatus(compra, StatusCompra.AGENDADA);
+
         Compra salvo = compraRepository.save(compra);
         return compraMapper.toResponse(salvo);
     }
