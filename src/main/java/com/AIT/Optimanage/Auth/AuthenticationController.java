@@ -37,21 +37,12 @@ public class AuthenticationController extends com.AIT.Optimanage.Controllers.Bas
         return ok(authenticationService.authenticate(request));
     }
 
-    @PostMapping("/verify-2fa")
-    @Operation(summary = "Verificar 2FA", description = "Verifica o código de 2FA")
-    @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<AuthenticationResponse> verifyTwoFactor(
-            @Valid @RequestBody TwoFactorRequest request) {
-        return ResponseEntity.ok(authenticationService.verifyTwoFactor(request));
-    }
-
     @PostMapping("/toggle-2fa")
     @Operation(summary = "Ativar/Desativar 2FA", description = "Ativa ou desativa o 2FA para o usuário")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Void> toggleTwoFactor(
+    public ResponseEntity<TwoFactorSetupResponse> toggleTwoFactor(
             @Valid @RequestBody TwoFactorToggleRequest request) {
-        authenticationService.toggleTwoFactor(request);
-        return ResponseEntity.ok().build();
+        return ok(authenticationService.toggleTwoFactor(request));
     }
 
     @PostMapping("/forgot-password")

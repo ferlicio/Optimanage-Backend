@@ -40,8 +40,7 @@ public class User extends BaseEntity implements UserDetails {
     @Builder.Default
     @Column(nullable = false)
     private Boolean twoFactorEnabled = false;
-    private String twoFactorCode;
-    private Instant twoFactorExpiry;
+    private String twoFactorSecret;
     private String resetCode;
     private Instant resetCodeExpiry;
 
