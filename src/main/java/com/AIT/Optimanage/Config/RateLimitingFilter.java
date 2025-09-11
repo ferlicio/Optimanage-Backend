@@ -18,8 +18,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
 
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
@@ -30,7 +32,9 @@ import com.AIT.Optimanage.Support.TenantContext;
  * Filter that limits requests hitting authentication endpoints.
  * Requests are tracked per user (if authenticated) or per remote IP address.
  * Metrics are recorded through Micrometer so limits can be monitored via the
- * Actuator metrics endpoint.
+ * Actuator metrics endpoint. Buckets are stored in a Caffeine cache that
+ * expires entries after the rate-limit window to prevent unbounded memory
+ * usage while ensuring limits cannot be bypassed by short idle periods.
  */
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
@@ -39,8 +43,28 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final long DEFAULT_CAPACITY = 5;
     /** Default length of the rate‑limit window. */
     private static final Duration DEFAULT_DURATION = Duration.ofMinutes(1);
+    /** Container for a bucket and the time after which it may be evicted. */
+    private record BucketEntry(Bucket bucket, Duration expiry) {}
 
-    private final ConcurrentMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+    /** Cache holding buckets for each user/IP and tenant combination. */
+    private final Cache<String, BucketEntry> buckets = Caffeine.newBuilder()
+            .expireAfter(new Expiry<String, BucketEntry>() {
+                @Override
+                public long expireAfterCreate(String key, BucketEntry value, long currentTime) {
+                    return value.expiry().toNanos();
+                }
+
+                @Override
+                public long expireAfterUpdate(String key, BucketEntry value, long currentTime, long currentDuration) {
+                    return value.expiry().toNanos();
+                }
+
+                @Override
+                public long expireAfterRead(String key, BucketEntry value, long currentTime, long currentDuration) {
+                    return value.expiry().toNanos();
+                }
+            })
+            .build();
     private final MeterRegistry meterRegistry;
     private final PlanoService planoService;
 
@@ -61,8 +85,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String tenantKey = tenantKey();
-        String key;
+        String key = bucketKey(request, authentication);
         Bucket bucket;
         String planTag;
 
@@ -70,13 +93,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             Plano plano = planoService.obterPlanoUsuario(user).orElse(null);
             long capacity = plano != null ? plano.getQtdAcessos() : DEFAULT_CAPACITY;
             Duration duration = plano != null ? Duration.ofDays(plano.getDuracaoDias()) : DEFAULT_DURATION;
-            key = tenantKey + ":" + authentication.getName();
             planTag = plano != null ? plano.getNome() : "none";
-            bucket = buckets.computeIfAbsent(key, k -> newBucket(capacity, duration));
+            bucket = buckets
+                    .get(key, k -> new BucketEntry(newBucket(capacity, duration), duration))
+                    .bucket();
         } else {
-            key = tenantKey + ":" + request.getRemoteAddr();
             planTag = "anonymous";
-            bucket = buckets.computeIfAbsent(key, k -> newBucket(DEFAULT_CAPACITY, DEFAULT_DURATION));
+            bucket = buckets
+                    .get(key, k -> new BucketEntry(newBucket(DEFAULT_CAPACITY, DEFAULT_DURATION), DEFAULT_DURATION))
+                    .bucket();
         }
 
         if (bucket.tryConsume(1)) {
@@ -94,6 +119,14 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         Refill refill = Refill.greedy(capacity, duration);
         Bandwidth limit = Bandwidth.classic(capacity, refill);
         return Bucket4j.builder().addLimit(limit).build();
+    }
+
+    private String bucketKey(HttpServletRequest request, Authentication authentication) {
+        String prefix = tenantKey() + ":";
+        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof User) {
+            return prefix + authentication.getName();
+        }
+        return prefix + request.getRemoteAddr();
     }
 
     private String tenantKey() {
