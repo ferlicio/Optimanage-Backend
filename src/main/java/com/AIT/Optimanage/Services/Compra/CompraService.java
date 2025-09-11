@@ -293,6 +293,38 @@ public class CompraService {
         return compraMapper.toResponse(salvo);
     }
 
+    public CompraResponseDTO agendarCompra(Integer idCompra, String dataAgendada) {
+        Compra compra = getCompra(idCompra);
+
+        boolean semItens = (compra.getCompraProdutos() == null || compra.getCompraProdutos().isEmpty())
+                && (compra.getCompraServicos() == null || compra.getCompraServicos().isEmpty());
+        if (semItens) {
+            throw new IllegalArgumentException("Não é possível agendar uma compra sem produtos ou serviços.");
+        }
+
+        if (compra.getStatus() == StatusCompra.AGUARDANDO_EXECUCAO || compra.getStatus() == StatusCompra.PAGO) {
+            compra.setDataAgendada(LocalDate.parse(dataAgendada));
+            compra.setStatus(StatusCompra.AGENDADA);
+        }
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
+    }
+
+    public CompraResponseDTO finalizarAgendamentoCompra(Integer idCompra) {
+        Compra compra = getCompra(idCompra);
+        if (compra.getStatus() == StatusCompra.AGENDADA) {
+            if (compra.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
+                compra.setStatus(StatusCompra.AGUARDANDO_PAG);
+            } else {
+                compra.setStatus(StatusCompra.CONCRETIZADO);
+            }
+        } else {
+            throw new IllegalArgumentException("Não é possível finalizar um agendamento que não está agendado.");
+        }
+        Compra salvo = compraRepository.save(compra);
+        return compraMapper.toResponse(salvo);
+    }
+
     public CompraResponseDTO finalizarCompra(Integer idCompra) {
         Compra compra = getCompra(idCompra);
         atualizarStatus(compra, StatusCompra.CONCRETIZADO);
@@ -349,6 +381,9 @@ public class CompraService {
         if (compraDTO.getDataEfetuacao().isAfter(LocalDate.now())) {
             throw new IllegalArgumentException("Data de efetuação não pode ser no futuro");
         }
+        if (compraDTO.getDataAgendada() == null && compraDTO.getStatus() == StatusCompra.AGENDADA) {
+            throw new IllegalArgumentException("Data agendada não informada para compra agendada");
+        }
         if (compraDTO.getDataCobranca() == null) {
             if (compraDTO.getStatus() == StatusCompra.AGUARDANDO_PAG) {
                 throw new IllegalArgumentException("Data de cobrança não informada para venda aguardando pagamento");
@@ -383,8 +418,14 @@ public class CompraService {
                 }
                 break;
 
+            case AGENDADA:
+                if (statusAtual == StatusCompra.CONCRETIZADO || statusAtual == StatusCompra.CANCELADO) {
+                    throw new IllegalStateException("Não é possivel agendar uma compra cancelada ou concretizada.");
+                }
+                break;
+
             case AGUARDANDO_PAG:
-                if (statusAtual != StatusCompra.AGUARDANDO_EXECUCAO && statusAtual != StatusCompra.ORCAMENTO) {
+                if (statusAtual != StatusCompra.AGUARDANDO_EXECUCAO && statusAtual != StatusCompra.ORCAMENTO && statusAtual != StatusCompra.AGENDADA) {
                     throw new IllegalStateException("A compra só pode aguardar pagamento se o pedido já foi realizado.");
                 }
                 break;
@@ -402,8 +443,8 @@ public class CompraService {
                 break;
 
             case CONCRETIZADO:
-                if (statusAtual != StatusCompra.PAGO && statusAtual != StatusCompra.AGUARDANDO_EXECUCAO) {
-                    throw new IllegalStateException("A compra só pode ser finalizada se estiver paga ou aguardando execução.");
+                if (statusAtual != StatusCompra.PAGO && statusAtual != StatusCompra.AGUARDANDO_EXECUCAO && statusAtual != StatusCompra.AGENDADA) {
+                    throw new IllegalStateException("A compra só pode ser finalizada se estiver paga, aguardando execução ou agendada.");
                 }
                 if (compra.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
                     throw new IllegalStateException("A compra não pode ser finalizada enquanto houver saldo pendente.");

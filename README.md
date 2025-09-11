@@ -81,6 +81,8 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `PUT /api/v1/compras/{idCompra}/lancar-pagamento` &ndash; lançar pagamentos.
 - `PUT /api/v1/compras/{idCompra}/estornar` &ndash; estornar compra.
 - `PUT /api/v1/compras/{idCompra}/estornar/{idPagamento}` &ndash; estornar pagamento.
+- `PUT /api/v1/compras/{idCompra}/agendar` &ndash; agendar compra.
+- `PUT /api/v1/compras/{idCompra}/finalizar-agendamento` &ndash; finalizar agendamento.
 - `PUT /api/v1/compras/{idCompra}/finalizar` &ndash; finalizar compra.
 - `PUT /api/v1/compras/{idCompra}/cancelar` &ndash; cancelar compra.
 

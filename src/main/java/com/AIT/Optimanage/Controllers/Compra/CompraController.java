@@ -118,6 +118,21 @@ public class CompraController extends V1BaseController {
           return ok(compraService.estornarPagamentoCompra(idCompra, idPagamento));
       }
 
+    @PutMapping("/{idCompra}/agendar")
+    @Operation(summary = "Agendar compra", description = "Agenda uma compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+      public ResponseEntity<CompraResponseDTO> agendarCompra(@PathVariable("idCompra") Integer idCompra,
+                                                 @RequestParam String dataAgendada) {
+          return ok(compraService.agendarCompra(idCompra, dataAgendada));
+      }
+
+    @PutMapping("/{idCompra}/finalizar-agendamento")
+    @Operation(summary = "Finalizar agendamento", description = "Finaliza o agendamento de uma compra")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+      public ResponseEntity<CompraResponseDTO> finalizarAgendamentoCompra(@PathVariable("idCompra") Integer idCompra) {
+          return ok(compraService.finalizarAgendamentoCompra(idCompra));
+      }
+
     @PutMapping("/{idCompra}/finalizar")
     @Operation(summary = "Finalizar compra", description = "Finaliza uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
