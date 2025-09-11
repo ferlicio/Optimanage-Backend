@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,5 +66,31 @@ class AuthenticationServiceTest {
 
         verify(refreshTokenRepository).deleteByUser(user);
         verify(tokenBlacklistService).blacklistToken(token);
+    }
+
+    @Test
+    void authenticateSkipsTwoFactorWhenSecretMissing() {
+        AuthenticationRequest request = AuthenticationRequest.builder()
+                .email("user@example.com")
+                .senha("password")
+                .build();
+        User user = new User();
+        user.setEmail("user@example.com");
+        user.setSenha("encoded");
+        user.setTwoFactorEnabled(true);
+        user.setTenantId(1);
+
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+        when(authenticationManager.authenticate(any())).thenReturn(null);
+        when(jwtService.generateToken(anyMap(), eq(user))).thenReturn("jwt");
+        when(jwtService.generateRefreshToken(user)).thenReturn("refresh");
+        when(jwtService.getRefreshExpiration()).thenReturn(1000L);
+        when(userRepository.save(user)).thenReturn(user);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AuthenticationResponse response = authenticationService.authenticate(request);
+
+        assertEquals("jwt", response.getToken());
+        assertEquals("refresh", response.getRefreshToken());
     }
 }
