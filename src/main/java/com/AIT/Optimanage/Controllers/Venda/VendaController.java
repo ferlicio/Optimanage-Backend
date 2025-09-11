@@ -7,7 +7,7 @@ import com.AIT.Optimanage.Models.Venda.DTOs.VendaDTO;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Models.Venda.Search.VendaSearch;
-import com.AIT.Optimanage.Models.Venda.Venda;
+import com.AIT.Optimanage.Models.Venda.DTOs.VendaResponseDTO;
 import com.AIT.Optimanage.Services.Venda.VendaService;
 import com.AIT.Optimanage.Payments.PaymentConfirmationDTO;
 import com.AIT.Optimanage.Payments.PaymentRequestDTO;
@@ -36,7 +36,7 @@ public class VendaController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar vendas", description = "Retorna uma página de vendas")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Page<Venda>> listarVendas(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<Page<VendaResponseDTO>> listarVendas(@AuthenticationPrincipal User loggedUser,
                                                     @RequestParam(value = "id", required = false) Integer id,
                                                     @RequestParam(value = "cliente_id", required = false) Integer clienteId,
                                                     @RequestParam(value = "data_inicial", required = false) String data_inicial,
@@ -67,7 +67,7 @@ public class VendaController extends V1BaseController {
     @GetMapping("/{idVenda}")
     @Operation(summary = "Listar venda", description = "Retorna uma venda pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> listarUmaVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> listarUmaVenda(@AuthenticationPrincipal User loggedUser,
                                                 @PathVariable("idVenda") Integer idVenda) {
         return ok(vendaService.listarUmaVenda(loggedUser, idVenda));
     }
@@ -75,7 +75,7 @@ public class VendaController extends V1BaseController {
     @PostMapping
     @Operation(summary = "Registrar venda", description = "Cria uma nova venda")
     @ApiResponse(responseCode = "201", description = "Criado")
-    public ResponseEntity<Venda> registrarVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> registrarVenda(@AuthenticationPrincipal User loggedUser,
                                                 @RequestBody @Valid VendaDTO venda) {
         return created(vendaService.registrarVenda(loggedUser, venda));
     }
@@ -83,7 +83,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}")
     @Operation(summary = "Editar venda", description = "Atualiza uma venda existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> editarVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> editarVenda(@AuthenticationPrincipal User loggedUser,
                                              @PathVariable("idVenda") Integer idVenda,
                                              @RequestBody @Valid VendaDTO venda) {
         return ok(vendaService.atualizarVenda(loggedUser, idVenda, venda));
@@ -92,7 +92,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/confirmar")
     @Operation(summary = "Confirmar venda", description = "Confirma uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> confirmarVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> confirmarVenda(@AuthenticationPrincipal User loggedUser,
                                                 @PathVariable("idVenda") Integer idVenda) {
         return ok(vendaService.confirmarVenda(loggedUser, idVenda));
     }
@@ -100,7 +100,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/pagar/{idPagamento}")
     @Operation(summary = "Pagar venda", description = "Realiza pagamento de uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> pagarVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> pagarVenda(@AuthenticationPrincipal User loggedUser,
                                             @PathVariable("idVenda") Integer idVenda,
                                             @PathVariable("idPagamento") Integer idPagamento) {
         return ok(vendaService.pagarVenda(loggedUser, idVenda, idPagamento));
@@ -118,7 +118,7 @@ public class VendaController extends V1BaseController {
     @PostMapping("/{idVenda}/pagamento-externo/confirmar")
     @Operation(summary = "Confirmar pagamento externo", description = "Confirma pagamento no provedor externo")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> confirmarPagamentoExterno(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> confirmarPagamentoExterno(@AuthenticationPrincipal User loggedUser,
                                                            @PathVariable("idVenda") Integer idVenda,
                                                            @RequestBody @Valid PaymentConfirmationDTO confirmDTO) {
         return ok(vendaService.confirmarPagamentoExterno(loggedUser, idVenda, confirmDTO));
@@ -127,7 +127,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/lancar-pagamento")
     @Operation(summary = "Lançar pagamento", description = "Registra pagamento de uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> lancarPagamentoVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> lancarPagamentoVenda(@AuthenticationPrincipal User loggedUser,
                                                       @PathVariable("idVenda") Integer idVenda,
                                                       @RequestBody List<@Valid PagamentoDTO> pagamentoDTO) {
         return ok(vendaService.lancarPagamentoVenda(loggedUser, idVenda, pagamentoDTO));
@@ -136,7 +136,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/estornar")
     @Operation(summary = "Estornar venda", description = "Estorna venda integralmente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> estornarVendaIntegral(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> estornarVendaIntegral(@AuthenticationPrincipal User loggedUser,
                                                        @PathVariable("idVenda") Integer idVenda) {
         return ok(vendaService.estornarVendaIntegral(loggedUser, idVenda));
     }
@@ -144,7 +144,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/estornar/{idPagamento}")
     @Operation(summary = "Estornar pagamento", description = "Estorna pagamento de uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> estornarPagamentoVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> estornarPagamentoVenda(@AuthenticationPrincipal User loggedUser,
                                                         @PathVariable("idVenda") Integer idVenda,
                                                         @PathVariable("idPagamento") Integer idPagamento) {
         return ok(vendaService.estornarPagamentoVenda(loggedUser, idVenda, idPagamento));
@@ -153,7 +153,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/agendar")
     @Operation(summary = "Agendar venda", description = "Agenda uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> agendarVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> agendarVenda(@AuthenticationPrincipal User loggedUser,
                                               @PathVariable("idVenda") Integer idVenda,
                                               @RequestParam String dataAgendada) {
         return ok(vendaService.agendarVenda(loggedUser, idVenda, dataAgendada));
@@ -162,7 +162,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/finalizar-agendamento")
     @Operation(summary = "Finalizar agendamento", description = "Finaliza o agendamento de uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> finalizarAgendamentoVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> finalizarAgendamentoVenda(@AuthenticationPrincipal User loggedUser,
                                                            @PathVariable("idVenda") Integer idVenda) {
         return ok(vendaService.finalizarAgendamentoVenda(loggedUser, idVenda));
     }
@@ -170,7 +170,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/finalizar")
     @Operation(summary = "Finalizar venda", description = "Finaliza uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> finalizarVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> finalizarVenda(@AuthenticationPrincipal User loggedUser,
                                                 @PathVariable("idVenda") Integer idVenda) {
         return ok(vendaService.finalizarVenda(loggedUser, idVenda));
     }
@@ -178,7 +178,7 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/cancelar")
     @Operation(summary = "Cancelar venda", description = "Cancela uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Venda> cancelarVenda(@AuthenticationPrincipal User loggedUser,
+    public ResponseEntity<VendaResponseDTO> cancelarVenda(@AuthenticationPrincipal User loggedUser,
                                                @PathVariable("idVenda") Integer idVenda) {
         return ok(vendaService.cancelarVenda(loggedUser, idVenda));
     }

@@ -11,6 +11,8 @@ import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaDTO;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaProdutoDTO;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaServicoDTO;
+import com.AIT.Optimanage.Models.Venda.DTOs.VendaResponseDTO;
+import com.AIT.Optimanage.Mappers.VendaMapper;
 import com.AIT.Optimanage.Models.Venda.Search.VendaSearch;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Models.Venda.Venda;
@@ -66,10 +68,11 @@ public class VendaService {
     private final ProdutoRepository produtoRepository;
     private final PaymentService paymentService;
     private final PaymentConfigService paymentConfigService;
+    private final VendaMapper vendaMapper;
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
-    public Page<Venda> listarVendas(User loggedUser, VendaSearch pesquisa) {
+    public Page<VendaResponseDTO> listarVendas(User loggedUser, VendaSearch pesquisa) {
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -87,17 +90,21 @@ public class VendaService {
                 pesquisa.getStatus(),
                 pesquisa.getPago(),
                 pesquisa.getFormaPagamento(),
-                pageable);
+                pageable).map(vendaMapper::toResponse);
     }
 
-    public Venda listarUmaVenda(User loggedUser, Integer idVenda) {
+    private Venda getVenda(User loggedUser, Integer idVenda) {
         return vendaRepository.findByIdAndOwnerUser(idVenda, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Venda não encontrada"));
     }
 
+    public VendaResponseDTO listarUmaVenda(User loggedUser, Integer idVenda) {
+        return vendaMapper.toResponse(getVenda(loggedUser, idVenda));
+    }
+
     @Transactional
     @CacheEvict(value = "vendas", allEntries = true)
-    public Venda registrarVenda(User loggedUser, VendaDTO vendaDTO) {
+    public VendaResponseDTO registrarVenda(User loggedUser, VendaDTO vendaDTO) {
         validarVenda(vendaDTO, loggedUser);
 
         Cliente cliente = clienteService.listarUmCliente(vendaDTO.getClienteId());
@@ -153,15 +160,15 @@ public class VendaService {
         });
 
         contadorService.IncrementarContador(Tabela.VENDA);
-        return novaVenda;
+        return vendaMapper.toResponse(novaVenda);
     }
 
     @Transactional
     @CacheEvict(value = "vendas", allEntries = true)
-    public Venda atualizarVenda(User loggedUser, Integer vendaId, VendaDTO vendaDTO) {
+    public VendaResponseDTO atualizarVenda(User loggedUser, Integer vendaId, VendaDTO vendaDTO) {
         validarVenda(vendaDTO, loggedUser);
 
-        Venda venda = listarUmaVenda(loggedUser, vendaId);
+        Venda venda = getVenda(loggedUser, vendaId);
         Venda vendaAtualizada = Venda.builder()
                 .cliente(venda.getCliente())
                 .sequencialUsuario(venda.getSequencialUsuario())
@@ -222,11 +229,12 @@ public class VendaService {
             }
         });
 
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
-    public Venda confirmarVenda(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO confirmarVenda(User loggedUser, Integer idVenda) {
+        Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.ORCAMENTO && venda.getVendaServicos().isEmpty()) {
             atualizarStatus(venda, StatusVenda.PENDENTE);
         } else if (venda.getStatus() == StatusVenda.ORCAMENTO) {
@@ -234,21 +242,23 @@ public class VendaService {
         } else {
             throw new IllegalArgumentException("Esta venda já foi confirmada.");
         }
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
-    public Venda pagarVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO pagarVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
+        Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
 
         pagamentoVendaService.registrarPagamento(loggedUser, venda, idPagamento);
 
         atualizarVendaPosPagamento(venda);
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
     public PaymentResponseDTO iniciarPagamentoExterno(User loggedUser, Integer idVenda, PaymentRequestDTO request) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+        Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
         PaymentProvider provider = request != null && request.getProvider() != null
                 ? request.getProvider()
@@ -264,19 +274,20 @@ public class VendaService {
         return paymentService.createPayment(req, config);
     }
 
-    public Venda confirmarPagamentoExterno(User loggedUser, Integer idVenda, PaymentConfirmationDTO confirmDTO) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO confirmarPagamentoExterno(User loggedUser, Integer idVenda, PaymentConfirmationDTO confirmDTO) {
+        Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
         PaymentProvider provider = confirmDTO.getProvider() != null ? confirmDTO.getProvider() : PaymentProvider.STRIPE;
         PaymentConfig config = paymentConfigService.getConfig(loggedUser, provider);
         PagamentoDTO pagamentoDTO = paymentService.confirmPayment(confirmDTO.getPaymentIntentId(), config);
         pagamentoVendaService.lancarPagamento(venda, pagamentoDTO);
         atualizarVendaPosPagamento(venda);
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
-    public Venda lancarPagamentoVenda(User loggedUser, Integer idVenda, List<PagamentoDTO> pagamentoDTO) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO lancarPagamentoVenda(User loggedUser, Integer idVenda, List<PagamentoDTO> pagamentoDTO) {
+        Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
 
         for (PagamentoDTO pagamento : pagamentoDTO) {
@@ -289,12 +300,13 @@ public class VendaService {
         }
 
         atualizarVendaPosPagamento(venda);
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
 
-    public Venda estornarVendaIntegral(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO estornarVendaIntegral(User loggedUser, Integer idVenda) {
+        Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.CONCRETIZADA || venda.getStatus() == StatusVenda.PAGA) {
             venda.setStatus(StatusVenda.AGUARDANDO_PAG);
         }
@@ -303,11 +315,12 @@ public class VendaService {
                 -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
                         { pagamentoVendaService.estornarPagamento(loggedUser, pagamento); }
                 });
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
-    public Venda estornarPagamentoVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO estornarPagamentoVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
+        Venda venda = getVenda(loggedUser, idVenda);
         VendaPagamento pagamento = pagamentoVendaService.listarUmPagamento(loggedUser, idPagamento);
         if (venda.getPagamentos().contains(pagamento)) {
             pagamentoVendaService.estornarPagamento(loggedUser, pagamento);
@@ -325,11 +338,12 @@ public class VendaService {
         } else if (valorPago.compareTo(BigDecimal.ZERO) > 0) {
             atualizarStatus(venda, StatusVenda.PARCIALMENTE_PAGA);
         }
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
-    public Venda agendarVenda(User loggedUser, Integer idVenda, String dataAgendada) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO agendarVenda(User loggedUser, Integer idVenda, String dataAgendada) {
+        Venda venda = getVenda(loggedUser, idVenda);
 
         if (venda.getVendaServicos().isEmpty()){
             throw new IllegalArgumentException("Não é possível agendar uma venda sem serviços.");
@@ -338,11 +352,12 @@ public class VendaService {
             venda.setDataAgendada(LocalDate.parse(dataAgendada));
             venda.setStatus(StatusVenda.AGENDADA);
         }
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
-    public Venda finalizarAgendamentoVenda(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO finalizarAgendamentoVenda(User loggedUser, Integer idVenda) {
+        Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.AGENDADA) {
             BigDecimal valorPago = venda.getValorFinal().subtract(venda.getValorPendente());
             if (valorPago.compareTo(BigDecimal.ZERO) <= 0) {
@@ -355,11 +370,12 @@ public class VendaService {
         }  else {
             throw new IllegalArgumentException("Não é possível finalizar um agendamento que não está agendado.");
         }
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
-    public Venda finalizarVenda(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO finalizarVenda(User loggedUser, Integer idVenda) {
+        Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.ORCAMENTO) {
             throw new IllegalArgumentException("Uma venda orçamento não pode ser finalizada.");
         } else if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
@@ -368,17 +384,19 @@ public class VendaService {
         if (venda.getStatus() == StatusVenda.AGENDADA || venda.getStatus() == StatusVenda.PAGA) {
             venda.setStatus(StatusVenda.CONCRETIZADA);
         }
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
     @CacheEvict(value = "vendas", allEntries = true)
-    public Venda cancelarVenda(User loggedUser, Integer idVenda) {
-        Venda venda = listarUmaVenda(loggedUser, idVenda);
+    public VendaResponseDTO cancelarVenda(User loggedUser, Integer idVenda) {
+        Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             throw new IllegalArgumentException("Uma venda concretizada não pode ser cancelada.");
         }
         venda.setStatus(StatusVenda.CANCELADA);
-        return vendaRepository.save(venda);
+        Venda salvo = vendaRepository.save(venda);
+        return vendaMapper.toResponse(salvo);
     }
 
 

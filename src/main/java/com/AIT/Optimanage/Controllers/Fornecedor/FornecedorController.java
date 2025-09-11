@@ -2,8 +2,8 @@ package com.AIT.Optimanage.Controllers.Fornecedor;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
 import com.AIT.Optimanage.Controllers.dto.FornecedorRequest;
+import com.AIT.Optimanage.Controllers.dto.FornecedorResponse;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
-import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.Search.FornecedorSearch;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class FornecedorController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar fornecedores", description = "Retorna uma página de fornecedores")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Page<Fornecedor>> listarFornecedores(@RequestParam(value = "id", required = false) Integer id,
+    public ResponseEntity<Page<FornecedorResponse>> listarFornecedores(@RequestParam(value = "id", required = false) Integer id,
                                                @RequestParam(value = "nome", required = false) String nome,
                                                @RequestParam(value = "cpfOuCnpj", required = false) String cpfOuCnpj,
                                                @RequestParam(value = "atividade", required = false) Integer atividade,
@@ -59,21 +59,21 @@ public class FornecedorController extends V1BaseController {
     @GetMapping("/{idFornecedor}")
     @Operation(summary = "Listar fornecedor", description = "Retorna um fornecedor pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Fornecedor> listarUmFornecedor(@PathVariable("idFornecedor") Integer idFornecedor) {
-        return ok(fornecedorService.listarUmFornecedor(idFornecedor));
+    public ResponseEntity<FornecedorResponse> listarUmFornecedor(@PathVariable("idFornecedor") Integer idFornecedor) {
+        return ok(fornecedorService.listarUmFornecedorResponse(idFornecedor));
     }
 
     @PostMapping
     @Operation(summary = "Criar fornecedor", description = "Cria um novo fornecedor")
     @ApiResponse(responseCode = "201", description = "Criado")
-    public ResponseEntity<Fornecedor> criarFornecedor(@RequestBody @Valid FornecedorRequest request) {
+    public ResponseEntity<FornecedorResponse> criarFornecedor(@RequestBody @Valid FornecedorRequest request) {
         return created(fornecedorService.criarFornecedor(request));
     }
 
     @PutMapping("/{idFornecedor}")
     @Operation(summary = "Editar fornecedor", description = "Atualiza um fornecedor existente")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Fornecedor> editarFornecedor(@PathVariable("idFornecedor") Integer idFornecedor,
+    public ResponseEntity<FornecedorResponse> editarFornecedor(@PathVariable("idFornecedor") Integer idFornecedor,
                                                        @RequestBody @Valid FornecedorRequest request) {
         return ok(fornecedorService.editarFornecedor(idFornecedor, request));
     }
@@ -90,7 +90,7 @@ public class FornecedorController extends V1BaseController {
     @PutMapping("/{idFornecedor}/restaurar")
     @Operation(summary = "Restaurar fornecedor", description = "Reativa um fornecedor inativo")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<Fornecedor> restaurarFornecedor(@PathVariable("idFornecedor") Integer idFornecedor) {
+    public ResponseEntity<FornecedorResponse> restaurarFornecedor(@PathVariable("idFornecedor") Integer idFornecedor) {
         return ok(fornecedorService.reativarFornecedor(idFornecedor));
     }
 
