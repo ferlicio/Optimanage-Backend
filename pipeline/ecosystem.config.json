@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Optimage",
+    "script": "java -Xms1m -Xmx1g -jar Optimanage-0.0.1-SNAPSHOT.jar",
+    "log_file": "Optimage.log",
+    "out_file": "Optimage.out",
+    "err_file": "Optimage.err",
+    "max_memory_restart": "1G",
+    "env": {
+      "JAVA_HOME": "/path/to/java/home"
+    }
+  }
+]
