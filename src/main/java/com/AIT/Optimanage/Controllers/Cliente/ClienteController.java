@@ -67,7 +67,7 @@ public class ClienteController extends V1BaseController {
     @Operation(summary = "Listar cliente", description = "Retorna um cliente pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<ClienteResponse> listarUmCliente(@PathVariable("idCliente") Integer idCliente) {
-        return ok(clienteService.listarUmCliente(idCliente));
+        return ok(clienteService.listarUmClienteResponse(idCliente));
     }
 
     @PostMapping

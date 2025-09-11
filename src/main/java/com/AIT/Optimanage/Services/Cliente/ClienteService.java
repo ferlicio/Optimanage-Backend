@@ -56,11 +56,14 @@ public class ClienteService {
         ).map(clienteMapper::toResponse);
     }
 
-    public ClienteResponse listarUmCliente(Integer idCliente) {
+    public Cliente listarUmCliente(Integer idCliente) {
         User loggedUser = CurrentUser.get();
-        Cliente cliente = clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
+        return clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
-        return clienteMapper.toResponse(cliente);
+    }
+
+    public ClienteResponse listarUmClienteResponse(Integer idCliente) {
+        return clienteMapper.toResponse(listarUmCliente(idCliente));
     }
 
     @CacheEvict(value = "clientes", allEntries = true)
