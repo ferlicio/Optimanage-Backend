@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.User.UserInfoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +40,7 @@ public class PlanoService {
     }
 
     @Transactional
+    @CacheEvict(value = "planos", allEntries = true)
     public PlanoResponse atualizarPlano(Integer idPlano, PlanoRequest request) {
         Plano existente = planoRepository.findById(idPlano)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
@@ -49,13 +51,14 @@ public class PlanoService {
     }
 
     @Transactional
+    @CacheEvict(value = "planos", allEntries = true)
     public void removerPlano(Integer idPlano) {
         Plano plano = planoRepository.findById(idPlano)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
         planoRepository.delete(plano);
     }
 
-    @Cacheable("planos")
+    @Cacheable(value = "planos", key = "#user.id")
     public Optional<Plano> obterPlanoUsuario(User user) {
         return userInfoRepository.findByOwnerUser(user)
                 .map(UserInfo::getPlanoAtivoId)
