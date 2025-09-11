@@ -151,4 +151,7 @@ Para executar as migrações manualmente, utilize o Maven especificando a conex�
 - `GET /actuator/metrics` – métricas do sistema e da JVM.
 - `GET /actuator/prometheus` – métricas no formato Prometheus.
 - Traces são exportados via OpenTelemetry OTLP para `http://localhost:4317` por padrão.
+- Métricas de autenticação:
+  - `auth.register.success` / `auth.register.failure` – registros bem-sucedidos ou falhos.
+  - `auth.authenticate.success` / `auth.authenticate.failure` – autenticações bem-sucedidas ou falhas.
 

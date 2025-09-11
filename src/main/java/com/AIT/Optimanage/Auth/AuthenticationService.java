@@ -12,6 +12,7 @@ import com.AIT.Optimanage.Exceptions.InvalidTwoFactorCodeException;
 import com.AIT.Optimanage.Exceptions.InvalidResetCodeException;
 import com.AIT.Optimanage.Exceptions.RefreshTokenNotFoundException;
 import com.AIT.Optimanage.Exceptions.RefreshTokenInvalidException;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -41,85 +42,98 @@ public class AuthenticationService {
     private final TokenBlacklistService tokenBlacklistService;
     private final EmailService emailService;
     private final AuthProperties authProperties;
+    private final MeterRegistry meterRegistry;
 
     @Transactional
     public AuthenticationResponse register(RegisterRequest request) {
-        var user = User.builder()
-                .nome(request.getNome())
-                .sobrenome(request.getSobrenome())
-                .email(request.getEmail())
-                .senha(passwordEncoder.encode(request.getSenha()))
-                .role(Role.USER)
-                .ativo(true)
-                .build();
-        userRepository.save(user);
-        var jwtToken = jwtService.generateToken(
-                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
-                user
-        );
-        var refreshToken = createRefreshToken(user);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .refreshToken(refreshToken)
-                .build();
+        try {
+            var user = User.builder()
+                    .nome(request.getNome())
+                    .sobrenome(request.getSobrenome())
+                    .email(request.getEmail())
+                    .senha(passwordEncoder.encode(request.getSenha()))
+                    .role(Role.USER)
+                    .ativo(true)
+                    .build();
+            userRepository.save(user);
+            var jwtToken = jwtService.generateToken(
+                    java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                    user
+            );
+            var refreshToken = createRefreshToken(user);
+            meterRegistry.counter("auth.register.success").increment();
+            return AuthenticationResponse.builder()
+                    .token(jwtToken)
+                    .refreshToken(refreshToken)
+                    .build();
+        } catch (Exception ex) {
+            meterRegistry.counter("auth.register.failure").increment();
+            throw ex;
+        }
     }
 
     @Transactional
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        var optionalUser = userRepository.findByEmail(request.getEmail());
-        var user = optionalUser.orElse(null);
         try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getEmail(),
-                            request.getSenha()
-                    )
-            );
-        } catch (AuthenticationException ex) {
-            if (ex instanceof BadCredentialsException && user != null) {
-                int attempts = user.getFailedAttempts() + 1;
-                user.setFailedAttempts(attempts);
-                if (attempts >= authProperties.getMaxFailedAttempts()) {
-                    user.setLockoutExpiry(Instant.now().plus(Duration.ofMinutes(authProperties.getLockoutMinutes())));
+            var optionalUser = userRepository.findByEmail(request.getEmail());
+            var user = optionalUser.orElse(null);
+            try {
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(
+                                request.getEmail(),
+                                request.getSenha()
+                        )
+                );
+            } catch (AuthenticationException ex) {
+                if (ex instanceof BadCredentialsException && user != null) {
+                    int attempts = user.getFailedAttempts() + 1;
+                    user.setFailedAttempts(attempts);
+                    if (attempts >= authProperties.getMaxFailedAttempts()) {
+                        user.setLockoutExpiry(Instant.now().plus(Duration.ofMinutes(authProperties.getLockoutMinutes())));
+                    }
+                    userRepository.save(user);
                 }
-                userRepository.save(user);
+                throw ex;
             }
+            if (user == null) {
+                throw new UserNotFoundException();
+            }
+            user.setFailedAttempts(0);
+            user.setLockoutExpiry(null);
+            userRepository.save(user);
+            if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
+                String secret = user.getTwoFactorSecret();
+                if (secret != null) {
+                    String code = request.getTwoFactorCode();
+                    if (code == null) {
+                        throw new InvalidTwoFactorCodeException();
+                    }
+                    int codeInt;
+                    try {
+                        codeInt = Integer.parseInt(code);
+                    } catch (NumberFormatException e) {
+                        throw new InvalidTwoFactorCodeException();
+                    }
+                    GoogleAuthenticator gAuth = new GoogleAuthenticator();
+                    if (!gAuth.authorize(secret, codeInt)) {
+                        throw new InvalidTwoFactorCodeException();
+                    }
+                }
+            }
+            var jwtToken = jwtService.generateToken(
+                    java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                    user
+            );
+            var refreshToken = createRefreshToken(user);
+            meterRegistry.counter("auth.authenticate.success").increment();
+            return AuthenticationResponse.builder()
+                    .token(jwtToken)
+                    .refreshToken(refreshToken)
+                    .build();
+        } catch (Exception ex) {
+            meterRegistry.counter("auth.authenticate.failure").increment();
             throw ex;
         }
-        if (user == null) {
-            throw new UserNotFoundException();
-        }
-        user.setFailedAttempts(0);
-        user.setLockoutExpiry(null);
-        userRepository.save(user);
-        if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            String secret = user.getTwoFactorSecret();
-            if (secret != null) {
-                String code = request.getTwoFactorCode();
-                if (code == null) {
-                    throw new InvalidTwoFactorCodeException();
-                }
-                int codeInt;
-                try {
-                    codeInt = Integer.parseInt(code);
-                } catch (NumberFormatException e) {
-                    throw new InvalidTwoFactorCodeException();
-                }
-                GoogleAuthenticator gAuth = new GoogleAuthenticator();
-                if (!gAuth.authorize(secret, codeInt)) {
-                    throw new InvalidTwoFactorCodeException();
-                }
-            }
-        }
-        var jwtToken = jwtService.generateToken(
-                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
-                user
-        );
-        var refreshToken = createRefreshToken(user);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .refreshToken(refreshToken)
-                .build();
     }
 
     @Transactional
