@@ -61,11 +61,11 @@ jobs:
 
       - name: Set Instances
         run: |
-          cp pipeline/1 Optimage.pm2.json
+          cp pipeline/ecosystem.config.json Optimage.pm2.json
           rm -Rf pipeline
         shell: bash
 
-      - name: Start Application 
+      - name: Start Application
         run: |
           pm2 start Optimage.pm2.json
           pm2 save
