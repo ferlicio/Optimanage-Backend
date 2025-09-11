@@ -1,5 +1,6 @@
 package com.AIT.Optimanage.Auth;
 
+import com.AIT.Optimanage.Config.LocaleConfig;
 import com.AIT.Optimanage.Exceptions.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +21,7 @@ import static org.mockito.Mockito.verify;
 
 @WebMvcTest(controllers = AuthenticationController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, LocaleConfig.class})
 class AuthenticationControllerValidationTest {
 
     @Autowired
@@ -45,7 +46,7 @@ class AuthenticationControllerValidationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.detail").value("Falha na validação"))
                 .andExpect(jsonPath("$.errors[0]").exists())
                 .andExpect(jsonPath("$.correlationId").exists());
     }
@@ -56,7 +57,7 @@ class AuthenticationControllerValidationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"invalid\",\"senha\":\"\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.detail").value("Falha na validação"))
                 .andExpect(jsonPath("$.errors[0]").exists())
                 .andExpect(jsonPath("$.correlationId").exists());
     }

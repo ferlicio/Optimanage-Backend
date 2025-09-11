@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
@@ -16,6 +18,7 @@ public class EmailService {
 
     // Optional provider so the app can start without mail configuration
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final MessageSource messageSource;
 
     @Value("${spring.mail.username:no-reply@optimanage.com}")
     private String from;
@@ -24,8 +27,10 @@ public class EmailService {
     public void enviarCodigo(String destino, String codigo) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(destino);
-        message.setSubject("Código de verificação");
-        message.setText("Seu código é: " + codigo);
+        String subject = messageSource.getMessage("email.verification.subject", null, LocaleContextHolder.getLocale());
+        String text = messageSource.getMessage("email.verification.text", new Object[]{codigo}, LocaleContextHolder.getLocale());
+        message.setSubject(subject);
+        message.setText(text);
         message.setFrom(from);
 
         JavaMailSender sender = mailSenderProvider.getIfAvailable();
