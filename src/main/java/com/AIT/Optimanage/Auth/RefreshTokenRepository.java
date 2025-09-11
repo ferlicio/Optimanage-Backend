@@ -14,9 +14,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Inte
     void deleteByUser(User user);
     void deleteByExpiryDateBefore(Instant expiryDate);
 
-    @Modifying
-    @Query("update RefreshToken t set t.revoked = true where t.token = :token")
-    void markAsRevoked(@Param("token") String token);
-
-    boolean existsByTokenAndRevokedFalse(String token);
+    @Modifying(clearAutomatically = true)
+    @Query("update RefreshToken t set t.revoked = true where t.token = :token and t.revoked = false")
+    int revokeIfNotRevoked(@Param("token") String token);
 }

@@ -167,17 +167,15 @@ public class AuthenticationService {
 
     @Transactional
     public AuthenticationResponse refreshToken(String token) {
-        if (!refreshTokenRepository.existsByTokenAndRevokedFalse(token)) {
+        if (refreshTokenRepository.revokeIfNotRevoked(token) == 0) {
             throw new RefreshTokenInvalidException();
         }
         var storedToken = refreshTokenRepository.findByToken(token)
                 .orElseThrow(RefreshTokenNotFoundException::new);
         var user = storedToken.getUser();
         if (storedToken.getExpiryDate().isBefore(Instant.now()) || !jwtService.isTokenValid(token, user)) {
-            refreshTokenRepository.markAsRevoked(token);
             throw new RefreshTokenInvalidException();
         }
-        refreshTokenRepository.markAsRevoked(token);
         var newRefreshToken = jwtService.generateRefreshToken(user);
         var newTokenEntity = RefreshToken.builder()
                 .user(user)

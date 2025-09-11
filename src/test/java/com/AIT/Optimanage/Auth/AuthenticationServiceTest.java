@@ -107,7 +107,7 @@ class AuthenticationServiceTest {
                 .revoked(false)
                 .build();
 
-        when(refreshTokenRepository.existsByTokenAndRevokedFalse(oldToken)).thenReturn(true);
+        when(refreshTokenRepository.revokeIfNotRevoked(oldToken)).thenReturn(1);
         when(refreshTokenRepository.findByToken(oldToken)).thenReturn(Optional.of(storedToken));
         when(jwtService.isTokenValid(oldToken, user)).thenReturn(true);
         when(jwtService.generateToken(anyMap(), eq(user))).thenReturn("newJwt");
@@ -119,6 +119,6 @@ class AuthenticationServiceTest {
 
         assertEquals("newJwt", response.getToken());
         assertEquals("newRefresh", response.getRefreshToken());
-        verify(refreshTokenRepository).markAsRevoked(oldToken);
+        verify(refreshTokenRepository).revokeIfNotRevoked(oldToken);
     }
 }
