@@ -20,10 +20,14 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.warrenstrange.googleauth.GoogleAuthenticator;
+import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
+import com.warrenstrange.googleauth.GoogleAuthenticatorQRGenerator;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.Duration;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Service
 @RequiredArgsConstructor
@@ -89,10 +93,20 @@ public class AuthenticationService {
         user.setLockoutExpiry(null);
         userRepository.save(user);
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            sendTwoFactorCode(user);
-            return AuthenticationResponse.builder()
-                    .twoFactorRequired(true)
-                    .build();
+            String code = request.getTwoFactorCode();
+            if (code == null) {
+                throw new InvalidTwoFactorCodeException();
+            }
+            int codeInt;
+            try {
+                codeInt = Integer.parseInt(code);
+            } catch (NumberFormatException e) {
+                throw new InvalidTwoFactorCodeException();
+            }
+            GoogleAuthenticator gAuth = new GoogleAuthenticator();
+            if (!gAuth.authorize(user.getTwoFactorSecret(), codeInt)) {
+                throw new InvalidTwoFactorCodeException();
+            }
         }
         var jwtToken = jwtService.generateToken(
                 java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
@@ -106,33 +120,25 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public AuthenticationResponse verifyTwoFactor(TwoFactorRequest request) {
+    public TwoFactorSetupResponse toggleTwoFactor(TwoFactorToggleRequest request) {
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(UserNotFoundException::new);
-        if (user.getTwoFactorCode() == null || !user.getTwoFactorCode().equals(request.getCode())
-                || user.getTwoFactorExpiry() == null || user.getTwoFactorExpiry().isBefore(Instant.now())) {
-            throw new InvalidTwoFactorCodeException();
+        if (request.isEnable()) {
+            GoogleAuthenticator gAuth = new GoogleAuthenticator();
+            GoogleAuthenticatorKey key = gAuth.createCredentials();
+            user.setTwoFactorSecret(key.getKey());
+            user.setTwoFactorEnabled(true);
+            userRepository.save(user);
+            String otpAuthURL = GoogleAuthenticatorQRGenerator.getOtpAuthURL("Optimanage", user.getEmail(), key);
+            String qrUrl = "https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=" +
+                    URLEncoder.encode(otpAuthURL, StandardCharsets.UTF_8);
+            return new TwoFactorSetupResponse(qrUrl);
+        } else {
+            user.setTwoFactorEnabled(false);
+            user.setTwoFactorSecret(null);
+            userRepository.save(user);
+            return new TwoFactorSetupResponse(null);
         }
-        user.setTwoFactorCode(null);
-        user.setTwoFactorExpiry(null);
-        userRepository.save(user);
-        var jwtToken = jwtService.generateToken(
-                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
-                user
-        );
-        var refreshToken = createRefreshToken(user);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .refreshToken(refreshToken)
-                .build();
-    }
-
-    @Transactional
-    public void toggleTwoFactor(TwoFactorToggleRequest request) {
-        var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(UserNotFoundException::new);
-        user.setTwoFactorEnabled(request.isEnable());
-        userRepository.save(user);
     }
 
     @Transactional
@@ -195,14 +201,6 @@ public class AuthenticationService {
                     .ifPresent(refreshTokenRepository::deleteByUser);
         }
         tokenBlacklistService.blacklistToken(token);
-    }
-
-    private void sendTwoFactorCode(User user) {
-        String code = generateCode();
-        user.setTwoFactorCode(code);
-        user.setTwoFactorExpiry(Instant.now().plusSeconds(authProperties.getTwoFactorExpirySeconds()));
-        userRepository.save(user);
-        sendCodeAsync(user.getEmail(), code);
     }
 
     private void sendResetCode(User user) {

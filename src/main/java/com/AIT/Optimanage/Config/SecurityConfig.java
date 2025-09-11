@@ -38,8 +38,7 @@ public class SecurityConfig {
                                         "/auth/authenticate",
                                         "/auth/refresh",
                                         "/auth/forgot-password",
-                                        "/auth/reset-password",
-                                        "/auth/verify-2fa"
+                                        "/auth/reset-password"
                                 ).permitAll()
                                 .requestMatchers("/usuarios/**").hasAuthority("ADMIN")
                                 .requestMatchers("/admin/**").hasAuthority("ADMIN")

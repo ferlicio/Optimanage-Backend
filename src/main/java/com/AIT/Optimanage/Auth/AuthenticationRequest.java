@@ -19,4 +19,6 @@ public class AuthenticationRequest {
 
     @NotBlank
     private String senha;
+
+    private String twoFactorCode;
 }

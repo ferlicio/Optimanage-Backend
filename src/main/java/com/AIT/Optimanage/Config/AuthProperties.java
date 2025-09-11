@@ -12,6 +12,5 @@ import lombok.Setter;
 public class AuthProperties {
     private int maxFailedAttempts = 5;
     private long lockoutMinutes = 15;
-    private long twoFactorExpirySeconds = 300;
     private long resetCodeExpirySeconds = 600;
 }
