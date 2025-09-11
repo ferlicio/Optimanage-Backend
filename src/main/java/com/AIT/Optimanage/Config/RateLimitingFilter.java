@@ -5,6 +5,7 @@ import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Bucket4j;
 import io.github.bucket4j.Refill;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,11 @@ import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.AIT.Optimanage.Models.Plano;
+import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Support.TenantContext;
+
 /**
  * Filter that limits requests hitting authentication endpoints.
  * Requests are tracked per user (if authenticated) or per remote IP address.
@@ -29,16 +35,18 @@ import java.util.concurrent.ConcurrentMap;
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
 
-    /** Maximum number of auth requests allowed during the window. */
-    private static final long CAPACITY = 5;
-    /** Length of the rate‑limit window. */
-    private static final Duration DURATION = Duration.ofMinutes(1);
+    /** Default number of auth requests allowed during the window. */
+    private static final long DEFAULT_CAPACITY = 5;
+    /** Default length of the rate‑limit window. */
+    private static final Duration DEFAULT_DURATION = Duration.ofMinutes(1);
 
     private final ConcurrentMap<String, Bucket> buckets = new ConcurrentHashMap<>();
     private final MeterRegistry meterRegistry;
+    private final PlanoService planoService;
 
-    public RateLimitingFilter(MeterRegistry meterRegistry) {
+    public RateLimitingFilter(MeterRegistry meterRegistry, PlanoService planoService) {
         this.meterRegistry = meterRegistry;
+        this.planoService = planoService;
     }
 
     @Override
@@ -52,31 +60,45 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return;
         }
 
-        String key = resolveKey(request);
-        Bucket bucket = buckets.computeIfAbsent(key, k -> newBucket());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String tenantKey = tenantKey();
+        String key;
+        Bucket bucket;
+        String planTag;
+
+        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof User user) {
+            Plano plano = planoService.obterPlanoUsuario(user).orElse(null);
+            long capacity = plano != null ? plano.getQtdAcessos() : DEFAULT_CAPACITY;
+            Duration duration = plano != null ? Duration.ofDays(plano.getDuracaoDias()) : DEFAULT_DURATION;
+            key = tenantKey + ":" + authentication.getName();
+            planTag = plano != null ? plano.getNome() : "none";
+            bucket = buckets.computeIfAbsent(key, k -> newBucket(capacity, duration));
+        } else {
+            key = tenantKey + ":" + request.getRemoteAddr();
+            planTag = "anonymous";
+            bucket = buckets.computeIfAbsent(key, k -> newBucket(DEFAULT_CAPACITY, DEFAULT_DURATION));
+        }
+
         if (bucket.tryConsume(1)) {
-            meterRegistry.counter("rate_limit.auth.allowed").increment();
+            meterRegistry.counter("rate_limit.auth.allowed", Tags.of("plan", planTag)).increment();
             filterChain.doFilter(request, response);
         } else {
-            meterRegistry.counter("rate_limit.auth.blocked").increment();
+            meterRegistry.counter("rate_limit.auth.blocked", Tags.of("plan", planTag)).increment();
             response.setStatus(429);
             response.setContentType("application/json");
             response.getWriter().write("{\"message\":\"Você excedeu o limite de tentativas. Tente novamente mais tarde.\"}");
         }
     }
 
-    private Bucket newBucket() {
-        Refill refill = Refill.greedy(CAPACITY, DURATION);
-        Bandwidth limit = Bandwidth.classic(CAPACITY, refill);
+    private Bucket newBucket(long capacity, Duration duration) {
+        Refill refill = Refill.greedy(capacity, duration);
+        Bandwidth limit = Bandwidth.classic(capacity, refill);
         return Bucket4j.builder().addLimit(limit).build();
     }
 
-    private String resolveKey(HttpServletRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()) {
-            return authentication.getName();
-        }
-        return request.getRemoteAddr();
+    private String tenantKey() {
+        Integer tenantId = TenantContext.getTenantId();
+        return tenantId != null ? tenantId.toString() : "noTenant";
     }
 }
 
