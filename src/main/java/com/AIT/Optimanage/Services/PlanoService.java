@@ -56,7 +56,8 @@ public class PlanoService {
 
     public Optional<Plano> obterPlanoUsuario(User user) {
         return userInfoRepository.findByOwnerUser(user)
-                .map(UserInfo::getPlanoAtivoId);
+                .map(UserInfo::getPlanoAtivoId)
+                .flatMap(planoRepository::findById);
     }
 
     private Plano fromRequest(PlanoRequest request) {
