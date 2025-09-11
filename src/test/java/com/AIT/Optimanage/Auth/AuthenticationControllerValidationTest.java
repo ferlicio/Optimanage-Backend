@@ -18,6 +18,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyString;
 
 @WebMvcTest(controllers = AuthenticationController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -68,5 +70,20 @@ class AuthenticationControllerValidationTest {
                 .header("Authorization", "Bearer token"))
                 .andExpect(status().isOk());
         verify(authenticationService).logout("token");
+    }
+
+    @Test
+    void whenLogoutWithoutAuthorization_thenReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout"))
+                .andExpect(status().isBadRequest());
+        verify(authenticationService, never()).logout(anyString());
+    }
+
+    @Test
+    void whenLogoutWithMalformedAuthorization_thenReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                .header("Authorization", "Token token"))
+                .andExpect(status().isUnauthorized());
+        verify(authenticationService, never()).logout(anyString());
     }
 }
