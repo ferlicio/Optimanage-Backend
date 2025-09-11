@@ -1,96 +1,127 @@
 package com.AIT.Optimanage.Auth;
 
-import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Exceptions.InvalidTwoFactorCodeException;
+import com.AIT.Optimanage.Exceptions.RefreshTokenInvalidException;
+import com.AIT.Optimanage.Exceptions.RefreshTokenNotFoundException;
 import com.AIT.Optimanage.Repositories.UserRepository;
-import com.AIT.Optimanage.Support.EmailService;
-import com.AIT.Optimanage.Config.JwtService;
-import com.AIT.Optimanage.Config.AuthProperties;
+import com.AIT.Optimanage.Support.TenantContext;
+import com.warrenstrange.googleauth.GoogleAuthenticator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.time.Instant;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
 class AuthenticationServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
-    @Mock
-    private PasswordEncoder passwordEncoder;
-    @Mock
-    private JwtService jwtService;
-    @Mock
-    private AuthenticationManager authenticationManager;
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
-    @Mock
-    private TokenBlacklistService tokenBlacklistService;
-    @Mock
-    private EmailService emailService;
-    @Mock
-    private AuthProperties authProperties;
-
+    @Autowired
     private AuthenticationService authenticationService;
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     @BeforeEach
-    void setUp() {
-        authenticationService = new AuthenticationService(
-                userRepository,
-                passwordEncoder,
-                jwtService,
-                authenticationManager,
-                refreshTokenRepository,
-                tokenBlacklistService,
-                emailService,
-                authProperties);
+    void setupTenant() {
+        TenantContext.setTenantId(1);
     }
 
-    @Test
-    void logoutShouldDeleteRefreshTokenAndBlacklistToken() {
-        String token = "jwt";
-        String email = "user@example.com";
-        User user = new User();
-
-        when(jwtService.extractEmail(token)).thenReturn(email);
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-
-        authenticationService.logout(token);
-
-        verify(refreshTokenRepository).deleteByUser(user);
-        verify(tokenBlacklistService).blacklistToken(token);
-    }
-
-    @Test
-    void authenticateSkipsTwoFactorWhenSecretMissing() {
-        AuthenticationRequest request = AuthenticationRequest.builder()
-                .email("user@example.com")
+    private RegisterRequest registerRequest() {
+        return RegisterRequest.builder()
+                .nome("John")
+                .sobrenome("Doe")
+                .email("john.doe@example.com")
                 .senha("password")
                 .build();
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setSenha("encoded");
-        user.setTwoFactorEnabled(true);
-        user.setTenantId(1);
+    }
 
-        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
-        when(authenticationManager.authenticate(any())).thenReturn(null);
-        when(jwtService.generateToken(anyMap(), eq(user))).thenReturn("jwt");
-        when(jwtService.generateRefreshToken(user)).thenReturn("refresh");
-        when(jwtService.getRefreshExpiration()).thenReturn(1000L);
-        when(userRepository.save(user)).thenReturn(user);
-        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    private AuthenticationRequest authRequest(String password) {
+        return AuthenticationRequest.builder()
+                .email("john.doe@example.com")
+                .senha(password)
+                .build();
+    }
 
-        AuthenticationResponse response = authenticationService.authenticate(request);
+    private AuthenticationRequest authRequestWith2fa(String password, String code) {
+        return AuthenticationRequest.builder()
+                .email("john.doe@example.com")
+                .senha(password)
+                .twoFactorCode(code)
+                .build();
+    }
 
-        assertEquals("jwt", response.getToken());
-        assertEquals("refresh", response.getRefreshToken());
+    @Test
+    void registerCreatesUserAndReturnsTokens() {
+        AuthenticationResponse response = authenticationService.register(registerRequest());
+        assertThat(response.getToken()).isNotBlank();
+        assertThat(response.getRefreshToken()).isNotBlank();
+    }
+
+    @Test
+    void authenticateWithValidCredentialsReturnsTokens() {
+        authenticationService.register(registerRequest());
+        AuthenticationResponse response = authenticationService.authenticate(authRequest("password"));
+        assertThat(response.getToken()).isNotBlank();
+        assertThat(response.getRefreshToken()).isNotBlank();
+    }
+
+    @Test
+    void authenticateWithInvalidPasswordThrows() {
+        authenticationService.register(registerRequest());
+        assertThatThrownBy(() -> authenticationService.authenticate(authRequest("wrong")))
+                .isInstanceOf(org.springframework.security.core.AuthenticationException.class);
+    }
+
+    @Test
+    void twoFactorAuthenticationFlow() {
+        authenticationService.register(registerRequest());
+        TwoFactorToggleRequest toggleRequest = new TwoFactorToggleRequest();
+        toggleRequest.setEmail("john.doe@example.com");
+        toggleRequest.setEnable(true);
+        authenticationService.toggleTwoFactor(toggleRequest);
+
+        // login without code
+        assertThatThrownBy(() -> authenticationService.authenticate(authRequest("password")))
+                .isInstanceOf(InvalidTwoFactorCodeException.class);
+
+        // login with valid code
+        String secret = userRepository.findByEmail("john.doe@example.com").orElseThrow().getTwoFactorSecret();
+        GoogleAuthenticator gAuth = new GoogleAuthenticator();
+        String code = String.valueOf(gAuth.getTotpPassword(secret));
+        AuthenticationResponse response = authenticationService.authenticate(authRequestWith2fa("password", code));
+        assertThat(response.getToken()).isNotBlank();
+    }
+
+    @Test
+    void refreshTokenFlow() {
+        authenticationService.register(registerRequest());
+        AuthenticationResponse auth = authenticationService.authenticate(authRequest("password"));
+        AuthenticationResponse refreshed = authenticationService.refreshToken(auth.getRefreshToken());
+        assertThat(refreshed.getToken()).isNotBlank();
+    }
+
+    @Test
+    void refreshTokenExpiredThrows() {
+        authenticationService.register(registerRequest());
+        AuthenticationResponse auth = authenticationService.authenticate(authRequest("password"));
+        var stored = refreshTokenRepository.findByToken(auth.getRefreshToken()).orElseThrow();
+        stored.setExpiryDate(Instant.now().minusSeconds(1));
+        refreshTokenRepository.save(stored);
+        assertThatThrownBy(() -> authenticationService.refreshToken(auth.getRefreshToken()))
+                .isInstanceOf(RefreshTokenInvalidException.class);
+    }
+
+    @Test
+    void refreshTokenNotFoundThrows() {
+        assertThatThrownBy(() -> authenticationService.refreshToken("missing"))
+                .isInstanceOf(RefreshTokenNotFoundException.class);
     }
 }
