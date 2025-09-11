@@ -25,7 +25,7 @@ public class CompraPagamento extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valorPago;
 
-    @Column(nullable = false)
+    @Column
     private LocalDate dataPagamento;
 
     @Column(nullable = false)

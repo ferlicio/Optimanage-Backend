@@ -41,7 +41,6 @@ public class PagamentoVendaService {
 
         pagamento.setDataPagamento(LocalDate.now());
         pagamento.setStatusPagamento(StatusPagamento.PAGO);
-        pagamento.setDataVencimento(null);
 
         pagamentoVendaRepository.save(pagamento);
     }
@@ -67,7 +66,6 @@ public class PagamentoVendaService {
             throw new RuntimeException("O pagamento não pode ser estornado");
         }
         vendaPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
-        vendaPagamento.setDataVencimento(null);
         pagamentoVendaRepository.save(vendaPagamento);
     }
 
@@ -77,7 +75,6 @@ public class PagamentoVendaService {
             throw new RuntimeException("O pagamento não pode ser estornado");
         }
         vendaPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
-        vendaPagamento.setDataVencimento(null);
         pagamentoVendaRepository.save(vendaPagamento);
     }
 
