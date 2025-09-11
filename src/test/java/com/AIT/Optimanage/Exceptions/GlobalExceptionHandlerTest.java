@@ -1,6 +1,9 @@
-package com.AIT.Optimanage.Controllers.ExceptionHandler;
+package com.AIT.Optimanage.Exceptions;
 
 import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
+import com.AIT.Optimanage.Exceptions.GlobalExceptionHandler;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.MDC;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -51,27 +55,43 @@ class GlobalExceptionHandlerTest {
         public String name;
     }
 
+    @BeforeEach
+    void setup() {
+        MDC.put("correlationId", "test-correlation-id");
+    }
+
+    @AfterEach
+    void cleanup() {
+        MDC.remove("correlationId");
+    }
+
     @Test
     void whenValidationFails_thenReturnsBadRequest() throws Exception {
         mockMvc.perform(post("/validate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.errors[0]").exists());
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0]").exists())
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 
     @Test
     void whenAccessDenied_thenReturnsForbidden() throws Exception {
         mockMvc.perform(get("/access-denied"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value(403));
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.detail").value("Forbidden"))
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 
     @Test
     void whenCustomRuntime_thenReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/runtime"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(400));
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detail").value("Custom error"))
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 }
