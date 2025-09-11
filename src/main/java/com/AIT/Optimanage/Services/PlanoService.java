@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.User.UserInfoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +55,7 @@ public class PlanoService {
         planoRepository.delete(plano);
     }
 
+    @Cacheable("planos")
     public Optional<Plano> obterPlanoUsuario(User user) {
         return userInfoRepository.findByOwnerUser(user)
                 .map(UserInfo::getPlanoAtivoId)
