@@ -28,6 +28,9 @@ public class CompraPagamento extends BaseEntity {
     @Column(nullable = false)
     private LocalDate dataPagamento;
 
+    @Column(nullable = false)
+    private LocalDate dataVencimento;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FormaPagamento formaPagamento;

@@ -41,6 +41,7 @@ class WebhookControllerTest {
         PagamentoDTO dto = PagamentoDTO.builder()
                 .valorPago(BigDecimal.TEN)
                 .dataPagamento(LocalDate.now())
+                .dataVencimento(LocalDate.now())
                 .formaPagamento(FormaPagamento.CARTAO_CREDITO)
                 .statusPagamento(StatusPagamento.PAGO)
                 .build();
@@ -62,6 +63,7 @@ class WebhookControllerTest {
         PagamentoDTO dto = PagamentoDTO.builder()
                 .valorPago(BigDecimal.ONE)
                 .dataPagamento(LocalDate.now())
+                .dataVencimento(LocalDate.now())
                 .formaPagamento(FormaPagamento.CARTAO_CREDITO)
                 .statusPagamento(StatusPagamento.PENDENTE)
                 .build();

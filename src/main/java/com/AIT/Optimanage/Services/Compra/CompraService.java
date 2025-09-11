@@ -243,10 +243,12 @@ public class CompraService {
         for (PagamentoDTO pagamento : pagamentoDTO) {
             if (pagamento.getValorPago().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("Valor de pagamento deve ser maior que zero");
-            } else if (pagamento.getStatusPagamento() == StatusPagamento.PAGO && pagamento.getDataPagamento().isAfter(LocalDate.now())) {
+            } else if (pagamento.getStatusPagamento() == StatusPagamento.PAGO &&
+                    pagamento.getDataPagamento() != null && pagamento.getDataPagamento().isAfter(LocalDate.now())) {
                 throw new IllegalArgumentException("Um pagamento realizado não pode ser no futuro");
-            } else if (pagamento.getStatusPagamento() == StatusPagamento.PENDENTE && pagamento.getDataPagamento().isBefore(LocalDate.now())) {
-                throw new IllegalArgumentException("Um pagamento pendente não pode ser no passado");
+            } else if (pagamento.getStatusPagamento() == StatusPagamento.PENDENTE &&
+                    pagamento.getDataVencimento().isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException("Um pagamento pendente não pode ter vencimento no passado");
             }
             pagamentoCompraService.lancarPagamento(compra, pagamento);
         }

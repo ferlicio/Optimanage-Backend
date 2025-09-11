@@ -46,6 +46,7 @@ public class PagamentoCompraService {
 
         pagamento.setDataPagamento(LocalDate.now());
         pagamento.setStatusPagamento(StatusPagamento.PAGO);
+        pagamento.setDataVencimento(null);
 
         pagamentoCompraRepository.save(pagamento);
     }
@@ -56,6 +57,7 @@ public class PagamentoCompraService {
                 .compra(compra)
                 .valorPago(pagamento.getValorPago())
                 .dataPagamento(pagamento.getDataPagamento())
+                .dataVencimento(pagamento.getDataVencimento())
                 .formaPagamento(pagamento.getFormaPagamento())
                 .statusPagamento(pagamento.getStatusPagamento())
                 .observacoes(pagamento.getObservacoes())
@@ -69,6 +71,7 @@ public class PagamentoCompraService {
 
         compraPagamento.setValorPago(pagamento.getValorPago());
         compraPagamento.setDataPagamento(pagamento.getDataPagamento());
+        compraPagamento.setDataVencimento(pagamento.getDataVencimento());
         compraPagamento.setFormaPagamento(pagamento.getFormaPagamento());
         compraPagamento.setStatusPagamento(pagamento.getStatusPagamento());
         compraPagamento.setObservacoes(pagamento.getObservacoes());
@@ -82,6 +85,7 @@ public class PagamentoCompraService {
             throw new RuntimeException("Pagamento não pode ser estornado");
         }
         compraPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
+        compraPagamento.setDataVencimento(null);
         pagamentoCompraRepository.save(compraPagamento);
     }
 
@@ -91,6 +95,7 @@ public class PagamentoCompraService {
             throw new RuntimeException("Pagamento não pode ser estornado");
         }
         compraPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
+        compraPagamento.setDataVencimento(null);
         pagamentoCompraRepository.save(compraPagamento);
     }
 }
