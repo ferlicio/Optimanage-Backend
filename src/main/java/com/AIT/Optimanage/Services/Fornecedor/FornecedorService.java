@@ -56,11 +56,14 @@ public class FornecedorService {
         ).map(fornecedorMapper::toResponse);
     }
 
-    public FornecedorResponse listarUmFornecedor(Integer idFornecedor) {
+    public Fornecedor listarUmFornecedor(Integer idFornecedor) {
         User loggedUser = CurrentUser.get();
-        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, loggedUser)
+        return fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
-        return fornecedorMapper.toResponse(fornecedor);
+    }
+
+    public FornecedorResponse listarUmFornecedorResponse(Integer idFornecedor) {
+        return fornecedorMapper.toResponse(listarUmFornecedor(idFornecedor));
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)

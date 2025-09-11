@@ -60,7 +60,7 @@ public class FornecedorController extends V1BaseController {
     @Operation(summary = "Listar fornecedor", description = "Retorna um fornecedor pelo ID")
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<FornecedorResponse> listarUmFornecedor(@PathVariable("idFornecedor") Integer idFornecedor) {
-        return ok(fornecedorService.listarUmFornecedor(idFornecedor));
+        return ok(fornecedorService.listarUmFornecedorResponse(idFornecedor));
     }
 
     @PostMapping
