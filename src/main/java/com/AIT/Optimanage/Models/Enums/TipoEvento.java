@@ -4,5 +4,7 @@ public enum TipoEvento {
     ANIVERSARIO,
     ANIVERSARIO_EMPRESA,
     AGENDAMENTO,
-    PAGAMENTO
+    PAGAMENTO,
+    COMPRA,
+    VENDA
 }
