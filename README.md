@@ -99,6 +99,9 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `PUT /api/v1/vendas/{idVenda}/finalizar` &ndash; finalizar venda.
 - `PUT /api/v1/vendas/{idVenda}/cancelar` &ndash; cancelar venda.
 
+### Pagamentos
+- `POST /api/v1/pagamentos/webhook` &ndash; receber eventos de provedores de pagamento.
+
 ### Contextos de Compatibilidade
 - `GET /api/v1/contextos` &ndash; listar contextos.
 - `GET /api/v1/contextos/{idContexto}` &ndash; obter contexto.
