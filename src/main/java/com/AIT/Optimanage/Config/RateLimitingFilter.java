@@ -75,10 +75,12 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     public RateLimitingFilter(MeterRegistry meterRegistry,
                               PlanoService planoService,
-                              @Value("${rate-limiting.protected-patterns:}") List<String> protectedPatterns) {
+                              @Value("${rate-limiting.protected-patterns:/auth/**}") List<String> protectedPatterns) {
         this.meterRegistry = meterRegistry;
         this.planoService = planoService;
-        this.protectedPatterns = protectedPatterns == null ? List.of() : protectedPatterns;
+        this.protectedPatterns = (protectedPatterns == null || protectedPatterns.isEmpty())
+                ? List.of("/auth/**")
+                : protectedPatterns;
     }
 
     @Override
