@@ -1,6 +1,8 @@
 package com.AIT.Optimanage.Controllers.dto;
 
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
+import com.AIT.Optimanage.Support.validation.CNPJValido;
+import com.AIT.Optimanage.Support.validation.CPFValido;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,11 +36,11 @@ public class ClienteRequest {
     private String razaoSocial;
 
     @Size(max = 14)
-    @Pattern(regexp = "^(\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}|\\d{11})$", message = "CPF inválido")
+    @CPFValido
     private String cpf;
 
     @Size(max = 18)
-    @Pattern(regexp = "^(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}|\\d{14})$", message = "CNPJ inválido")
+    @CNPJValido
     private String cnpj;
 
     @Size(max = 18)
