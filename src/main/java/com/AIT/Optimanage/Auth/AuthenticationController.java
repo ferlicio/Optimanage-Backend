@@ -2,6 +2,9 @@ package com.AIT.Optimanage.Auth;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +21,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequiredArgsConstructor
 @Tag(name = "Autenticação", description = "Endpoints de autenticação")
 public class AuthenticationController extends com.AIT.Optimanage.Controllers.BaseController.V1BaseController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationController.class);
 
     private final AuthenticationService authenticationService;
 
@@ -76,10 +81,16 @@ public class AuthenticationController extends com.AIT.Optimanage.Controllers.Bas
     @ApiResponse(responseCode = "200", description = "Sucesso")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         final String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            authenticationService.logout(token);
+        if (authHeader == null) {
+            log.warn("Logout attempt without Authorization header");
+            return ResponseEntity.badRequest().build();
         }
+        if (!authHeader.startsWith("Bearer ")) {
+            log.warn("Logout attempt with malformed Authorization header: {}", authHeader);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String token = authHeader.substring(7);
+        authenticationService.logout(token);
         return ResponseEntity.ok().build();
     }
 }
