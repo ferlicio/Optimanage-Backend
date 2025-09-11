@@ -19,8 +19,11 @@ public class PagamentoDTO {
     @NotNull
     @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal valorPago;
-    @NotNull
+    @PastOrPresent
     private LocalDate dataPagamento;
+    @NotNull
+    @FutureOrPresent
+    private LocalDate dataVencimento;
     @NotNull
     private FormaPagamento formaPagamento;
     @NotNull

@@ -66,6 +66,7 @@ public class PixPaymentProvider implements PaymentProviderStrategy {
         return PagamentoDTO.builder()
                 .valorPago(amount)
                 .dataPagamento(LocalDate.now())
+                .dataVencimento(LocalDate.now())
                 .formaPagamento(FormaPagamento.PIX)
                 .statusPagamento(statusPagamento)
                 .observacoes("PIX payment " + paymentIntentId)

@@ -66,6 +66,7 @@ public class BoletoPaymentProvider implements PaymentProviderStrategy {
         return PagamentoDTO.builder()
                 .valorPago(amount)
                 .dataPagamento(LocalDate.now())
+                .dataVencimento(LocalDate.now())
                 .formaPagamento(FormaPagamento.BOLETO)
                 .statusPagamento(statusPagamento)
                 .observacoes("Boleto payment " + paymentIntentId)

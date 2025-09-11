@@ -56,6 +56,7 @@ public class PagamentoCompraService {
                 .compra(compra)
                 .valorPago(pagamento.getValorPago())
                 .dataPagamento(pagamento.getDataPagamento())
+                .dataVencimento(pagamento.getDataVencimento())
                 .formaPagamento(pagamento.getFormaPagamento())
                 .statusPagamento(pagamento.getStatusPagamento())
                 .observacoes(pagamento.getObservacoes())
@@ -69,6 +70,7 @@ public class PagamentoCompraService {
 
         compraPagamento.setValorPago(pagamento.getValorPago());
         compraPagamento.setDataPagamento(pagamento.getDataPagamento());
+        compraPagamento.setDataVencimento(pagamento.getDataVencimento());
         compraPagamento.setFormaPagamento(pagamento.getFormaPagamento());
         compraPagamento.setStatusPagamento(pagamento.getStatusPagamento());
         compraPagamento.setObservacoes(pagamento.getObservacoes());

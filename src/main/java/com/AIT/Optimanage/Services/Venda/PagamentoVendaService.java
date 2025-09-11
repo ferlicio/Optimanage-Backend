@@ -51,6 +51,7 @@ public class PagamentoVendaService {
                 .venda(venda)
                 .valorPago(pagamentoDTO.getValorPago())
                 .dataPagamento(pagamentoDTO.getDataPagamento())
+                .dataVencimento(pagamentoDTO.getDataVencimento())
                 .formaPagamento(pagamentoDTO.getFormaPagamento())
                 .statusPagamento(pagamentoDTO.getStatusPagamento())
                 .observacoes(pagamentoDTO.getObservacoes())

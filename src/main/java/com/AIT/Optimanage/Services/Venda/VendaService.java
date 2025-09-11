@@ -293,8 +293,12 @@ public class VendaService {
         for (PagamentoDTO pagamento : pagamentoDTO) {
             if (pagamento.getValorPago().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("O valor do pagamento deve ser maior que zero.");
-            } else if (pagamento.getDataPagamento().isAfter(LocalDate.now())) {
+            } else if (pagamento.getStatusPagamento() == StatusPagamento.PAGO &&
+                    pagamento.getDataPagamento() != null && pagamento.getDataPagamento().isAfter(LocalDate.now())) {
                 throw new IllegalArgumentException("A data de pagamento não pode ser no futuro.");
+            } else if (pagamento.getStatusPagamento() == StatusPagamento.PENDENTE &&
+                    pagamento.getDataVencimento().isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException("Um pagamento pendente não pode ter vencimento no passado.");
             }
             pagamentoVendaService.lancarPagamento(venda, pagamento);
         }

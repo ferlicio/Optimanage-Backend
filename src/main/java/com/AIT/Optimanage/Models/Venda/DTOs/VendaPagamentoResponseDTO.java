@@ -18,6 +18,7 @@ public class VendaPagamentoResponseDTO {
     private Integer id;
     private BigDecimal valorPago;
     private LocalDate dataPagamento;
+    private LocalDate dataVencimento;
     private FormaPagamento formaPagamento;
     private StatusPagamento statusPagamento;
     private String observacoes;
