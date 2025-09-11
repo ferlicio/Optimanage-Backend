@@ -21,14 +21,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Filter that limits the number of requests per user or IP using Bucket4j.
- * Blocked requests are recorded using Micrometer metrics for monitoring.
+ * Filter that limits requests hitting authentication endpoints.
+ * Requests are tracked per user (if authenticated) or per remote IP address.
+ * Metrics are recorded through Micrometer so limits can be monitored via the
+ * Actuator metrics endpoint.
  */
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
 
-    private static final long CAPACITY = 100;
+    /** Maximum number of auth requests allowed during the window. */
+    private static final long CAPACITY = 5;
+    /** Length of the rate‑limit window. */
     private static final Duration DURATION = Duration.ofMinutes(1);
+
     private final ConcurrentMap<String, Bucket> buckets = new ConcurrentHashMap<>();
     private final MeterRegistry meterRegistry;
 
@@ -40,15 +45,23 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
+
+        String path = request.getServletPath();
+        if (!path.startsWith("/auth")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String key = resolveKey(request);
         Bucket bucket = buckets.computeIfAbsent(key, k -> newBucket());
         if (bucket.tryConsume(1)) {
+            meterRegistry.counter("rate_limit.auth.allowed").increment();
             filterChain.doFilter(request, response);
         } else {
-            String tenant = String.valueOf(com.AIT.Optimanage.Support.TenantContext.getTenantId());
-            meterRegistry.counter("rate_limit.blocked_requests", "tenant", tenant).increment();
+            meterRegistry.counter("rate_limit.auth.blocked").increment();
             response.setStatus(429);
-            response.getWriter().write("Too many requests");
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Você excedeu o limite de tentativas. Tente novamente mais tarde.\"}");
         }
     }
 
