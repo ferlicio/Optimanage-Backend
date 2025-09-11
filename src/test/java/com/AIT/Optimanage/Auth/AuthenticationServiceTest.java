@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.authentication.LockedException;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -79,6 +80,16 @@ class AuthenticationServiceTest {
         authenticationService.register(registerRequest());
         assertThatThrownBy(() -> authenticationService.authenticate(authRequest("wrong")))
                 .isInstanceOf(org.springframework.security.core.AuthenticationException.class);
+    }
+
+    @Test
+    void authenticateLockedUserThrows() {
+        authenticationService.register(registerRequest());
+        var user = userRepository.findByEmail("john.doe@example.com").orElseThrow();
+        user.setLockoutExpiry(Instant.now().plusSeconds(60));
+        userRepository.save(user);
+        assertThatThrownBy(() -> authenticationService.authenticate(authRequest("password")))
+                .isInstanceOf(LockedException.class);
     }
 
     @Test
