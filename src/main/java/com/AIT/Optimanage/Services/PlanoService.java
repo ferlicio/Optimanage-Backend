@@ -2,6 +2,7 @@ package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Controllers.dto.PlanoRequest;
 import com.AIT.Optimanage.Controllers.dto.PlanoResponse;
+import com.AIT.Optimanage.Mappers.PlanoMapper;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.User.UserInfo;
@@ -23,20 +24,21 @@ public class PlanoService {
 
     private final PlanoRepository planoRepository;
     private final UserInfoRepository userInfoRepository;
+    private final PlanoMapper planoMapper;
 
     public List<PlanoResponse> listarPlanos() {
         return planoRepository.findAll()
                 .stream()
-                .map(this::toResponse)
+                .map(planoMapper::toResponse)
                 .toList();
     }
 
     @Transactional
     public PlanoResponse criarPlano(PlanoRequest request) {
-        Plano plano = fromRequest(request);
+        Plano plano = planoMapper.toEntity(request);
         plano.setId(null);
         Plano salvo = planoRepository.save(plano);
-        return toResponse(salvo);
+        return planoMapper.toResponse(salvo);
     }
 
     @Transactional
@@ -44,10 +46,10 @@ public class PlanoService {
     public PlanoResponse atualizarPlano(Integer idPlano, PlanoRequest request) {
         Plano existente = planoRepository.findById(idPlano)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
-        Plano plano = fromRequest(request);
+        Plano plano = planoMapper.toEntity(request);
         plano.setId(existente.getId());
         Plano atualizado = planoRepository.save(plano);
-        return toResponse(atualizado);
+        return planoMapper.toResponse(atualizado);
     }
 
     @Transactional
@@ -63,25 +65,6 @@ public class PlanoService {
         return userInfoRepository.findByOwnerUser(user)
                 .map(UserInfo::getPlanoAtivoId)
                 .flatMap(planoRepository::findById);
-    }
-
-    private Plano fromRequest(PlanoRequest request) {
-        return Plano.builder()
-                .nome(request.getNome())
-                .valor(request.getValor())
-                .duracaoDias(request.getDuracaoDias())
-                .qtdAcessos(request.getQtdAcessos())
-                .build();
-    }
-
-    private PlanoResponse toResponse(Plano plano) {
-        return PlanoResponse.builder()
-                .id(plano.getId())
-                .nome(plano.getNome())
-                .valor(plano.getValor())
-                .duracaoDias(plano.getDuracaoDias())
-                .qtdAcessos(plano.getQtdAcessos())
-                .build();
     }
 }
 

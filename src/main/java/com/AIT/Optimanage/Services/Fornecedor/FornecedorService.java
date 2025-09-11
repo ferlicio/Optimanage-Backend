@@ -1,8 +1,7 @@
 package com.AIT.Optimanage.Services.Fornecedor;
 
 import com.AIT.Optimanage.Controllers.dto.FornecedorRequest;
-import com.AIT.Optimanage.Models.Atividade;
-import com.AIT.Optimanage.Models.Cliente.Cliente;
+import com.AIT.Optimanage.Mappers.FornecedorMapper;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.Search.FornecedorSearch;
@@ -28,6 +27,7 @@ import java.util.Optional;
 public class FornecedorService {
 
     private final FornecedorRepository fornecedorRepository;
+    private final FornecedorMapper fornecedorMapper;
 
     @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -64,7 +64,7 @@ public class FornecedorService {
     @CacheEvict(value = "fornecedores", allEntries = true)
     public Fornecedor criarFornecedor(FornecedorRequest request) {
         User loggedUser = CurrentUser.get();
-        Fornecedor fornecedor = fromRequest(request);
+        Fornecedor fornecedor = fornecedorMapper.toEntity(request);
         fornecedor.setOwnerUser(loggedUser);
         fornecedor.setDataCadastro(LocalDate.now());
         validarFornecedor(fornecedor);
@@ -74,7 +74,7 @@ public class FornecedorService {
     @CacheEvict(value = "fornecedores", allEntries = true)
     public Fornecedor editarFornecedor(Integer idFornecedor, FornecedorRequest request) {
         Fornecedor fornecedorSalvo = listarUmFornecedor(idFornecedor);
-        Fornecedor fornecedor = fromRequest(request);
+        Fornecedor fornecedor = fornecedorMapper.toEntity(request);
         fornecedor.setId(fornecedorSalvo.getId());
         fornecedor.setDataCadastro(fornecedorSalvo.getDataCadastro());
         validarFornecedor(fornecedor);
@@ -119,25 +119,5 @@ public class FornecedorService {
             fornecedor.setCpf(null);
         }
 
-    }
-
-    private Fornecedor fromRequest(FornecedorRequest request) {
-        Fornecedor fornecedor = new Fornecedor();
-        Atividade atividade = new Atividade();
-        atividade.setId(request.getAtividadeId());
-        fornecedor.setAtividade(atividade);
-        fornecedor.setTipoPessoa(request.getTipoPessoa());
-        fornecedor.setOrigem(request.getOrigem());
-        fornecedor.setAtivo(request.getAtivo() != null ? request.getAtivo() : true);
-        fornecedor.setNome(request.getNome());
-        fornecedor.setNomeFantasia(request.getNomeFantasia());
-        fornecedor.setRazaoSocial(request.getRazaoSocial());
-        fornecedor.setCpf(request.getCpf());
-        fornecedor.setCnpj(request.getCnpj());
-        fornecedor.setInscricaoEstadual(request.getInscricaoEstadual());
-        fornecedor.setInscricaoMunicipal(request.getInscricaoMunicipal());
-        fornecedor.setSite(request.getSite());
-        fornecedor.setInformacoesAdicionais(request.getInformacoesAdicionais());
-        return fornecedor;
     }
 }
