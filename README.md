@@ -166,4 +166,7 @@ Com essa configuração, as rotas de redefinição de senha e criação de conta
 - `GET /actuator/metrics` – métricas do sistema e da JVM.
 - `GET /actuator/prometheus` – métricas no formato Prometheus.
 - Traces são exportados via OpenTelemetry OTLP para `http://localhost:4317` por padrão.
+- Contadores de autenticação:
+  - `auth.register.success` e `auth.register.failure` – registros bem-sucedidos e falhos.
+  - `auth.authenticate.success` e `auth.authenticate.failure` – logins bem-sucedidos e falhos.
 
