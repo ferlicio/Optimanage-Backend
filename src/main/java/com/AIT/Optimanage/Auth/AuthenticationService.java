@@ -13,9 +13,11 @@ import com.AIT.Optimanage.Exceptions.InvalidResetCodeException;
 import com.AIT.Optimanage.Exceptions.RefreshTokenNotFoundException;
 import com.AIT.Optimanage.Exceptions.RefreshTokenInvalidException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthenticationService {
 
     private final UserRepository userRepository;
@@ -68,6 +71,13 @@ public class AuthenticationService {
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         var optionalUser = userRepository.findByEmail(request.getEmail());
         var user = optionalUser.orElse(null);
+        if (user != null && user.getLockoutExpiry() != null && user.getLockoutExpiry().isAfter(Instant.now())) {
+            int attempts = user.getFailedAttempts() + 1;
+            user.setFailedAttempts(attempts);
+            userRepository.save(user);
+            log.warn("Login attempt for locked user: {}", request.getEmail());
+            throw new LockedException("User account is locked");
+        }
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
