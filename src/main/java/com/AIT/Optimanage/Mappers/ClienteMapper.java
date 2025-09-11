@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Mappers;
 
 import com.AIT.Optimanage.Controllers.dto.ClienteRequest;
+import com.AIT.Optimanage.Controllers.dto.ClienteResponse;
 import com.AIT.Optimanage.Models.Atividade;
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import org.mapstruct.Mapper;
@@ -18,6 +19,10 @@ public interface ClienteMapper {
 
     @Mapping(target = "atividadeId", source = "atividade.id")
     ClienteRequest toRequest(Cliente cliente);
+
+    @Mapping(target = "ownerUserId", source = "ownerUser.id")
+    @Mapping(target = "atividadeId", source = "atividade.id")
+    ClienteResponse toResponse(Cliente cliente);
 
     @Named("idToAtividade")
     default Atividade mapAtividade(Integer atividadeId) {

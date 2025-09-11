@@ -25,14 +25,14 @@ public class ClienteContatoService {
 
     public ClienteContato listarUmContato(Integer idCliente, Integer idContato) {
         User loggedUser = CurrentUser.get();
-        Cliente cliente = clienteService.listarUmCliente(idCliente);
+        Cliente cliente = clienteService.buscarCliente(idCliente);
         return clienteContatoRepository.findByIdAndCliente_IdAndClienteOwnerUser(idContato, cliente.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Contato não encontrado"));
     }
 
     public ClienteContato cadastrarContato(Integer idCliente, ClienteContato contato) {
         User loggedUser = CurrentUser.get();
-        Cliente cliente = clienteService.listarUmCliente(idCliente);
+        Cliente cliente = clienteService.buscarCliente(idCliente);
 
         contato.setId(null);
         contato.setCliente(cliente);

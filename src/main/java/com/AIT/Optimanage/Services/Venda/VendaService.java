@@ -100,7 +100,7 @@ public class VendaService {
     public Venda registrarVenda(User loggedUser, VendaDTO vendaDTO) {
         validarVenda(vendaDTO, loggedUser);
 
-        Cliente cliente = clienteService.listarUmCliente(vendaDTO.getClienteId());
+        Cliente cliente = clienteService.buscarCliente(vendaDTO.getClienteId());
         Contador contador = contadorService.BuscarContador(Tabela.VENDA);
         Venda novaVenda = Venda.builder()
                 .cliente(cliente)

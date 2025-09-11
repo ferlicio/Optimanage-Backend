@@ -25,14 +25,14 @@ public class ClienteEnderecoService {
 
     public ClienteEndereco listarUmEndereco(Integer idCliente, Integer idEndereco) {
         User loggedUser = CurrentUser.get();
-        Cliente cliente = clienteService.listarUmCliente(idCliente);
+        Cliente cliente = clienteService.buscarCliente(idCliente);
         return clienteEnderecoRepository.findByIdAndCliente_IdAndClienteOwnerUser(idEndereco, cliente.getId(), loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
     }
 
     public ClienteEndereco cadastrarEndereco(Integer idCliente, ClienteEndereco endereco) {
         User loggedUser = CurrentUser.get();
-        Cliente cliente = clienteService.listarUmCliente(idCliente);
+        Cliente cliente = clienteService.buscarCliente(idCliente);
 
         endereco.setId(null);
         endereco.setCliente(cliente);
