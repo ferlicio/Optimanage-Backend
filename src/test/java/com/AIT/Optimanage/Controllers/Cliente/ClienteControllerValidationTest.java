@@ -1,6 +1,8 @@
 package com.AIT.Optimanage.Controllers.Cliente;
 
-import com.AIT.Optimanage.Controllers.ExceptionHandler.GlobalExceptionHandler;
+import com.AIT.Optimanage.Exceptions.GlobalExceptionHandler;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -9,6 +11,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.slf4j.MDC;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -25,6 +28,16 @@ class ClienteControllerValidationTest {
     @MockBean
     private com.AIT.Optimanage.Services.Cliente.ClienteService clienteService;
 
+    @BeforeEach
+    void setup() {
+        MDC.put("correlationId", "test-correlation-id");
+    }
+
+    @AfterEach
+    void cleanup() {
+        MDC.remove("correlationId");
+    }
+
     @Test
     void whenCpfInvalid_thenReturnsBadRequest() throws Exception {
         String payload = "{\"atividadeId\":1,\"tipoPessoa\":\"FISICA\",\"origem\":\"SITE\",\"cpf\":\"123\"}";
@@ -32,7 +45,9 @@ class ClienteControllerValidationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0]").exists());
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0]").exists())
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 
     @Test
@@ -42,6 +57,8 @@ class ClienteControllerValidationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0]").exists());
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0]").exists())
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 }

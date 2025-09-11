@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -123,5 +124,32 @@ class AuthenticationServiceTest {
     void refreshTokenNotFoundThrows() {
         assertThatThrownBy(() -> authenticationService.refreshToken("missing"))
                 .isInstanceOf(RefreshTokenNotFoundException.class);
+    }
+
+    @Test
+    void refreshTokenGeneratesNewTokenAndRevokesOld() {
+        String oldToken = "oldRefresh";
+        User user = new User();
+        user.setTenantId(1);
+        RefreshToken storedToken = RefreshToken.builder()
+                .token(oldToken)
+                .user(user)
+                .expiryDate(Instant.now().plusSeconds(60))
+                .revoked(false)
+                .build();
+
+        when(refreshTokenRepository.revokeIfNotRevoked(oldToken)).thenReturn(1);
+        when(refreshTokenRepository.findByToken(oldToken)).thenReturn(Optional.of(storedToken));
+        when(jwtService.isTokenValid(oldToken, user)).thenReturn(true);
+        when(jwtService.generateToken(anyMap(), eq(user))).thenReturn("newJwt");
+        when(jwtService.generateRefreshToken(user)).thenReturn("newRefresh");
+        when(jwtService.getRefreshExpiration()).thenReturn(1000L);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AuthenticationResponse response = authenticationService.refreshToken(oldToken);
+
+        assertEquals("newJwt", response.getToken());
+        assertEquals("newRefresh", response.getRefreshToken());
+        verify(refreshTokenRepository).revokeIfNotRevoked(oldToken);
     }
 }

@@ -10,6 +10,7 @@ import com.AIT.Optimanage.Repositories.User.UserInfoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -50,6 +51,7 @@ public class UsuarioService {
     }
 
     @Transactional
+    @CacheEvict(value = "planos", key = "#id")
     public UserResponse atualizarPlanoAtivo(Integer id, Integer novoPlanoId) {
         User usuario = getUsuario(id);
         UserInfo userInfo = userInfoRepository.findByOwnerUser(usuario)

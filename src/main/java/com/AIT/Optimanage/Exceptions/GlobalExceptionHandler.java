@@ -1,6 +1,7 @@
-package com.AIT.Optimanage.Controllers.ExceptionHandler;
+package com.AIT.Optimanage.Exceptions;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -10,27 +11,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import jakarta.validation.ConstraintViolationException;
-
-import com.AIT.Optimanage.Exceptions.CustomRuntimeException;
-import com.AIT.Optimanage.Exceptions.UserNotFoundException;
-import com.AIT.Optimanage.Exceptions.InvalidTwoFactorCodeException;
-import com.AIT.Optimanage.Exceptions.InvalidResetCodeException;
-import com.AIT.Optimanage.Exceptions.RefreshTokenNotFoundException;
-import com.AIT.Optimanage.Exceptions.RefreshTokenInvalidException;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
-@ControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
     private static final String PROBLEM_BASE_URI = "https://api.optimanage.com/problems/";
 
     private ProblemDetail buildProblemDetail(HttpStatus status, String title, String detail,
