@@ -67,6 +67,7 @@ public class OrganizationService {
         // Update tenant for owner and organization to the generated id
         Integer orgId = organization.getId();
         owner.setTenantId(orgId);
+        owner.setOrganization(organization);
         userRepository.save(owner);
         organization.setTenantId(orgId);
         organizationRepository.save(organization);
@@ -97,6 +98,7 @@ public class OrganizationService {
                 .senha(passwordEncoder.encode(request.getSenha()))
                 .role(request.getRole())
                 .ativo(true)
+                .organization(organization)
                 .build();
         user.setTenantId(organizationId);
         user = userRepository.save(user);
