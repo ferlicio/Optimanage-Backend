@@ -55,7 +55,7 @@ public class AuthenticationService {
                     .sobrenome(request.getSobrenome())
                     .email(request.getEmail())
                     .senha(passwordEncoder.encode(request.getSenha()))
-                    .role(Role.USER)
+                    .role(Role.OPERADOR)
                     .ativo(true)
                     .build();
             userRepository.save(user);
