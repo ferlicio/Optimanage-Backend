@@ -30,10 +30,12 @@ public class TenantFilter extends OncePerRequestFilter {
         Integer tenantId = resolveTenantId(request);
         try {
             if (tenantId != null) {
-                TenantContext.setTenantId(tenantId);
+            TenantContext.setTenantId(tenantId);
+            if (!Integer.valueOf(1).equals(tenantId)) {
                 Session session = entityManager.unwrap(Session.class);
                 session.enableFilter("organizationFilter").setParameter("organizationId", tenantId);
             }
+        }
             filterChain.doFilter(request, response);
         } finally {
             Session session = entityManager.unwrap(Session.class);
