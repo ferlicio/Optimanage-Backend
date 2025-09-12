@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Security;
 
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Support.TenantContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -36,5 +37,13 @@ public final class CurrentUser {
 
     public static void clear() {
         mockUser.remove();
+    }
+
+    public static Integer getOrganizationId() {
+        User user = get();
+        if (user != null) {
+            return user.getTenantId();
+        }
+        return TenantContext.getTenantId();
     }
 }
