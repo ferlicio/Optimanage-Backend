@@ -101,7 +101,14 @@ public class OrganizationService {
         user.setTenantId(organizationId);
         user = userRepository.save(user);
 
-        String token = jwtService.generateToken(Map.of("tenantId", organizationId), user);
+        String token = jwtService.generateToken(
+                Map.<String, Object>of(
+                        "tenantId", organizationId,
+                        "organizationId", organizationId,
+                        "role", user.getRole().name()
+                ),
+                user
+        );
         TenantContext.clear();
         return AuthenticationResponse.builder()
                 .token(token)
