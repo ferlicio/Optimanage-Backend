@@ -44,8 +44,6 @@ public class User extends BaseEntity implements UserDetails {
     private String resetCode;
     private Instant resetCodeExpiry;
 
-    @OneToOne(mappedBy = "ownerUser", orphanRemoval = true, fetch = FetchType.LAZY)
-    private UserInfo userInfo;
 
     @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

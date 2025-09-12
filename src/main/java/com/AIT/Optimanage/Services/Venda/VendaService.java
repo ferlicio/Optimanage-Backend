@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaDTO;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaProdutoDTO;
@@ -30,6 +31,7 @@ import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaServicoRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
@@ -69,6 +71,7 @@ public class VendaService {
     private final PaymentService paymentService;
     private final PaymentConfigService paymentConfigService;
     private final VendaMapper vendaMapper;
+    private final OrganizationRepository organizationRepository;
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -462,8 +465,11 @@ public class VendaService {
         }
         if (vendaDTO.getStatus() == null) {
             throw new IllegalArgumentException("Status não informado");
-        } else if (vendaDTO.getStatus() == StatusVenda.ORCAMENTO && !loggedUser.getUserInfo().getPermiteOrcamento()) {
-            throw new IllegalArgumentException("Usuário não tem permissão para criar orçamentos");
+        } else if (vendaDTO.getStatus() == StatusVenda.ORCAMENTO) {
+            Organization organization = organizationRepository.findById(loggedUser.getTenantId()).orElse(null);
+            if (organization == null || !Boolean.TRUE.equals(organization.getPermiteOrcamento())) {
+                throw new IllegalArgumentException("Usuário não tem permissão para criar orçamentos");
+            }
         }
         if (vendaDTO.hasNoItems()) {
             throw new IllegalArgumentException("Uma venda deve ter no mínimo um produto ou serviço");
