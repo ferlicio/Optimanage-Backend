@@ -27,13 +27,14 @@ public class TenantFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
-        Integer tenantId = resolveTenantId(request);
+        Integer organizationId = resolveOrganizationId(request);
         try {
             if (tenantId != null) {
-            TenantContext.setTenantId(tenantId);
-            if (!Integer.valueOf(1).equals(tenantId)) {
-                Session session = entityManager.unwrap(Session.class);
-                session.enableFilter("organizationFilter").setParameter("organizationId", tenantId);
+              TenantContext.setTenantId(tenantId);
+              if (!Integer.valueOf(1).equals(tenantId)) {
+                  Session session = entityManager.unwrap(Session.class);
+                  session.enableFilter("organizationFilter").setParameter("organizationId", organizationId);
+              }
             }
         }
             filterChain.doFilter(request, response);
@@ -46,8 +47,8 @@ public class TenantFilter extends OncePerRequestFilter {
         }
     }
 
-    private Integer resolveTenantId(HttpServletRequest request) {
-        String header = request.getHeader("X-Tenant-ID");
+    private Integer resolveOrganizationId(HttpServletRequest request) {
+        String header = request.getHeader("X-Organization-ID");
         if (header != null) {
             try {
                 return Integer.valueOf(header);
@@ -57,7 +58,7 @@ public class TenantFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            return jwtService.extractClaim(token, claims -> claims.get("tenantId", Integer.class));
+            return jwtService.extractOrganizationId(token);
         }
         return null;
     }
