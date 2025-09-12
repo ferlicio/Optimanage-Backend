@@ -9,6 +9,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.concurrent.CountDownLatch;
@@ -28,11 +31,18 @@ class ProdutoRepositoryConcurrencyTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    private TransactionTemplate transactionTemplate;
+
     private User owner;
 
     @BeforeEach
     void setup() {
         TenantContext.setTenantId(1);
+        transactionTemplate = new TransactionTemplate(transactionManager);
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         owner = User.builder()
                 .nome("John")
                 .sobrenome("Doe")
@@ -75,7 +85,10 @@ class ProdutoRepositoryConcurrencyTest {
                 TenantContext.setTenantId(1);
                 try {
                     start.await();
-                    produtoRepository.incrementarEstoque(produto.getId(), 1);
+                    transactionTemplate.execute(status -> {
+                        produtoRepository.incrementarEstoque(produto.getId(), 1);
+                        return null;
+                    });
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } finally {
@@ -107,7 +120,8 @@ class ProdutoRepositoryConcurrencyTest {
                 TenantContext.setTenantId(1);
                 try {
                     start.await();
-                    int updated = produtoRepository.reduzirEstoque(produto.getId(), 1);
+                    Integer updated = transactionTemplate.execute(status ->
+                            produtoRepository.reduzirEstoque(produto.getId(), 1));
                     if (updated == 1) {
                         success.incrementAndGet();
                     }
