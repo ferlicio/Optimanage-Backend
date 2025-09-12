@@ -36,6 +36,9 @@ public class OrganizationRequest {
     @NotNull
     private LocalDate dataAssinatura;
 
+    @NotNull
+    private Integer planoId;
+
     @Valid
     @NotNull
     private UserRequest owner;

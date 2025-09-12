@@ -6,9 +6,11 @@ import com.AIT.Optimanage.Controllers.User.dto.UserRequest;
 import com.AIT.Optimanage.Controllers.dto.OrganizationRequest;
 import com.AIT.Optimanage.Controllers.dto.OrganizationResponse;
 import com.AIT.Optimanage.Models.Organization.Organization;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
+import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Support.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
@@ -25,6 +27,7 @@ public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
+    private final PlanoRepository planoRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -44,8 +47,12 @@ public class OrganizationService {
         owner.setTenantId(0);
         owner = userRepository.save(owner);
 
+        Plano plano = planoRepository.findById(request.getPlanoId())
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+
         Organization organization = Organization.builder()
                 .ownerUser(owner)
+                .planoAtivoId(plano)
                 .cnpj(request.getCnpj())
                 .razaoSocial(request.getRazaoSocial())
                 .nomeFantasia(request.getNomeFantasia())
