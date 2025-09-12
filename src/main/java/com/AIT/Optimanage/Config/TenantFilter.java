@@ -19,7 +19,10 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class TenantFilter extends OncePerRequestFilter {
 
+    private static final Integer PLATFORM_ORGANIZATION_ID = 1;
+
     private final JwtService jwtService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -27,16 +30,17 @@ public class TenantFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
-        Integer organizationId = resolveOrganizationId(request);
+        Integer jwtOrganizationId = resolveOrganizationIdFromToken(request);
+        Integer organizationId = resolveOrganizationId(request, jwtOrganizationId);
         try {
-            if (tenantId != null) {
-              TenantContext.setTenantId(tenantId);
-              if (!Integer.valueOf(1).equals(tenantId)) {
-                  Session session = entityManager.unwrap(Session.class);
-                  session.enableFilter("organizationFilter").setParameter("organizationId", organizationId);
-              }
+            if (organizationId != null) {
+                TenantContext.setTenantId(organizationId);
+                if (!PLATFORM_ORGANIZATION_ID.equals(jwtOrganizationId)) {
+                    Session session = entityManager.unwrap(Session.class);
+                    session.enableFilter("organizationFilter")
+                            .setParameter("organizationId", organizationId);
+                }
             }
-        }
             filterChain.doFilter(request, response);
         } finally {
             Session session = entityManager.unwrap(Session.class);
@@ -47,14 +51,18 @@ public class TenantFilter extends OncePerRequestFilter {
         }
     }
 
-    private Integer resolveOrganizationId(HttpServletRequest request) {
+    private Integer resolveOrganizationId(HttpServletRequest request, Integer jwtOrganizationId) {
         String header = request.getHeader("X-Organization-ID");
-        if (header != null) {
+        if (header != null && PLATFORM_ORGANIZATION_ID.equals(jwtOrganizationId)) {
             try {
                 return Integer.valueOf(header);
             } catch (NumberFormatException ignored) {
             }
         }
+        return jwtOrganizationId;
+    }
+
+    private Integer resolveOrganizationIdFromToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
