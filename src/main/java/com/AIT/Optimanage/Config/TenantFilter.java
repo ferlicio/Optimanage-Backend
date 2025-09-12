@@ -32,13 +32,13 @@ public class TenantFilter extends OncePerRequestFilter {
             if (tenantId != null) {
                 TenantContext.setTenantId(tenantId);
                 Session session = entityManager.unwrap(Session.class);
-                session.enableFilter("tenantFilter").setParameter("tenantId", tenantId);
+                session.enableFilter("organizationFilter").setParameter("organizationId", tenantId);
             }
             filterChain.doFilter(request, response);
         } finally {
             Session session = entityManager.unwrap(Session.class);
-            if (session.getEnabledFilter("tenantFilter") != null) {
-                session.disableFilter("tenantFilter");
+            if (session.getEnabledFilter("organizationFilter") != null) {
+                session.disableFilter("organizationFilter");
             }
             TenantContext.clear();
         }

@@ -19,11 +19,13 @@ import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Repositories.Compra.CompraProdutoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
@@ -63,6 +65,7 @@ public class CompraService {
     private final PagamentoCompraService pagamentoCompraService;
     private final ProdutoRepository produtoRepository;
     private final CompraMapper compraMapper;
+    private final OrganizationRepository organizationRepository;
 
     @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -407,8 +410,11 @@ public class CompraService {
         }
         if (compraDTO.getStatus() == null) {
             throw new IllegalArgumentException("Status não informado");
-        } else if (compraDTO.getStatus() == StatusCompra.ORCAMENTO && !loggedUser.getUserInfo().getPermiteOrcamento()) {
-            throw new IllegalArgumentException("Usuário não tem permissão para criar orçamentos");
+        } else if (compraDTO.getStatus() == StatusCompra.ORCAMENTO) {
+            Organization organization = organizationRepository.findById(loggedUser.getTenantId()).orElse(null);
+            if (organization == null || !Boolean.TRUE.equals(organization.getPermiteOrcamento())) {
+                throw new IllegalArgumentException("Usuário não tem permissão para criar orçamentos");
+            }
         }
         if (compraDTO.hasNoItems()) {
             throw new IllegalArgumentException("Uma venda deve ter no mínimo um produto ou serviço");
