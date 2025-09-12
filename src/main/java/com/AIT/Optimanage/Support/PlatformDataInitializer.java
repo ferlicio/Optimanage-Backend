@@ -70,6 +70,9 @@ public class PlatformDataInitializer implements ApplicationRunner {
         organization.setId(1);
         organizationRepository.save(organization);
 
+        owner.setOrganization(organization);
+        userRepository.save(owner);
+
         TenantContext.clear();
     }
 }

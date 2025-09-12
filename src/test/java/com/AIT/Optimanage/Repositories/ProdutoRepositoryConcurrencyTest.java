@@ -48,7 +48,7 @@ class ProdutoRepositoryConcurrencyTest {
                 .sobrenome("Doe")
                 .email("john@doe.com")
                 .senha("pwd")
-                .role(Role.USER)
+                .role(Role.OPERADOR)
                 .build();
         userRepository.save(owner);
     }
