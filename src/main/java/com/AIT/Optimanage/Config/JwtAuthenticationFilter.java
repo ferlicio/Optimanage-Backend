@@ -55,6 +55,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             if (jwtService.isTokenValid(jwt, userDetails)) {
                 String role = jwtService.extractRole(jwt);
+                if (role == null) {
+                    response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid token");
+                    return;
+                }
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
