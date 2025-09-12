@@ -188,6 +188,7 @@ public class VendaService {
             int updated = produtoRepository.incrementarEstoque(vp.getProduto().getId(), vp.getQuantidade());
             if (updated == 0) {
                 log.warn("Falha ao restaurar estoque do produto {}", vp.getProduto().getId());
+                throw new IllegalArgumentException("Falha ao restaurar estoque do produto " + vp.getProduto().getNome());
             }
         });
         vendaProdutoRepository.deleteByVenda(venda);

@@ -143,7 +143,11 @@ public class CompraService {
 
         compraProdutos.forEach(cp -> {
             log.info("Incrementando estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
-            produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            int updated = produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            if (updated == 0) {
+                log.warn("Falha ao incrementar estoque do produto {}", cp.getProduto().getId());
+                throw new IllegalArgumentException("Falha ao incrementar estoque do produto " + cp.getProduto().getNome());
+            }
         });
 
         contadorService.IncrementarContador(Tabela.COMPRA);
@@ -206,7 +210,11 @@ public class CompraService {
 
         compraProdutos.forEach(cp -> {
             log.info("Incrementando estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
-            produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            int updated = produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            if (updated == 0) {
+                log.warn("Falha ao incrementar estoque do produto {}", cp.getProduto().getId());
+                throw new IllegalArgumentException("Falha ao incrementar estoque do produto " + cp.getProduto().getNome());
+            }
         });
 
         Compra salvo = compraRepository.save(compra);
