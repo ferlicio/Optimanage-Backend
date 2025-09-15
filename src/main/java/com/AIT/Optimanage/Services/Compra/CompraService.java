@@ -30,6 +30,7 @@ import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
+import com.AIT.Optimanage.Validation.CompraValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -65,6 +66,7 @@ public class CompraService {
     private final PagamentoCompraService pagamentoCompraService;
     private final ProdutoRepository produtoRepository;
     private final CompraMapper compraMapper;
+    private final CompraValidator compraValidator;
     private final OrganizationRepository organizationRepository;
 
     @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
@@ -106,7 +108,7 @@ public class CompraService {
     @Transactional
     @CacheEvict(value = "compras", allEntries = true)
     public CompraResponseDTO criarCompra(CompraDTO compraDTO) {
-        validarCompra(compraDTO);
+        compraValidator.validarCompra(compraDTO);
 
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(compraDTO.getFornecedorId());
         Contador contador = contadorService.BuscarContador(Tabela.COMPRA);
@@ -160,7 +162,7 @@ public class CompraService {
     @Transactional
     @CacheEvict(value = "compras", allEntries = true)
     public CompraResponseDTO editarCompra(Integer idCompra, CompraDTO compraDTO) {
-        validarCompra(compraDTO);
+        compraValidator.validarCompra(compraDTO);
 
         Compra compra = getCompra(idCompra);
         Compra compraAtualizada = Compra.builder()
@@ -391,34 +393,6 @@ public class CompraService {
                             .build();
                 })
                 .collect(Collectors.toList());
-    }
-
-    private void validarCompra(CompraDTO compraDTO) {
-        User loggedUser = CurrentUser.get();
-        if (compraDTO.getDataEfetuacao().isAfter(LocalDate.now())) {
-            throw new IllegalArgumentException("Data de efetuação não pode ser no futuro");
-        }
-        if (compraDTO.getDataAgendada() == null && compraDTO.getStatus() == StatusCompra.AGENDADA) {
-            throw new IllegalArgumentException("Data agendada não informada para compra agendada");
-        }
-        if (compraDTO.getDataCobranca() == null) {
-            if (compraDTO.getStatus() == StatusCompra.AGUARDANDO_PAG) {
-                throw new IllegalArgumentException("Data de cobrança não informada para venda aguardando pagamento");
-            } else if (compraDTO.getStatus() == StatusCompra.CONCRETIZADO) {
-                throw new IllegalArgumentException("Data de cobrança não informada para venda concretizada");
-            }
-        }
-        if (compraDTO.getStatus() == null) {
-            throw new IllegalArgumentException("Status não informado");
-        } else if (compraDTO.getStatus() == StatusCompra.ORCAMENTO) {
-            Organization organization = organizationRepository.findById(loggedUser.getTenantId()).orElse(null);
-            if (organization == null || !Boolean.TRUE.equals(organization.getPermiteOrcamento())) {
-                throw new IllegalArgumentException("Usuário não tem permissão para criar orçamentos");
-            }
-        }
-        if (compraDTO.hasNoItems()) {
-            throw new IllegalArgumentException("Uma venda deve ter no mínimo um produto ou serviço");
-        }
     }
 
     private void atualizarStatus(Compra compra, StatusCompra novoStatus) {

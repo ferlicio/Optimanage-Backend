@@ -1,7 +1,7 @@
 package com.AIT.Optimanage.Models.Venda.DTOs;
 
-import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,8 +31,10 @@ public class VendaDTO {
     @NotNull
     private StatusVenda status = StatusVenda.PENDENTE;
     private String observacoes;
-    private List<VendaProdutoDTO> produtos;
-    private List<VendaServicoDTO> servicos;
+    @NotNull
+    private List<@Valid VendaProdutoDTO> produtos;
+    @NotNull
+    private List<@Valid VendaServicoDTO> servicos;
 
     public boolean hasNoItems() {
         return produtos.isEmpty() && servicos.isEmpty();
