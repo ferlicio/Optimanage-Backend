@@ -1,5 +1,7 @@
 package com.AIT.Optimanage.Config;
 
+import static com.AIT.Optimanage.Support.PlatformConstants.PLATFORM_ORGANIZATION_ID;
+
 import com.AIT.Optimanage.Support.TenantContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -18,8 +20,6 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class TenantFilter extends OncePerRequestFilter {
-
-    private static final Integer PLATFORM_ORGANIZATION_ID = 1;
 
     private final JwtService jwtService;
 

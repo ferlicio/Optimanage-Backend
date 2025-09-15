@@ -5,6 +5,8 @@ import com.AIT.Optimanage.Config.AuthProperties;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Models.Organization.UserInvite;
+import com.AIT.Optimanage.Services.Organization.UserInviteService;
 import com.AIT.Optimanage.Auth.TokenBlacklistService;
 import com.AIT.Optimanage.Support.EmailService;
 import com.AIT.Optimanage.Exceptions.UserNotFoundException;
@@ -46,19 +48,24 @@ public class AuthenticationService {
     private final EmailService emailService;
     private final AuthProperties authProperties;
     private final MeterRegistry meterRegistry;
+    private final UserInviteService userInviteService;
 
     @Transactional
     public AuthenticationResponse register(RegisterRequest request) {
         try {
+            UserInvite invite = userInviteService.validarConvite(request.getCodigoConvite(), request.getEmail());
             var user = User.builder()
                     .nome(request.getNome())
                     .sobrenome(request.getSobrenome())
                     .email(request.getEmail())
                     .senha(passwordEncoder.encode(request.getSenha()))
-                    .role(Role.OPERADOR)
+                    .role(invite.getRole())
                     .ativo(true)
+                    .organization(invite.getOrganization())
                     .build();
+            user.setTenantId(invite.getOrganizationId());
             userRepository.save(user);
+            userInviteService.marcarComoUsado(invite, user);
             var jwtToken = jwtService.generateToken(
                     java.util.Map.<String, Object>of(
                             "tenantId", user.getTenantId(),
