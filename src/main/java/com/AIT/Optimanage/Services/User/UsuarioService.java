@@ -4,9 +4,9 @@ import com.AIT.Optimanage.Controllers.User.dto.UserRequest;
 import com.AIT.Optimanage.Controllers.User.dto.UserResponse;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
-import com.AIT.Optimanage.Models.User.UserInfo;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
-import com.AIT.Optimanage.Repositories.User.UserInfoRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UsuarioService {
 
     private final UserRepository userRepository;
-    private final UserInfoRepository userInfoRepository;
+    private final OrganizationRepository organizationRepository;
     private final PlanoRepository planoRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
@@ -54,12 +54,12 @@ public class UsuarioService {
     @CacheEvict(value = "planos", key = "#id")
     public UserResponse atualizarPlanoAtivo(Integer id, Integer novoPlanoId) {
         User usuario = getUsuario(id);
-        UserInfo userInfo = userInfoRepository.findByOwnerUser(usuario)
+        Organization organization = organizationRepository.findByOwnerUser(usuario)
                 .orElseThrow(() -> new EntityNotFoundException("Informações do usuário não encontradas"));
         Plano plano = planoRepository.findById(novoPlanoId)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
-        userInfo.setPlanoAtivoId(plano);
-        userInfoRepository.save(userInfo);
+        organization.setPlanoAtivoId(plano);
+        organizationRepository.save(organization);
         return toResponse(usuario);
     }
 

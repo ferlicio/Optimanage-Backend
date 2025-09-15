@@ -1,7 +1,9 @@
 package com.AIT.Optimanage.Models.User;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,6 +39,11 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id", insertable = false, updatable = false)
+    private Organization organization;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean twoFactorEnabled = false;
@@ -44,8 +51,6 @@ public class User extends BaseEntity implements UserDetails {
     private String resetCode;
     private Instant resetCodeExpiry;
 
-    @OneToOne(mappedBy = "ownerUser", orphanRemoval = true, fetch = FetchType.LAZY)
-    private UserInfo userInfo;
 
     @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

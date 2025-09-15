@@ -61,4 +61,7 @@ public class Produto extends BaseEntity implements OwnableEntity {
     @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Compatibilidade> compatibilidades;
 
+    @Version
+    private Long version;
+
 }

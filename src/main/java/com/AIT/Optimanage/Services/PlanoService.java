@@ -5,9 +5,9 @@ import com.AIT.Optimanage.Controllers.dto.PlanoResponse;
 import com.AIT.Optimanage.Mappers.PlanoMapper;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
-import com.AIT.Optimanage.Models.User.UserInfo;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
-import com.AIT.Optimanage.Repositories.User.UserInfoRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -23,7 +23,7 @@ import java.util.Optional;
 public class PlanoService {
 
     private final PlanoRepository planoRepository;
-    private final UserInfoRepository userInfoRepository;
+    private final OrganizationRepository organizationRepository;
     private final PlanoMapper planoMapper;
 
     public List<PlanoResponse> listarPlanos() {
@@ -62,8 +62,8 @@ public class PlanoService {
 
     @Cacheable(value = "planos", key = "#user.id")
     public Optional<Plano> obterPlanoUsuario(User user) {
-        return userInfoRepository.findByOwnerUser(user)
-                .map(UserInfo::getPlanoAtivoId)
+        return organizationRepository.findById(user.getTenantId())
+                .map(Organization::getPlanoAtivoId)
                 .flatMap(planoRepository::findById);
     }
 }

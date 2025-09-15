@@ -36,7 +36,7 @@ class OwnerEntityListenerTest {
                 .sobrenome("Doe")
                 .email("john@example.com")
                 .senha("password")
-                .role(Role.USER)
+                .role(Role.OPERADOR)
                 .build();
         entityManager.persistAndFlush(user);
 

@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaDTO;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaProdutoDTO;
@@ -30,6 +31,7 @@ import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaServicoRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
@@ -71,6 +73,7 @@ public class VendaService {
     private final PaymentConfigService paymentConfigService;
     private final VendaMapper vendaMapper;
     private final VendaValidator vendaValidator;
+    private final OrganizationRepository organizationRepository;
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -190,6 +193,7 @@ public class VendaService {
             int updated = produtoRepository.incrementarEstoque(vp.getProduto().getId(), vp.getQuantidade());
             if (updated == 0) {
                 log.warn("Falha ao restaurar estoque do produto {}", vp.getProduto().getId());
+                throw new IllegalArgumentException("Falha ao restaurar estoque do produto " + vp.getProduto().getNome());
             }
         });
         vendaProdutoRepository.deleteByVenda(venda);

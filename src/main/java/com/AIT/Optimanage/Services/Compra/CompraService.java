@@ -19,11 +19,13 @@ import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Repositories.Compra.CompraProdutoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
@@ -65,6 +67,7 @@ public class CompraService {
     private final ProdutoRepository produtoRepository;
     private final CompraMapper compraMapper;
     private final CompraValidator compraValidator;
+    private final OrganizationRepository organizationRepository;
 
     @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -145,7 +148,11 @@ public class CompraService {
 
         compraProdutos.forEach(cp -> {
             log.info("Incrementando estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
-            produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            int updated = produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            if (updated == 0) {
+                log.warn("Falha ao incrementar estoque do produto {}", cp.getProduto().getId());
+                throw new IllegalArgumentException("Falha ao incrementar estoque do produto " + cp.getProduto().getNome());
+            }
         });
 
         contadorService.IncrementarContador(Tabela.COMPRA);
@@ -208,7 +215,11 @@ public class CompraService {
 
         compraProdutos.forEach(cp -> {
             log.info("Incrementando estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
-            produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            int updated = produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
+            if (updated == 0) {
+                log.warn("Falha ao incrementar estoque do produto {}", cp.getProduto().getId());
+                throw new IllegalArgumentException("Falha ao incrementar estoque do produto " + cp.getProduto().getNome());
+            }
         });
 
         Compra salvo = compraRepository.save(compra);

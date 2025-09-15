@@ -55,12 +55,16 @@ public class AuthenticationService {
                     .sobrenome(request.getSobrenome())
                     .email(request.getEmail())
                     .senha(passwordEncoder.encode(request.getSenha()))
-                    .role(Role.USER)
+                    .role(Role.OPERADOR)
                     .ativo(true)
                     .build();
             userRepository.save(user);
             var jwtToken = jwtService.generateToken(
-                    java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                    java.util.Map.<String, Object>of(
+                            "tenantId", user.getTenantId(),
+                            "organizationId", user.getTenantId(),
+                            "role", user.getRole().name()
+                    ),
                     user
             );
             var refreshToken = createRefreshToken(user);
@@ -121,7 +125,11 @@ public class AuthenticationService {
                 }
             }
             var jwtToken = jwtService.generateToken(
-                    java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                    java.util.Map.<String, Object>of(
+                            "tenantId", user.getTenantId(),
+                            "organizationId", user.getTenantId(),
+                            "role", user.getRole().name()
+                    ),
                     user
             );
             var refreshToken = createRefreshToken(user);
@@ -209,7 +217,11 @@ public class AuthenticationService {
                 .build();
         refreshTokenRepository.save(newTokenEntity);
         var jwtToken = jwtService.generateToken(
-                java.util.Map.<String, Object>of("tenantId", user.getTenantId()),
+                java.util.Map.<String, Object>of(
+                        "tenantId", user.getTenantId(),
+                        "organizationId", user.getTenantId(),
+                        "role", user.getRole().name()
+                ),
                 user
         );
         return AuthenticationResponse.builder()
