@@ -1,7 +1,7 @@
 package com.AIT.Optimanage.Models.Compra.DTOs;
 
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
-import com.AIT.Optimanage.Models.PagamentoDTO;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,8 +30,10 @@ public class CompraDTO {
     @NotNull
     private StatusCompra status = StatusCompra.ORCAMENTO;
     private String observacoes;
-    private List<CompraProdutoDTO> produtos;
-    private List<CompraServicoDTO> servicos;
+    @NotNull
+    private List<@Valid CompraProdutoDTO> produtos;
+    @NotNull
+    private List<@Valid CompraServicoDTO> servicos;
 
     public boolean hasNoItems() {
         return produtos.isEmpty() && servicos.isEmpty();

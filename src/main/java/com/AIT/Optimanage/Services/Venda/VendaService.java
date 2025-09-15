@@ -34,6 +34,7 @@ import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
+import com.AIT.Optimanage.Validation.VendaValidator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +70,7 @@ public class VendaService {
     private final PaymentService paymentService;
     private final PaymentConfigService paymentConfigService;
     private final VendaMapper vendaMapper;
+    private final VendaValidator vendaValidator;
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -105,7 +107,7 @@ public class VendaService {
     @Transactional
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO registrarVenda(User loggedUser, VendaDTO vendaDTO) {
-        validarVenda(vendaDTO, loggedUser);
+        vendaValidator.validarVenda(vendaDTO, loggedUser);
 
         Cliente cliente = clienteService.listarUmCliente(vendaDTO.getClienteId());
         Contador contador = contadorService.BuscarContador(Tabela.VENDA);
@@ -166,7 +168,7 @@ public class VendaService {
     @Transactional
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO atualizarVenda(User loggedUser, Integer vendaId, VendaDTO vendaDTO) {
-        validarVenda(vendaDTO, loggedUser);
+        vendaValidator.validarVenda(vendaDTO, loggedUser);
 
         Venda venda = getVenda(loggedUser, vendaId);
         Venda vendaAtualizada = Venda.builder()
@@ -444,30 +446,6 @@ public class VendaService {
                         .build();
             })
             .collect(Collectors.toList());
-    }
-
-    private void validarVenda(VendaDTO vendaDTO, User loggedUser ) {
-        if (vendaDTO.getDataEfetuacao().isAfter(LocalDate.now())) {
-            throw new IllegalArgumentException("Data de efetuação não pode ser no futuro");
-        }
-        if (vendaDTO.getDataAgendada() == null && vendaDTO.getStatus() == StatusVenda.AGENDADA) {
-            throw new IllegalArgumentException("Data agendada não informada para venda agendada");
-        }
-        if (vendaDTO.getDataCobranca() == null) {
-            if (vendaDTO.getStatus() == StatusVenda.AGUARDANDO_PAG) {
-                throw new IllegalArgumentException("Data de cobrança não informada para venda aguardando pagamento");
-            } else if (vendaDTO.getStatus() == StatusVenda.CONCRETIZADA) {
-                throw new IllegalArgumentException("Data de cobrança não informada para venda concretizada");
-            }
-        }
-        if (vendaDTO.getStatus() == null) {
-            throw new IllegalArgumentException("Status não informado");
-        } else if (vendaDTO.getStatus() == StatusVenda.ORCAMENTO && !loggedUser.getUserInfo().getPermiteOrcamento()) {
-            throw new IllegalArgumentException("Usuário não tem permissão para criar orçamentos");
-        }
-        if (vendaDTO.hasNoItems()) {
-            throw new IllegalArgumentException("Uma venda deve ter no mínimo um produto ou serviço");
-        }
     }
 
     public void atualizarStatus(Venda venda, StatusVenda novoStatus) {
