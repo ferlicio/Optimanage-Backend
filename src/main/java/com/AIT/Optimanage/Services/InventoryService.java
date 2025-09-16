@@ -12,10 +12,9 @@ import com.AIT.Optimanage.Support.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.Optional;
 
@@ -94,7 +93,7 @@ public class InventoryService {
     }
 
     @Transactional
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void aoCriarCompra(CompraCriadaEvent event) {
         if (event.getProdutos().isEmpty()) {
             return;
@@ -105,7 +104,7 @@ public class InventoryService {
     }
 
     @Transactional
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void aoRegistrarVenda(VendaRegistradaEvent event) {
         if (event.getProdutos().isEmpty()) {
             return;
