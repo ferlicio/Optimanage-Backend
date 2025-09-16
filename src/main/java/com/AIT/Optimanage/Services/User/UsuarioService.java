@@ -11,7 +11,8 @@ import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,6 +27,7 @@ public class UsuarioService {
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final PlanoRepository planoRepository;
+    private final CacheManager cacheManager;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public UserResponse salvarUsuario(UserRequest request) {
@@ -67,7 +69,6 @@ public class UsuarioService {
     }
 
     @Transactional
-    @CacheEvict(value = "planos", key = "#id")
     public UserResponse atualizarPlanoAtivo(Integer id, Integer novoPlanoId) {
         User usuario = getUsuario(id);
         Organization organization = organizationRepository.findByOwnerUser(usuario)
@@ -80,6 +81,7 @@ public class UsuarioService {
 
         organization.setPlanoAtivoId(plano);
         organizationRepository.save(organization);
+        evictPlanoCache(organization.getId());
         return toResponse(usuario);
     }
 
@@ -112,6 +114,16 @@ public class UsuarioService {
         Integer limite = plano.getMaxUsuarios();
         if (limite != null && limite > 0 && usuariosAtivos + novosUsuarios > limite) {
             throw new IllegalStateException("Limite de usuários do plano atingido");
+        }
+    }
+
+    private void evictPlanoCache(Integer organizationId) {
+        if (organizationId == null) {
+            return;
+        }
+        Cache cache = cacheManager.getCache("planos");
+        if (cache != null) {
+            cache.evict(organizationId);
         }
     }
 }

@@ -72,12 +72,13 @@ public class PlanoService {
         planoRepository.delete(plano);
     }
 
-    @Cacheable(value = "planos", key = "#user.id")
+    @Cacheable(
+            value = "planos",
+            key = "T(com.AIT.Optimanage.Services.PlanoService).resolveOrganizationId(#user)",
+            condition = "T(com.AIT.Optimanage.Services.PlanoService).resolveOrganizationId(#user) != null"
+    )
     public Optional<Plano> obterPlanoUsuario(User user) {
-        Integer organizationId = user != null ? user.getTenantId() : null;
-        if (organizationId == null) {
-            organizationId = TenantContext.getTenantId();
-        }
+        Integer organizationId = resolveOrganizationId(user);
         if (organizationId == null) {
             return Optional.empty();
         }
@@ -92,10 +93,7 @@ public class PlanoService {
             throw new EntityNotFoundException("Usuário não autenticado");
         }
 
-        Integer organizationId = user.getTenantId();
-        if (organizationId == null) {
-            organizationId = TenantContext.getTenantId();
-        }
+        Integer organizationId = resolveOrganizationId(user);
 
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada para o usuário");
@@ -144,6 +142,17 @@ public class PlanoService {
         }
         long restante = maximo - utilizado;
         return (int) Math.max(0, restante);
+    }
+
+    public static Integer resolveOrganizationId(User user) {
+        Integer organizationId = null;
+        if (user != null) {
+            organizationId = user.getTenantId();
+        }
+        if (organizationId == null) {
+            organizationId = TenantContext.getTenantId();
+        }
+        return organizationId;
     }
 }
 
