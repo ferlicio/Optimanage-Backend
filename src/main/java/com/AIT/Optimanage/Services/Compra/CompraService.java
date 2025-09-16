@@ -303,6 +303,7 @@ public class CompraService {
             throw new IllegalArgumentException("O pagamento informado não pode ser estornado");
         }
         BigDecimal valorPago = compra.getPagamentos().stream()
+                .filter(pagamentoCompra -> pagamentoCompra.getStatusPagamento() == StatusPagamento.PAGO)
                 .map(CompraPagamento::getValorPago)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         compra.setValorPendente(compra.getValorFinal().subtract(valorPago));
@@ -310,7 +311,7 @@ public class CompraService {
             if (compra.getStatus() == StatusCompra.AGUARDANDO_PAG || compra.getStatus() == StatusCompra.PARCIALMENTE_PAGO) {
                 atualizarStatus(compra, StatusCompra.PAGO);
             }
-        } else if (valorPago.compareTo(BigDecimal.ZERO) < 0) {
+        } else if (valorPago.compareTo(BigDecimal.ZERO) > 0) {
             atualizarStatus(compra, StatusCompra.PARCIALMENTE_PAGO);
         }
         Compra salvo = compraRepository.save(compra);

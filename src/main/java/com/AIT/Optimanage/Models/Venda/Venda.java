@@ -86,7 +86,7 @@ public class Venda extends AuditableEntity implements OwnableEntity {
     private List<VendaPagamento> pagamentos;
 
     public boolean isOrcamento() {
-        return this.status.equals(StatusVenda.PENDENTE);
+        return this.status.equals(StatusVenda.ORCAMENTO);
     }
 
     public boolean isPago() {

@@ -29,14 +29,16 @@ public class ContextoCompatibilidadeService {
     }
 
     public ContextoCompatibilidade criarContexto(User logedUser, ContextoCompatibilidadeDTO request) {
-        ContextoCompatibilidade contexto = listarUmContextoPorNome(logedUser, request.getNome());
-        if (contexto != null) {
+        if (contextoRepository.findByOwnerUserAndNome(logedUser, request.getNome()).isPresent()) {
             throw new RuntimeException("Contexto já existe!");
-        } else {
-            return contextoRepository.save(ContextoCompatibilidade.builder()
-                    .nome(request.getNome())
-                    .build());
-            }
+        }
+
+        ContextoCompatibilidade novoContexto = ContextoCompatibilidade.builder()
+                .ownerUser(logedUser)
+                .nome(request.getNome())
+                .build();
+
+        return contextoRepository.save(novoContexto);
     }
 
     public ContextoCompatibilidade editarContexto(User loggedUser, Integer idContexto, ContextoCompatibilidadeDTO request) {
