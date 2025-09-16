@@ -1,6 +1,6 @@
 package com.AIT.Optimanage.Models.Organization;
 
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -17,7 +17,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class UserInvite extends BaseEntity {
+public class UserInvite extends AuditableEntity {
     @Column(unique = true, nullable = false)
     private String code;
 

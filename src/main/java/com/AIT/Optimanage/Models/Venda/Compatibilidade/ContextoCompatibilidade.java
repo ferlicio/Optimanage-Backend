@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 
 @Data
 @Builder
@@ -17,7 +17,7 @@ import com.AIT.Optimanage.Models.BaseEntity;
 @AllArgsConstructor
 @Entity
 @EntityListeners(OwnerEntityListener.class)
-public class ContextoCompatibilidade extends BaseEntity implements OwnableEntity {
+public class ContextoCompatibilidade extends AuditableEntity implements OwnableEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)

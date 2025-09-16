@@ -4,14 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class FornecedorContato extends BaseEntity {
+public class FornecedorContato extends AuditableEntity {
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "fornecedor_id", referencedColumnName = "id", nullable = false)

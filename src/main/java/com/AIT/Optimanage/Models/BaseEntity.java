@@ -6,21 +6,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
-import java.time.LocalDateTime;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.FilterDef;
 import org.hibernate.annotations.ParamDef;
+import com.AIT.Optimanage.Models.Audit.AuditListener;
 import com.AIT.Optimanage.Support.TenantEntityListener;
 
 @Getter
 @Setter
 @MappedSuperclass
-@EntityListeners({AuditingEntityListener.class, TenantEntityListener.class})
+@EntityListeners({AuditListener.class, TenantEntityListener.class})
 @FilterDef(name = "organizationFilter", parameters = @ParamDef(name = "organizationId", type = Integer.class))
 @Filter(name = "organizationFilter", condition = "organization_id = :organizationId")
 public abstract class BaseEntity {
@@ -30,14 +27,6 @@ public abstract class BaseEntity {
 
     @Column(name = "organization_id", nullable = false, updatable = false)
     private Integer organizationId;
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
 
     // Temporary compatibility helpers for legacy tenant naming
     public Integer getTenantId() {

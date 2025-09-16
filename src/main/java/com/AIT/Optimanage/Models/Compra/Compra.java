@@ -10,7 +10,7 @@ import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import com.AIT.Optimanage.Models.OwnableEntity;
 import jakarta.validation.constraints.*;
 import lombok.*;
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,7 +22,7 @@ import java.util.List;
 @AllArgsConstructor
 @Entity
 @EntityListeners(OwnerEntityListener.class)
-public class Compra extends BaseEntity implements OwnableEntity {
+public class Compra extends AuditableEntity implements OwnableEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)
