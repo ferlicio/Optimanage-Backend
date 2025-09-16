@@ -25,9 +25,12 @@ public class CompraValidator {
                 throw new IllegalArgumentException("Data de cobrança não informada para venda concretizada");
             }
         }
+        boolean permiteOrcamento = loggedUser != null
+                && loggedUser.getOrganization() != null
+                && Boolean.TRUE.equals(loggedUser.getOrganization().getPermiteOrcamento());
         if (compraDTO.getStatus() == null) {
             throw new IllegalArgumentException("Status não informado");
-        } else if (compraDTO.getStatus() == StatusCompra.ORCAMENTO && !loggedUser.getUserInfo().getPermiteOrcamento()) {
+        } else if (compraDTO.getStatus() == StatusCompra.ORCAMENTO && !permiteOrcamento) {
             throw new IllegalArgumentException("Usuário não tem permissão para criar orçamentos");
         }
         if (compraDTO.hasNoItems()) {
