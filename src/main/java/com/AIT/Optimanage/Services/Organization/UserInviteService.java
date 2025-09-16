@@ -40,7 +40,7 @@ public class UserInviteService {
                 .role(request.getRole())
                 .expiresAt(request.getExpiresAt())
                 .email(request.getEmail())
-                .createdBy(creator)
+                .creator(creator)
                 .organization(organization)
                 .build();
         invite.setTenantId(organizationId);

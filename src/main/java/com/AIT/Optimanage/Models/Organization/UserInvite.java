@@ -35,7 +35,7 @@ public class UserInvite extends AuditableEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id", nullable = false)
-    private User createdBy;
+    private User creator;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
