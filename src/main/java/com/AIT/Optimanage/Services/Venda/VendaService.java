@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
@@ -36,6 +37,7 @@ import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
+import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Validation.VendaValidator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +50,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
 import java.math.BigDecimal;
@@ -64,6 +67,7 @@ public class VendaService {
     private final ClienteService clienteService;
     private final ProdutoService produtoService;
     private final ServicoService servicoService;
+    private final PlanoService planoService;
     private final VendaProdutoRepository vendaProdutoRepository;
     private final VendaServicoRepository vendaServicoRepository;
     private final ContadorService contadorService;
@@ -111,6 +115,10 @@ public class VendaService {
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO registrarVenda(User loggedUser, VendaDTO vendaDTO) {
         vendaValidator.validarVenda(vendaDTO, loggedUser);
+        if (vendaDTO.getDataAgendada() != null) {
+            Plano plano = obterPlanoAtivo(loggedUser);
+            garantirAgendaHabilitada(plano);
+        }
 
         Cliente cliente = clienteService.listarUmCliente(vendaDTO.getClienteId());
         Contador contador = contadorService.BuscarContador(Tabela.VENDA);
@@ -172,6 +180,10 @@ public class VendaService {
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO atualizarVenda(User loggedUser, Integer vendaId, VendaDTO vendaDTO) {
         vendaValidator.validarVenda(vendaDTO, loggedUser);
+        if (vendaDTO.getDataAgendada() != null) {
+            Plano plano = obterPlanoAtivo(loggedUser);
+            garantirAgendaHabilitada(plano);
+        }
 
         Venda venda = getVenda(loggedUser, vendaId);
         Venda vendaAtualizada = Venda.builder()
@@ -253,6 +265,8 @@ public class VendaService {
     }
 
     public VendaResponseDTO pagarVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
+        Plano plano = obterPlanoAtivo(loggedUser);
+        garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
 
@@ -264,6 +278,8 @@ public class VendaService {
     }
 
     public PaymentResponseDTO iniciarPagamentoExterno(User loggedUser, Integer idVenda, PaymentRequestDTO request) {
+        Plano plano = obterPlanoAtivo(loggedUser);
+        garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
         PaymentProvider provider = request != null && request.getProvider() != null
@@ -281,6 +297,8 @@ public class VendaService {
     }
 
     public VendaResponseDTO confirmarPagamentoExterno(User loggedUser, Integer idVenda, PaymentConfirmationDTO confirmDTO) {
+        Plano plano = obterPlanoAtivo(loggedUser);
+        garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
         PaymentProvider provider = confirmDTO.getProvider() != null ? confirmDTO.getProvider() : PaymentProvider.STRIPE;
@@ -293,6 +311,8 @@ public class VendaService {
     }
 
     public VendaResponseDTO lancarPagamentoVenda(User loggedUser, Integer idVenda, List<PagamentoDTO> pagamentoDTO) {
+        Plano plano = obterPlanoAtivo(loggedUser);
+        garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
 
@@ -316,6 +336,8 @@ public class VendaService {
 
 
     public VendaResponseDTO estornarVendaIntegral(User loggedUser, Integer idVenda) {
+        Plano plano = obterPlanoAtivo(loggedUser);
+        garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.CONCRETIZADA || venda.getStatus() == StatusVenda.PAGA) {
             venda.setStatus(StatusVenda.AGUARDANDO_PAG);
@@ -330,6 +352,8 @@ public class VendaService {
     }
 
     public VendaResponseDTO estornarPagamentoVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
+        Plano plano = obterPlanoAtivo(loggedUser);
+        garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
         VendaPagamento pagamento = pagamentoVendaService.listarUmPagamento(loggedUser, idPagamento);
         if (venda.getPagamentos().contains(pagamento)) {
@@ -353,6 +377,8 @@ public class VendaService {
     }
 
     public VendaResponseDTO agendarVenda(User loggedUser, Integer idVenda, String dataAgendada) {
+        Plano plano = obterPlanoAtivo(loggedUser);
+        garantirAgendaHabilitada(plano);
         Venda venda = getVenda(loggedUser, idVenda);
 
         if (venda.getVendaServicos().isEmpty()){
@@ -367,6 +393,8 @@ public class VendaService {
     }
 
     public VendaResponseDTO finalizarAgendamentoVenda(User loggedUser, Integer idVenda) {
+        Plano plano = obterPlanoAtivo(loggedUser);
+        garantirAgendaHabilitada(plano);
         Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.AGENDADA) {
             BigDecimal valorPago = venda.getValorFinal().subtract(venda.getValorPendente());
@@ -546,6 +574,26 @@ public class VendaService {
             if (venda.getStatus() == StatusVenda.AGUARDANDO_PAG) {
                 atualizarStatus(venda, StatusVenda.PARCIALMENTE_PAGA);
             }
+        }
+    }
+
+    private Plano obterPlanoAtivo(User loggedUser) {
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        return planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+    }
+
+    private void garantirPagamentosHabilitados(Plano plano) {
+        if (!Boolean.TRUE.equals(plano.getPagamentosHabilitados())) {
+            throw new AccessDeniedException("Pagamentos não estão habilitados no plano atual");
+        }
+    }
+
+    private void garantirAgendaHabilitada(Plano plano) {
+        if (!Boolean.TRUE.equals(plano.getAgendaHabilitada())) {
+            throw new AccessDeniedException("Agenda não está habilitada no plano atual");
         }
     }
 }

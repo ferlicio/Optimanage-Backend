@@ -8,6 +8,7 @@ import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -28,6 +29,20 @@ public class UsuarioService {
     private final BCryptPasswordEncoder passwordEncoder;
 
     public UserResponse salvarUsuario(UserRequest request) {
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Informações do usuário não encontradas"));
+
+        Plano plano = planoRepository.findById(organization.getPlanoAtivoId())
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+
+        long usuariosAtivos = userRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+        validarLimiteUsuarios(plano, usuariosAtivos, 1);
+
         User usuario = User.builder()
                 .nome(request.getNome())
                 .sobrenome(request.getSobrenome())
@@ -36,6 +51,7 @@ public class UsuarioService {
                 .role(request.getRole())
                 .ativo(true)
                 .build();
+        usuario.setTenantId(organizationId);
         User salvo = userRepository.save(usuario);
         return toResponse(salvo);
     }
@@ -58,6 +74,10 @@ public class UsuarioService {
                 .orElseThrow(() -> new EntityNotFoundException("Informações do usuário não encontradas"));
         Plano plano = planoRepository.findById(novoPlanoId)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+
+        long usuariosAtivos = userRepository.countByOrganizationIdAndAtivoTrue(organization.getId());
+        validarLimiteUsuarios(plano, usuariosAtivos, 0);
+
         organization.setPlanoAtivoId(plano);
         organizationRepository.save(organization);
         return toResponse(usuario);
@@ -83,6 +103,16 @@ public class UsuarioService {
                 .ativo(usuario.getAtivo())
                 .role(usuario.getRole())
                 .build();
+    }
+
+    private void validarLimiteUsuarios(Plano plano, long usuariosAtivos, int novosUsuarios) {
+        if (plano == null) {
+            throw new EntityNotFoundException("Plano não encontrado");
+        }
+        Integer limite = plano.getMaxUsuarios();
+        if (limite != null && limite > 0 && usuariosAtivos + novosUsuarios > limite) {
+            throw new IllegalStateException("Limite de usuários do plano atingido");
+        }
     }
 }
 

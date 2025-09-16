@@ -6,9 +6,11 @@ import com.AIT.Optimanage.Mappers.ClienteMapper;
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.Search.ClienteSearch;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,6 +31,7 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
     private final ClienteMapper clienteMapper;
+    private final PlanoService planoService;
 
     @Cacheable(value = "clientes", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -70,6 +73,17 @@ public class ClienteService {
     @Transactional(rollbackFor = Exception.class)
     public ClienteResponse criarCliente(ClienteRequest request) {
         User loggedUser = CurrentUser.get();
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+        long clientesAtivos = clienteRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+        validarLimiteClientes(plano, clientesAtivos, 1);
         Cliente cliente = clienteMapper.toEntity(request);
         cliente.setId(null);
         cliente.setDataCadastro(LocalDate.now());
@@ -108,6 +122,19 @@ public class ClienteService {
         User loggedUser = CurrentUser.get();
         Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        if (!Boolean.TRUE.equals(cliente.getAtivo())) {
+            Integer organizationId = CurrentUser.getOrganizationId();
+            if (organizationId == null) {
+                throw new EntityNotFoundException("Organização não encontrada");
+            }
+            Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                    .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+            long clientesAtivos = clienteRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+            validarLimiteClientes(plano, clientesAtivos, 1);
+        }
         cliente.setAtivo(true);
         Cliente atualizado = clienteRepository.save(cliente);
         return clienteMapper.toResponse(atualizado);
@@ -140,5 +167,12 @@ public class ClienteService {
 
     }
 
-    
+
+    private void validarLimiteClientes(Plano plano, long clientesAtivos, int novosClientes) {
+        Integer limite = plano.getMaxClientes();
+        if (limite != null && limite > 0 && clientesAtivos + novosClientes > limite) {
+            throw new IllegalStateException("Limite de clientes do plano atingido");
+        }
+    }
+
 }

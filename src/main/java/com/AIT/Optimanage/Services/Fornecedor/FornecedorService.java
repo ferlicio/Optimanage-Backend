@@ -6,9 +6,11 @@ import com.AIT.Optimanage.Mappers.FornecedorMapper;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.Search.FornecedorSearch;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,6 +31,7 @@ public class FornecedorService {
 
     private final FornecedorRepository fornecedorRepository;
     private final FornecedorMapper fornecedorMapper;
+    private final PlanoService planoService;
 
     @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -69,6 +72,17 @@ public class FornecedorService {
     @CacheEvict(value = "fornecedores", allEntries = true)
     public FornecedorResponse criarFornecedor(FornecedorRequest request) {
         User loggedUser = CurrentUser.get();
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+        long fornecedoresAtivos = fornecedorRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+        validarLimiteFornecedores(plano, fornecedoresAtivos, 1);
         Fornecedor fornecedor = fornecedorMapper.toEntity(request);
         fornecedor.setOwnerUser(loggedUser);
         fornecedor.setDataCadastro(LocalDate.now());
@@ -97,7 +111,19 @@ public class FornecedorService {
 
     @CacheEvict(value = "fornecedores", allEntries = true)
     public FornecedorResponse reativarFornecedor(Integer idFornecedor) {
-        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoFalse(idFornecedor, CurrentUser.get())
+        User loggedUser = CurrentUser.get();
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+        long fornecedoresAtivos = fornecedorRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+        validarLimiteFornecedores(plano, fornecedoresAtivos, 1);
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoFalse(idFornecedor, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(true);
         return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
@@ -126,5 +152,12 @@ public class FornecedorService {
             fornecedor.setCpf(null);
         }
 
+    }
+
+    private void validarLimiteFornecedores(Plano plano, long fornecedoresAtivos, int novosFornecedores) {
+        Integer limite = plano.getMaxFornecedores();
+        if (limite != null && limite > 0 && fornecedoresAtivos + novosFornecedores > limite) {
+            throw new IllegalStateException("Limite de fornecedores do plano atingido");
+        }
     }
 }

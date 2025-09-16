@@ -26,5 +26,37 @@ public class PlanoRequest {
     @NotNull
     @Positive
     private Integer qtdAcessos;
+
+    @NotNull
+    @PositiveOrZero
+    private Integer maxUsuarios;
+
+    @NotNull
+    @PositiveOrZero
+    private Integer maxProdutos;
+
+    @NotNull
+    @PositiveOrZero
+    private Integer maxClientes;
+
+    @NotNull
+    @PositiveOrZero
+    private Integer maxFornecedores;
+
+    @NotNull
+    @PositiveOrZero
+    private Integer maxServicos;
+
+    @NotNull
+    private Boolean agendaHabilitada;
+
+    @NotNull
+    private Boolean recomendacoesHabilitadas;
+
+    @NotNull
+    private Boolean pagamentosHabilitados;
+
+    @NotNull
+    private Boolean suportePrioritario;
 }
 

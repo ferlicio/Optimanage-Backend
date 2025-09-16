@@ -17,4 +17,6 @@ public interface ServicoRepository extends JpaRepository<Servico, Integer> {
     Optional<Servico> findByIdAndOwnerUserAndAtivoTrue(Integer idServico, User ownerUser);
 
     Optional<Servico> findByIdAndOwnerUser(Integer idServico, User ownerUser);
+
+    long countByOrganizationIdAndAtivoTrue(Integer organizationId);
 }
