@@ -82,6 +82,7 @@ public class ProdutoService {
         Produto produtoSalvo = buscarProdutoAtivo(idProduto);
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(produtoSalvo.getId());
+        produto.setTenantId(produtoSalvo.getOrganizationId());
         Produto atualizado = produtoRepository.save(produto);
         return produtoMapper.toResponse(atualizado);
     }

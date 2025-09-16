@@ -74,6 +74,7 @@ public class PagamentoVendaService {
                 .observacoes(pagamentoDTO.getObservacoes())
                 .build();
 
+        pagamento.setTenantId(venda.getOrganizationId());
         pagamentoVendaRepository.save(pagamento);
     }
 

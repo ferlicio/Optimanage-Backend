@@ -131,6 +131,10 @@ public class CompraService {
             garantirAgendaHabilitada(plano);
         }
 
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(compraDTO.getFornecedorId());
         Contador contador = contadorService.BuscarContador(Tabela.COMPRA);
         Compra novaCompra = Compra.builder()

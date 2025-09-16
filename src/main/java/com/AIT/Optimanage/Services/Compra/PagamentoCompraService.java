@@ -4,7 +4,6 @@ import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Compra.CompraPagamento;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.PagamentoDTO;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Compra.PagamentoCompraRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import lombok.RequiredArgsConstructor;
@@ -20,24 +19,39 @@ public class PagamentoCompraService {
     private final PagamentoCompraRepository pagamentoCompraRepository;
 
     public List<CompraPagamento> listarPagamentosCompra(Integer idCompra) {
-        User loggedUser = CurrentUser.get();
-        return pagamentoCompraRepository.findAllByCompraIdAndCompraOwnerUser(idCompra, loggedUser);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return pagamentoCompraRepository.findAllByCompraIdAndCompraOrganizationId(idCompra, organizationId);
     }
 
     public List<CompraPagamento> listarPagamentosRealizadosCompra(Integer idCompra) {
-        User loggedUser = CurrentUser.get();
-        return pagamentoCompraRepository.findAllByCompraIdAndCompraOwnerUserAndStatusPagamento(idCompra, loggedUser, StatusPagamento.PAGO);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return pagamentoCompraRepository.findAllByCompraIdAndCompraOrganizationIdAndStatusPagamento(idCompra, organizationId, StatusPagamento.PAGO);
     }
 
     private CompraPagamento listarUmPagamentoCompra(Compra compra, Integer id) {
-        User loggedUser = CurrentUser.get();
-        return pagamentoCompraRepository.findByIdAndCompraAndCompraOwnerUser(id, compra, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        if (!organizationId.equals(compra.getOrganizationId())) {
+            throw new RuntimeException("Compra não pertence à organização atual");
+        }
+        return pagamentoCompraRepository.findByIdAndCompraIdAndCompraOrganizationId(id, compra.getId(), organizationId)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 
     public CompraPagamento listarUmPagamento(Integer idPagamento) {
-        User loggedUser = CurrentUser.get();
-        return pagamentoCompraRepository.findByIdAndCompraOwnerUser(idPagamento, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return pagamentoCompraRepository.findByIdAndCompraOrganizationId(idPagamento, organizationId)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 
@@ -62,6 +76,7 @@ public class PagamentoCompraService {
                 .observacoes(pagamento.getObservacoes())
                 .build();
 
+        compraPagamento.setTenantId(compra.getOrganizationId());
         pagamentoCompraRepository.save(compraPagamento);
     }
 

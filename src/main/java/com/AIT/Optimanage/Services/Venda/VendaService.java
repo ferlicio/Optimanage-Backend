@@ -275,7 +275,7 @@ public class VendaService {
 
         pagamentoVendaService.registrarPagamento(loggedUser, venda, idPagamento);
 
-        atualizarVendaPosPagamento(venda);
+        atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
@@ -308,7 +308,7 @@ public class VendaService {
         PaymentConfig config = paymentConfigService.getConfig(loggedUser, provider);
         PagamentoDTO pagamentoDTO = paymentService.confirmPayment(confirmDTO.getPaymentIntentId(), config);
         pagamentoVendaService.lancarPagamento(venda, pagamentoDTO);
-        atualizarVendaPosPagamento(venda);
+        atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
@@ -332,7 +332,7 @@ public class VendaService {
             pagamentoVendaService.lancarPagamento(venda, pagamento);
         }
 
-        atualizarVendaPosPagamento(venda);
+        atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
@@ -579,8 +579,8 @@ public class VendaService {
         }
     }
 
-    private void atualizarVendaPosPagamento(Venda venda) {
-        List<VendaPagamento> pagamentos = pagamentoVendaService.listarPagamentosRealizadosVenda(venda.getOwnerUser(), venda.getId());
+    private void atualizarVendaPosPagamento(User loggedUser, Venda venda) {
+        List<VendaPagamento> pagamentos = pagamentoVendaService.listarPagamentosRealizadosVenda(loggedUser, venda.getId());
 
         BigDecimal valorPago = pagamentos.stream().map(VendaPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
         venda.setValorPendente(venda.getValorFinal().subtract(valorPago));
