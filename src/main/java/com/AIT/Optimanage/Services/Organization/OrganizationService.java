@@ -36,6 +36,11 @@ public class OrganizationService {
     @Transactional
     public OrganizationResponse criarOrganizacao(OrganizationRequest request, User creator) {
         validarPermissaoCriacao(creator);
+        Plano plano = planoRepository.findById(request.getPlanoId())
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+
+        validarLimiteUsuarios(plano, 0, 1);
+
         // Create owner user first
         UserRequest ownerReq = request.getOwner();
         User owner = User.builder()
@@ -49,9 +54,6 @@ public class OrganizationService {
         // Temporarily set tenant to 0 until organization is persisted
         owner.setTenantId(0);
         owner = userRepository.save(owner);
-
-        Plano plano = planoRepository.findById(request.getPlanoId())
-                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
 
         Organization organization = Organization.builder()
                 .ownerUser(owner)
@@ -105,6 +107,11 @@ public class OrganizationService {
             throw new IllegalArgumentException("Role OWNER não é permitido");
         }
 
+        Plano plano = planoRepository.findById(organization.getPlanoAtivoId())
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+        long usuariosAtivos = userRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+        validarLimiteUsuarios(plano, usuariosAtivos, 1);
+
         TenantContext.setTenantId(organizationId);
         User user = User.builder()
                 .nome(request.getNome())
@@ -130,5 +137,15 @@ public class OrganizationService {
         return AuthenticationResponse.builder()
                 .token(token)
                 .build();
+    }
+
+    private void validarLimiteUsuarios(Plano plano, long usuariosAtivos, int novosUsuarios) {
+        if (plano == null) {
+            throw new EntityNotFoundException("Plano não encontrado");
+        }
+        Integer limite = plano.getMaxUsuarios();
+        if (limite != null && limite > 0 && usuariosAtivos + novosUsuarios > limite) {
+            throw new IllegalStateException("Limite de usuários do plano atingido");
+        }
     }
 }

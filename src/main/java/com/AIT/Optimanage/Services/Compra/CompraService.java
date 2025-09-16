@@ -19,6 +19,7 @@ import com.AIT.Optimanage.Models.Inventory.InventorySource;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
@@ -33,6 +34,7 @@ import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
+import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Validation.CompraValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +48,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 
 import com.AIT.Optimanage.Repositories.Compra.CompraFilters;
 import com.AIT.Optimanage.Repositories.FilterBuilder;
@@ -65,6 +69,7 @@ public class CompraService {
     private final ContadorService contadorService;
     private final ProdutoService produtoService;
     private final ServicoService servicoService;
+    private final PlanoService planoService;
     private final CompraProdutoRepository compraProdutoRepository;
     private final CompraServicoRepository compraServicoRepository;
     private final PagamentoCompraService pagamentoCompraService;
@@ -114,6 +119,10 @@ public class CompraService {
     @CacheEvict(value = "compras", allEntries = true)
     public CompraResponseDTO criarCompra(CompraDTO compraDTO) {
         compraValidator.validarCompra(compraDTO);
+        if (compraDTO.getDataAgendada() != null) {
+            Plano plano = obterPlanoAtual();
+            garantirAgendaHabilitada(plano);
+        }
 
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(compraDTO.getFornecedorId());
         Contador contador = contadorService.BuscarContador(Tabela.COMPRA);
@@ -161,6 +170,10 @@ public class CompraService {
     @CacheEvict(value = "compras", allEntries = true)
     public CompraResponseDTO editarCompra(Integer idCompra, CompraDTO compraDTO) {
         compraValidator.validarCompra(compraDTO);
+        if (compraDTO.getDataAgendada() != null) {
+            Plano plano = obterPlanoAtual();
+            garantirAgendaHabilitada(plano);
+        }
 
         Compra compra = getCompra(idCompra);
         Compra compraAtualizada = Compra.builder()
@@ -226,6 +239,8 @@ public class CompraService {
     }
 
     public CompraResponseDTO pagarCompra(Integer idCompra, Integer idPagamento) {
+        Plano plano = obterPlanoAtual();
+        garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
         podePagarCompra(compra);
 
@@ -238,6 +253,8 @@ public class CompraService {
 
     @Transactional
     public CompraResponseDTO lancarPagamentoCompra(Integer idCompra, List<PagamentoDTO> pagamentoDTO) {
+        Plano plano = obterPlanoAtual();
+        garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
         podePagarCompra(compra);
 
@@ -260,6 +277,8 @@ public class CompraService {
     }
 
     public CompraResponseDTO estornarCompraIntegral(Integer idCompra) {
+        Plano plano = obterPlanoAtual();
+        garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
         if (compra.getStatus() == StatusCompra.CONCRETIZADO || compra.getStatus() == StatusCompra.PAGO) {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
@@ -274,6 +293,8 @@ public class CompraService {
     }
 
     public CompraResponseDTO estornarPagamentoCompra(Integer idCompra, Integer idPagamento) {
+        Plano plano = obterPlanoAtual();
+        garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
         CompraPagamento pagamento = pagamentoCompraService.listarUmPagamento(idPagamento);
         if (compra.getPagamentos().contains(pagamento) && pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
@@ -297,6 +318,8 @@ public class CompraService {
     }
 
     public CompraResponseDTO agendarCompra(Integer idCompra, String dataAgendada) {
+        Plano plano = obterPlanoAtual();
+        garantirAgendaHabilitada(plano);
         Compra compra = getCompra(idCompra);
 
         boolean semItens = (compra.getCompraProdutos() == null || compra.getCompraProdutos().isEmpty())
@@ -318,6 +341,8 @@ public class CompraService {
     }
 
     public CompraResponseDTO finalizarAgendamentoCompra(Integer idCompra) {
+        Plano plano = obterPlanoAtual();
+        garantirAgendaHabilitada(plano);
         Compra compra = getCompra(idCompra);
         if (compra.getStatus() == StatusCompra.AGENDADA) {
             if (compra.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
@@ -490,4 +515,24 @@ public class CompraService {
         }
     }
 
+    private Plano obterPlanoAtual() {
+        User loggedUser = CurrentUser.get();
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        return planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+    }
+
+    private void garantirPagamentosHabilitados(Plano plano) {
+        if (!Boolean.TRUE.equals(plano.getPagamentosHabilitados())) {
+            throw new AccessDeniedException("Pagamentos não estão habilitados no plano atual");
+        }
+    }
+
+    private void garantirAgendaHabilitada(Plano plano) {
+        if (!Boolean.TRUE.equals(plano.getAgendaHabilitada())) {
+            throw new AccessDeniedException("Agenda não está habilitada no plano atual");
+        }
+    }
 }

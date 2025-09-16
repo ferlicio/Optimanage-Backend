@@ -1,15 +1,19 @@
 package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -20,10 +24,19 @@ public class RecommendationService {
 
     private final VendaRepository vendaRepository;
     private final ProdutoRepository produtoRepository;
+    private final PlanoService planoService;
 
     @Transactional(readOnly = true)
     public List<ProdutoResponse> recomendarProdutos(Integer clienteId) {
         User loggedUser = CurrentUser.get();
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+        if (!Boolean.TRUE.equals(plano.getRecomendacoesHabilitadas())) {
+            throw new AccessDeniedException("Recomendações não estão habilitadas no plano atual");
+        }
         List<Object[]> historicoCliente = vendaRepository.findTopProdutosByCliente(clienteId, loggedUser.getId());
 
         Set<Integer> produtosCliente = historicoCliente.stream()

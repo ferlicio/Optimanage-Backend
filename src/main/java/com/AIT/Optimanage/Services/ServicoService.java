@@ -4,10 +4,12 @@ import com.AIT.Optimanage.Controllers.dto.ServicoRequest;
 import com.AIT.Optimanage.Controllers.dto.ServicoResponse;
 import com.AIT.Optimanage.Mappers.ServicoMapper;
 import com.AIT.Optimanage.Models.Search;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Repositories.ServicoRepository;
+import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -26,6 +28,7 @@ public class ServicoService {
 
     private final ServicoRepository servicoRepository;
     private final ServicoMapper servicoMapper;
+    private final PlanoService planoService;
 
     @Cacheable(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     public Page<ServicoResponse> listarServicos(Search pesquisa) {
@@ -50,6 +53,17 @@ public class ServicoService {
     @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
     public ServicoResponse cadastrarServico(ServicoRequest request) {
         User loggedUser = CurrentUser.get();
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+        long servicosAtivos = servicoRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+        validarLimiteServicos(plano, servicosAtivos, 1);
         Servico servico = servicoMapper.toEntity(request);
         servico.setId(null);
         Servico salvo = servicoRepository.save(servico);
@@ -79,6 +93,19 @@ public class ServicoService {
     public ServicoResponse restaurarServico(Integer idServico) {
         User loggedUser = CurrentUser.get();
         Servico servico = buscarServico(idServico);
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        if (!Boolean.TRUE.equals(servico.getAtivo())) {
+            Integer organizationId = CurrentUser.getOrganizationId();
+            if (organizationId == null) {
+                throw new EntityNotFoundException("Organização não encontrada");
+            }
+            Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                    .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+            long servicosAtivos = servicoRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+            validarLimiteServicos(plano, servicosAtivos, 1);
+        }
         servico.setAtivo(true);
         Servico atualizado = servicoRepository.save(servico);
         return servicoMapper.toResponse(atualizado);
@@ -100,6 +127,13 @@ public class ServicoService {
         User loggedUser = CurrentUser.get();
         return servicoRepository.findByIdAndOwnerUserAndAtivoTrue(idServico, loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
+    }
+
+    private void validarLimiteServicos(Plano plano, long servicosAtivos, int novosServicos) {
+        Integer limite = plano.getMaxServicos();
+        if (limite != null && limite > 0 && servicosAtivos + novosServicos > limite) {
+            throw new IllegalStateException("Limite de serviços do plano atingido");
+        }
     }
 }
 

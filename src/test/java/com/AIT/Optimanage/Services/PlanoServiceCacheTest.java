@@ -50,10 +50,13 @@ class PlanoServiceCacheTest {
     }
 
     @Test
-    void obterPlanoUsuarioIsCachedPerTenant() {
-        User user = new User();
-        user.setId(1);
-        user.setTenantId(1);
+    void obterPlanoUsuarioIsCachedPerOrganization() {
+        User owner = new User();
+        owner.setId(1);
+        owner.setTenantId(1);
+        User collaborator = new User();
+        collaborator.setId(2);
+        collaborator.setTenantId(1);
         Plano plano = new Plano();
         plano.setId(10);
         Organization organization = new Organization();
@@ -62,21 +65,30 @@ class PlanoServiceCacheTest {
         when(organizationRepository.findById(1)).thenReturn(Optional.of(organization));
         when(planoRepository.findById(10)).thenReturn(Optional.of(plano));
 
-        TenantContext.setTenantId(1);
-        Optional<Plano> first = planoService.obterPlanoUsuario(user);
-        Optional<Plano> second = planoService.obterPlanoUsuario(user);
+        Optional<Plano> first = planoService.obterPlanoUsuario(owner);
+        Optional<Plano> second = planoService.obterPlanoUsuario(collaborator);
 
         assertThat(first).contains(plano);
         assertThat(second).contains(plano);
         verify(planoRepository, times(1)).findById(10);
         verify(organizationRepository, times(1)).findById(1);
 
-        TenantContext.setTenantId(2);
-        Optional<Plano> third = planoService.obterPlanoUsuario(user);
+        User otherTenantUser = new User();
+        otherTenantUser.setId(3);
+        otherTenantUser.setTenantId(2);
+        Plano otherPlano = new Plano();
+        otherPlano.setId(20);
+        Organization otherOrganization = new Organization();
+        otherOrganization.setPlanoAtivoId(otherPlano);
 
-        assertThat(third).contains(plano);
-        verify(planoRepository, times(2)).findById(10);
-        verify(organizationRepository, times(2)).findById(1);
+        when(organizationRepository.findById(2)).thenReturn(Optional.of(otherOrganization));
+        when(planoRepository.findById(20)).thenReturn(Optional.of(otherPlano));
+
+        Optional<Plano> third = planoService.obterPlanoUsuario(otherTenantUser);
+
+        assertThat(third).contains(otherPlano);
+        verify(organizationRepository, times(1)).findById(2);
+        verify(planoRepository, times(1)).findById(20);
     }
 
     @Test

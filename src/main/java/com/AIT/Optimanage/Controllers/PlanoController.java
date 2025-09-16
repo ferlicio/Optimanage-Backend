@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Controllers;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
+import com.AIT.Optimanage.Controllers.dto.PlanoQuotaResponse;
 import com.AIT.Optimanage.Controllers.dto.PlanoRequest;
 import com.AIT.Optimanage.Controllers.dto.PlanoResponse;
 import com.AIT.Optimanage.Services.PlanoService;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
@@ -22,6 +24,15 @@ import java.util.List;
 public class PlanoController extends V1BaseController {
 
     private final PlanoService planoService;
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Consultar plano atual", description = "Retorna o plano ativo da organização com o uso das quotas")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public ResponseEntity<PlanoQuotaResponse> obterPlanoAtual(
+            @AuthenticationPrincipal com.AIT.Optimanage.Models.User.User loggedUser) {
+        return ok(planoService.obterPlanoAtual(loggedUser));
+    }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping

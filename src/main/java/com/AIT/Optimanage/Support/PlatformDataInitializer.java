@@ -43,6 +43,15 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .valor(0f)
                 .duracaoDias(0)
                 .qtdAcessos(0)
+                .maxUsuarios(0)
+                .maxProdutos(0)
+                .maxClientes(0)
+                .maxFornecedores(0)
+                .maxServicos(0)
+                .agendaHabilitada(true)
+                .recomendacoesHabilitadas(true)
+                .pagamentosHabilitados(true)
+                .suportePrioritario(true)
                 .build();
         plan.setId(1);
         planoRepository.save(plan);

@@ -2,12 +2,14 @@ package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Controllers.dto.ProdutoRequest;
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Mappers.ProdutoMapper;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.User.User;
-import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
-import com.AIT.Optimanage.Mappers.ProdutoMapper;
+import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -26,6 +28,7 @@ public class ProdutoService {
 
     private final ProdutoRepository produtoRepository;
     private final ProdutoMapper produtoMapper;
+    private final PlanoService planoService;
 
     @Cacheable(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     public Page<ProdutoResponse> listarProdutos(Search pesquisa) {
@@ -50,8 +53,21 @@ public class ProdutoService {
     @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
     public ProdutoResponse cadastrarProduto(ProdutoRequest request) {
         User loggedUser = CurrentUser.get();
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+        long produtosAtivos = produtoRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+        validarLimiteProdutos(plano, produtosAtivos, 1);
+
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(null);
+        produto.setTenantId(organizationId);
         Produto salvo = produtoRepository.save(produto);
         return produtoMapper.toResponse(salvo);
     }
@@ -75,6 +91,19 @@ public class ProdutoService {
     }
 
     public ProdutoResponse restaurarProduto(Integer idProduto) {
+        User loggedUser = CurrentUser.get();
+        if (loggedUser == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Plano plano = planoService.obterPlanoUsuario(loggedUser)
+                .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
+        long produtosAtivos = produtoRepository.countByOrganizationIdAndAtivoTrue(organizationId);
+        validarLimiteProdutos(plano, produtosAtivos, 1);
+
         Produto produto = buscarProduto(idProduto);
         produto.setAtivo(true);
         Produto atualizado = produtoRepository.save(produto);
@@ -97,4 +126,14 @@ public class ProdutoService {
     }
 
     // Mapping handled by ProdutoMapper
+
+    private void validarLimiteProdutos(Plano plano, long produtosAtivos, int novosProdutos) {
+        if (plano == null) {
+            throw new EntityNotFoundException("Plano não encontrado");
+        }
+        Integer limite = plano.getMaxProdutos();
+        if (limite != null && limite > 0 && produtosAtivos + novosProdutos > limite) {
+            throw new IllegalStateException("Limite de produtos do plano atingido");
+        }
+    }
 }

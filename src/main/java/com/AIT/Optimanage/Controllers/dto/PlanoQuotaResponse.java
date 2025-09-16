@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PlanoResponse {
+public class PlanoQuotaResponse {
 
     private Integer id;
     private String nome;
@@ -25,5 +25,14 @@ public class PlanoResponse {
     private Boolean recomendacoesHabilitadas;
     private Boolean pagamentosHabilitados;
     private Boolean suportePrioritario;
+    private Integer usuariosUtilizados;
+    private Integer usuariosRestantes;
+    private Integer produtosUtilizados;
+    private Integer produtosRestantes;
+    private Integer clientesUtilizados;
+    private Integer clientesRestantes;
+    private Integer fornecedoresUtilizados;
+    private Integer fornecedoresRestantes;
+    private Integer servicosUtilizados;
+    private Integer servicosRestantes;
 }
-

@@ -47,4 +47,6 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
     Optional<Cliente> findByIdAndOwnerUserAndAtivoTrue(Integer idCliente, User loggedUser);
 
     Optional<Cliente> findByIdAndOwnerUser(Integer idCliente, User loggedUser);
+
+    long countByOrganizationIdAndAtivoTrue(Integer organizationId);
 }
