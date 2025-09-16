@@ -11,8 +11,11 @@ import com.AIT.Optimanage.Models.Compra.DTOs.CompraResponseDTO;
 import com.AIT.Optimanage.Mappers.CompraMapper;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Compra.Search.CompraSearch;
+import com.AIT.Optimanage.Events.CompraCriadaEvent;
+import com.AIT.Optimanage.Events.InventoryAdjustment;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
+import com.AIT.Optimanage.Models.Inventory.InventorySource;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
@@ -24,9 +27,9 @@ import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Repositories.Compra.CompraProdutoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
-import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
+import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
@@ -35,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -64,10 +68,11 @@ public class CompraService {
     private final CompraProdutoRepository compraProdutoRepository;
     private final CompraServicoRepository compraServicoRepository;
     private final PagamentoCompraService pagamentoCompraService;
-    private final ProdutoRepository produtoRepository;
     private final CompraMapper compraMapper;
     private final CompraValidator compraValidator;
     private final OrganizationRepository organizationRepository;
+    private final InventoryService inventoryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -146,14 +151,7 @@ public class CompraService {
         compraProdutoRepository.saveAll(compraProdutos);
         compraServicoRepository.saveAll(compraServicos);
 
-        compraProdutos.forEach(cp -> {
-            log.info("Incrementando estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
-            int updated = produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
-            if (updated == 0) {
-                log.warn("Falha ao incrementar estoque do produto {}", cp.getProduto().getId());
-                throw new IllegalArgumentException("Falha ao incrementar estoque do produto " + cp.getProduto().getNome());
-            }
-        });
+        publicarCompraCriada(novaCompra, compraProdutos);
 
         contadorService.IncrementarContador(Tabela.COMPRA);
         return compraMapper.toResponse(novaCompra);
@@ -177,14 +175,9 @@ public class CompraService {
                 .observacoes(compraDTO.getObservacoes())
                 .build();
 
-        compra.getCompraProdutos().forEach(cp -> {
-            log.info("Revertendo estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
-            int updated = produtoRepository.reduzirEstoque(cp.getProduto().getId(), cp.getQuantidade());
-            if (updated == 0) {
-                log.warn("Estoque insuficiente para reverter produto {}", cp.getProduto().getId());
-                throw new IllegalArgumentException("Estoque insuficiente para reverter produto " + cp.getProduto().getNome());
-            }
-        });
+        compra.getCompraProdutos().forEach(cp ->
+                inventoryService.reduzir(cp.getProduto().getId(), cp.getQuantidade(), InventorySource.COMPRA,
+                        compra.getId(), "Ajuste de edição da compra #" + compra.getId()));
 
         compraProdutoRepository.deleteAll(compra.getCompraProdutos());
         compraServicoRepository.deleteAll(compra.getCompraServicos());
@@ -213,14 +206,9 @@ public class CompraService {
         compraProdutoRepository.saveAll(compraProdutos);
         compraServicoRepository.saveAll(compraServicos);
 
-        compraProdutos.forEach(cp -> {
-            log.info("Incrementando estoque do produto {} em {} unidades", cp.getProduto().getId(), cp.getQuantidade());
-            int updated = produtoRepository.incrementarEstoque(cp.getProduto().getId(), cp.getQuantidade());
-            if (updated == 0) {
-                log.warn("Falha ao incrementar estoque do produto {}", cp.getProduto().getId());
-                throw new IllegalArgumentException("Falha ao incrementar estoque do produto " + cp.getProduto().getNome());
-            }
-        });
+        compraProdutos.forEach(cp ->
+                inventoryService.incrementar(cp.getProduto().getId(), cp.getQuantidade(), InventorySource.COMPRA,
+                        compra.getId(), "Atualização da compra #" + compra.getId()));
 
         Compra salvo = compraRepository.save(compra);
         return compraMapper.toResponse(salvo);
@@ -375,6 +363,21 @@ public class CompraService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private void publicarCompraCriada(Compra compra, List<CompraProduto> itens) {
+        if (itens == null || itens.isEmpty()) {
+            return;
+        }
+
+        Integer organizationId = Optional.ofNullable(compra.getOrganizationId())
+                .orElse(CurrentUser.getOrganizationId());
+
+        List<InventoryAdjustment> ajustes = itens.stream()
+                .map(item -> new InventoryAdjustment(item.getProduto().getId(), item.getQuantidade()))
+                .collect(Collectors.toList());
+
+        eventPublisher.publishEvent(new CompraCriadaEvent(compra.getId(), organizationId, ajustes));
     }
 
     private List<CompraServico> criarListaServicos(List<CompraServicoDTO> servicosDTO, Compra compra) {
