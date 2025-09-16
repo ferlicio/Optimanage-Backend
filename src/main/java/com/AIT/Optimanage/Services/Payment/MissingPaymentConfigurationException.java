@@ -10,6 +10,6 @@ public class MissingPaymentConfigurationException extends RuntimeException {
 
     public MissingPaymentConfigurationException(PaymentProvider provider) {
         super("Nenhuma configuração de pagamento disponível para o provedor " + provider
-                + ". Cadastre as credenciais ou defina chaves padrão antes de iniciar cobranças.");
+                + ". Cadastre as credenciais antes de iniciar cobranças.");
     }
 }

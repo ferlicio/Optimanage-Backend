@@ -9,8 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,32 +47,11 @@ class PaymentConfigServiceTest {
     }
 
     @Test
-    void shouldFallbackToDefaultStripeCredentialsWhenMissing() {
-        User user = new User();
-        user.setOrganizationId(42);
-
-        when(repository.findByUserAndProvider(user, PaymentProvider.STRIPE))
-                .thenReturn(Optional.empty());
-
-        ReflectionTestUtils.setField(service, "defaultStripeApiKey", "sk_test_default");
-
-        PaymentConfig config = service.getConfig(user, PaymentProvider.STRIPE);
-
-        assertNotNull(config);
-        assertEquals(PaymentProvider.STRIPE, config.getProvider());
-        assertEquals("sk_test_default", config.getApiKey());
-        assertEquals(user.getOrganizationId(), config.getOrganizationId());
-        assertSame(user, config.getUser());
-    }
-
-    @Test
-    void shouldThrowWhenConfigMissingAndNoFallbackAvailable() {
+    void shouldThrowWhenConfigMissing() {
         User user = new User();
 
         when(repository.findByUserAndProvider(user, PaymentProvider.STRIPE))
                 .thenReturn(Optional.empty());
-
-        ReflectionTestUtils.setField(service, "defaultStripeApiKey", "");
 
         assertThrows(MissingPaymentConfigurationException.class,
                 () -> service.getConfig(user, PaymentProvider.STRIPE));
