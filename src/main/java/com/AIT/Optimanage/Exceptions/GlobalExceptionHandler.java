@@ -17,6 +17,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.AIT.Optimanage.Services.Payment.MissingPaymentConfigurationException;
+
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -61,6 +63,16 @@ public class GlobalExceptionHandler {
         String title = getMessage("error.bad_request");
         ProblemDetail problem = buildProblemDetail(HttpStatus.BAD_REQUEST, title,
                 ex.getMessage(), "illegal-argument", correlationId, Collections.emptyList());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
+    }
+
+    @ExceptionHandler(MissingPaymentConfigurationException.class)
+    public ResponseEntity<ProblemDetail> handleMissingPaymentConfig(MissingPaymentConfigurationException ex) {
+        String correlationId = MDC.get("correlationId");
+        log.warn("Missing payment configuration: {} - correlationId: {}", ex.getMessage(), correlationId);
+        String title = getMessage("error.bad_request");
+        ProblemDetail problem = buildProblemDetail(HttpStatus.BAD_REQUEST, title,
+                ex.getMessage(), "missing-payment-config", correlationId, Collections.emptyList());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
     }
 
