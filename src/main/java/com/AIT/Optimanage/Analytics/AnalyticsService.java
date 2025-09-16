@@ -8,6 +8,7 @@ import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.springframework.stereotype.Service;
@@ -25,13 +26,20 @@ public class AnalyticsService {
 
     public ResumoDTO obterResumo() {
         User user = CurrentUser.get();
+        if (user == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         BigDecimal totalVendas = vendaRepository.findAll().stream()
-                .filter(v -> v.getOwnerUser().getId().equals(user.getId()))
+                .filter(v -> organizationId.equals(v.getOrganizationId()))
                 .map(Venda::getValorFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalCompras = compraRepository.findAll().stream()
-                .filter(c -> c.getOwnerUser().getId().equals(user.getId()))
+                .filter(c -> organizationId.equals(c.getOrganizationId()))
                 .map(Compra::getValorFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -41,8 +49,15 @@ public class AnalyticsService {
 
     public PrevisaoDTO preverDemanda() {
         User user = CurrentUser.get();
+        if (user == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         List<Venda> vendas = vendaRepository.findAll().stream()
-                .filter(v -> v.getOwnerUser().getId().equals(user.getId()))
+                .filter(v -> organizationId.equals(v.getOrganizationId()))
                 .sorted(Comparator.comparing(Venda::getDataEfetuacao))
                 .toList();
 

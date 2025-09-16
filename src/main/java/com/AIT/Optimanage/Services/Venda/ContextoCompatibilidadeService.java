@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.Venda.Compatibilidade.ContextoCompatibilidade;
 import com.AIT.Optimanage.Models.Venda.Compatibilidade.ContextoCompatibilidadeDTO;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Venda.Compatibilidade.ContextoCompatibilidadeRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,21 +28,38 @@ public class ContextoCompatibilidadeService {
 
         Pageable pageable = PageRequest.of(pageNumber, size, Sort.by(direction, sortBy));
 
-        return contextoRepository.findAllByOwnerUser(loggedUser, pageable);
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return contextoRepository.findAllByOrganizationId(organizationId, pageable);
     }
 
     public ContextoCompatibilidade listarUmContexto(User loggedUser, Integer idContexto) {
-        return contextoRepository.findById(idContexto)
+        ContextoCompatibilidade contexto = contextoRepository.findById(idContexto)
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null || !organizationId.equals(contexto.getOrganizationId())) {
+            throw new RuntimeException("Contexto não encontrado!");
+        }
+        return contexto;
     }
 
     public ContextoCompatibilidade listarUmContextoPorNome(User loggedUser, String nomeContexto) {
-        return contextoRepository.findByOwnerUserAndNome(loggedUser, nomeContexto)
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return contextoRepository.findByOrganizationIdAndNome(organizationId, nomeContexto)
                 .orElseThrow(() -> new RuntimeException("Contexto não encontrado!"));
     }
 
     public ContextoCompatibilidade criarContexto(User logedUser, ContextoCompatibilidadeDTO request) {
-        contextoRepository.findByOwnerUserAndNome(logedUser, request.getNome())
+        Integer organizationId = logedUser != null ? logedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        contextoRepository.findByOrganizationIdAndNome(organizationId, request.getNome())
                 .ifPresent(existing -> {
                     throw new RuntimeException("Contexto já existe!");
                 });
@@ -49,6 +67,7 @@ public class ContextoCompatibilidadeService {
         ContextoCompatibilidade novoContexto = ContextoCompatibilidade.builder()
                 .nome(request.getNome())
                 .build();
+        novoContexto.setTenantId(organizationId);
 
         return contextoRepository.save(novoContexto);
     }

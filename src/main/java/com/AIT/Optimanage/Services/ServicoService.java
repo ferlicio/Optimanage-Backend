@@ -33,6 +33,10 @@ public class ServicoService {
     @Cacheable(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     public Page<ServicoResponse> listarServicos(Search pesquisa) {
         User loggedUser = CurrentUser.get();
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
 
@@ -40,7 +44,7 @@ public class ServicoService {
 
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        return servicoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser, pageable)
+        return servicoRepository.findAllByOrganizationIdAndAtivoTrue(organizationId, pageable)
                 .map(servicoMapper::toResponse);
     }
 
@@ -66,6 +70,7 @@ public class ServicoService {
         validarLimiteServicos(plano, servicosAtivos, 1);
         Servico servico = servicoMapper.toEntity(request);
         servico.setId(null);
+        servico.setTenantId(organizationId);
         Servico salvo = servicoRepository.save(servico);
         return servicoMapper.toResponse(salvo);
     }
@@ -77,6 +82,7 @@ public class ServicoService {
         Servico servicoSalvo = buscarServicoAtivo(idServico);
         Servico servico = servicoMapper.toEntity(request);
         servico.setId(servicoSalvo.getId());
+        servico.setTenantId(servicoSalvo.getOrganizationId());
         Servico atualizado = servicoRepository.save(servico);
         return servicoMapper.toResponse(atualizado);
     }
@@ -118,14 +124,20 @@ public class ServicoService {
     }
 
     private Servico buscarServico(Integer idServico) {
-        User loggedUser = CurrentUser.get();
-        return servicoRepository.findByIdAndOwnerUser(idServico, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return servicoRepository.findByIdAndOrganizationId(idServico, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
     }
 
     public Servico buscarServicoAtivo(Integer idServico) {
-        User loggedUser = CurrentUser.get();
-        return servicoRepository.findByIdAndOwnerUserAndAtivoTrue(idServico, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return servicoRepository.findByIdAndOrganizationIdAndAtivoTrue(idServico, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
     }
 

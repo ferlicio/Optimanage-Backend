@@ -13,14 +13,13 @@ import org.mapstruct.ReportingPolicy;
 public interface FornecedorMapper {
 
     @Mapping(target = "atividade", source = "atividadeId", qualifiedByName = "idToAtividade")
-    @Mapping(target = "ownerUser", ignore = true)
     @Mapping(target = "ativo", source = "ativo", defaultValue = "true")
     Fornecedor toEntity(FornecedorRequest request);
 
     @Mapping(target = "atividadeId", source = "atividade.id")
     FornecedorRequest toRequest(Fornecedor fornecedor);
 
-    @Mapping(target = "ownerUserId", source = "ownerUser.id")
+    @Mapping(target = "organizationId", source = "organizationId")
     @Mapping(target = "atividadeId", source = "atividade.id")
     FornecedorResponse toResponse(Fornecedor fornecedor);
 

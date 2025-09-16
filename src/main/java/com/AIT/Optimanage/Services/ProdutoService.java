@@ -32,7 +32,11 @@ public class ProdutoService {
 
     @Cacheable(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
     public Page<ProdutoResponse> listarProdutos(Search pesquisa) {
-        User loggedUser = CurrentUser.get();
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
 
@@ -40,7 +44,7 @@ public class ProdutoService {
 
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
-        return produtoRepository.findAllByOwnerUserAndAtivoTrue(loggedUser, pageable)
+        return produtoRepository.findAllByOrganizationIdAndAtivoTrue(organizationId, pageable)
                 .map(produtoMapper::toResponse);
     }
 
@@ -116,12 +120,20 @@ public class ProdutoService {
     }
 
     private Produto buscarProduto(Integer idProduto) {
-        return produtoRepository.findByIdAndOwnerUser(idProduto, CurrentUser.get())
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return produtoRepository.findByIdAndOrganizationId(idProduto, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
 
     public Produto buscarProdutoAtivo(Integer idProduto) {
-        return produtoRepository.findByIdAndOwnerUserAndAtivoTrue(idProduto, CurrentUser.get())
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return produtoRepository.findByIdAndOrganizationIdAndAtivoTrue(idProduto, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
 

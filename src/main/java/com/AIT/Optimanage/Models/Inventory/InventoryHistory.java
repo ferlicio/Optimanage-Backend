@@ -4,7 +4,6 @@ import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import com.AIT.Optimanage.Models.BaseEntity;
 import com.AIT.Optimanage.Models.OwnableEntity;
 import com.AIT.Optimanage.Models.Produto;
-import com.AIT.Optimanage.Models.User.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -28,10 +27,6 @@ import lombok.NoArgsConstructor;
 @Entity
 @EntityListeners(OwnerEntityListener.class)
 public class InventoryHistory extends BaseEntity implements OwnableEntity {
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)
-    private User ownerUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "produto_id", referencedColumnName = "id", nullable = false)

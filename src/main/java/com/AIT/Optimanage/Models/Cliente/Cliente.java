@@ -2,7 +2,6 @@ package com.AIT.Optimanage.Models.Cliente;
 
 import com.AIT.Optimanage.Models.Atividade;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
-import com.AIT.Optimanage.Models.User.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -21,16 +20,6 @@ import java.util.List;
 @Entity
 @EntityListeners(OwnerEntityListener.class)
 public class Cliente extends AuditableEntity implements OwnableEntity {
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)
-    private User ownerUser;
-
-    @JsonProperty("owner_user_id")
-    public Integer getOwnerUserId() {
-        return ownerUser != null ? ownerUser.getId() : null;
-    }
-
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atividade_id", referencedColumnName = "id", nullable = false)

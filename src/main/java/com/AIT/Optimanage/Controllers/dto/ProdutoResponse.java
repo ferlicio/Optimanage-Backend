@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 public class ProdutoResponse {
 
     private Integer id;
-    private Integer ownerUserId;
+    private Integer organizationId;
     private Integer fornecedorId;
     private Integer sequencialUsuario;
     private String codigoReferencia;

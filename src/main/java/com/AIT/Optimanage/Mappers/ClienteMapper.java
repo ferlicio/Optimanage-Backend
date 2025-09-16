@@ -13,7 +13,6 @@ import org.mapstruct.ReportingPolicy;
 public interface ClienteMapper {
 
     @Mapping(target = "atividade", source = "atividadeId", qualifiedByName = "idToAtividade")
-    @Mapping(target = "ownerUser", ignore = true)
     @Mapping(target = "ativo", source = "ativo", defaultValue = "true")
     Cliente toEntity(ClienteRequest request);
 
@@ -21,7 +20,7 @@ public interface ClienteMapper {
     ClienteRequest toRequest(Cliente cliente);
 
     @Mapping(target = "atividadeId", source = "atividade.id")
-    @Mapping(target = "ownerUserId", source = "ownerUser.id")
+    @Mapping(target = "organizationId", source = "organizationId")
     ClienteResponse toResponse(Cliente cliente);
 
     @Named("idToAtividade")

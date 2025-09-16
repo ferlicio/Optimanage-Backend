@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
 import com.AIT.Optimanage.Repositories.Venda.PagamentoVendaRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,20 +20,36 @@ public class PagamentoVendaService {
     private final PagamentoVendaRepository pagamentoVendaRepository;
 
     public List<VendaPagamento> listarPagamentosVenda(User loggedUser, Integer idVenda) {
-        return pagamentoVendaRepository.findAllByVendaIdAndVendaOwnerUser(idVenda, loggedUser);
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return pagamentoVendaRepository.findAllByVendaIdAndVendaOrganizationId(idVenda, organizationId);
     }
 
     public List<VendaPagamento> listarPagamentosRealizadosVenda(User loggedUser, Integer idVenda) {
-        return pagamentoVendaRepository.findAllByVendaIdAndVendaOwnerUserAndStatusPagamento(idVenda, loggedUser, StatusPagamento.PAGO);
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return pagamentoVendaRepository.findAllByVendaIdAndVendaOrganizationIdAndStatusPagamento(idVenda, organizationId, StatusPagamento.PAGO);
     }
 
     private VendaPagamento listarUmPagamentoVenda(User loggedUser, Venda venda, Integer idPagamento) {
-        return pagamentoVendaRepository.findByIdAndVendaAndVendaOwnerUser(idPagamento, venda, loggedUser)
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return pagamentoVendaRepository.findByIdAndVendaAndVendaOrganizationId(idPagamento, venda, organizationId)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 
     public VendaPagamento listarUmPagamento(User loggedUser, Integer idPagamento) {
-        return pagamentoVendaRepository.findByIdAndVendaOwnerUser(idPagamento, loggedUser)
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return pagamentoVendaRepository.findByIdAndVendaOrganizationId(idPagamento, organizationId)
                 .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
     }
 

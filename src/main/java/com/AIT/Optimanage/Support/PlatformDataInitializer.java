@@ -65,6 +65,7 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .ativo(true)
                 .build();
         owner.setId(1);
+        owner.setTenantId(1);
         userRepository.save(owner);
 
         Organization organization = Organization.builder()
@@ -77,6 +78,7 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .dataAssinatura(LocalDate.now())
                 .build();
         organization.setId(1);
+        organization.setTenantId(1);
         organizationRepository.save(organization);
 
         owner.setOrganization(organization);

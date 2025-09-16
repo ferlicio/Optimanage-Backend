@@ -37,6 +37,10 @@ public class FornecedorService {
     @Transactional(readOnly = true)
     public Page<FornecedorResponse> listarFornecedores(FornecedorSearch pesquisa) {
         User loggedUser = CurrentUser.get();
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -47,7 +51,7 @@ public class FornecedorService {
 
         // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
         return fornecedorRepository.buscarFornecedores(
-                loggedUser.getId(),
+                organizationId,
                 pesquisa.getId(),
                 pesquisa.getNome(),
                 pesquisa.getCpfOuCnpj(),
@@ -60,8 +64,11 @@ public class FornecedorService {
     }
 
     public Fornecedor listarUmFornecedor(Integer idFornecedor) {
-        User loggedUser = CurrentUser.get();
-        return fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return fornecedorRepository.findByIdAndOrganizationIdAndAtivoTrue(idFornecedor, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
     }
 
@@ -84,7 +91,7 @@ public class FornecedorService {
         long fornecedoresAtivos = fornecedorRepository.countByOrganizationIdAndAtivoTrue(organizationId);
         validarLimiteFornecedores(plano, fornecedoresAtivos, 1);
         Fornecedor fornecedor = fornecedorMapper.toEntity(request);
-        fornecedor.setOwnerUser(loggedUser);
+        fornecedor.setTenantId(organizationId);
         fornecedor.setDataCadastro(LocalDate.now());
         validarFornecedor(fornecedor);
         return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
@@ -92,18 +99,27 @@ public class FornecedorService {
 
     @CacheEvict(value = "fornecedores", allEntries = true)
     public FornecedorResponse editarFornecedor(Integer idFornecedor, FornecedorRequest request) {
-        Fornecedor fornecedorSalvo = fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, CurrentUser.get())
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Fornecedor fornecedorSalvo = fornecedorRepository.findByIdAndOrganizationIdAndAtivoTrue(idFornecedor, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         Fornecedor fornecedor = fornecedorMapper.toEntity(request);
         fornecedor.setId(fornecedorSalvo.getId());
         fornecedor.setDataCadastro(fornecedorSalvo.getDataCadastro());
+        fornecedor.setTenantId(fornecedorSalvo.getOrganizationId());
         validarFornecedor(fornecedor);
         return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
     }
 
     @CacheEvict(value = "fornecedores", allEntries = true)
     public void inativarFornecedor(Integer idFornecedor) {
-        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoTrue(idFornecedor, CurrentUser.get())
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOrganizationIdAndAtivoTrue(idFornecedor, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(false);
         fornecedorRepository.save(fornecedor);
@@ -123,7 +139,7 @@ public class FornecedorService {
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
         long fornecedoresAtivos = fornecedorRepository.countByOrganizationIdAndAtivoTrue(organizationId);
         validarLimiteFornecedores(plano, fornecedoresAtivos, 1);
-        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUserAndAtivoFalse(idFornecedor, loggedUser)
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOrganizationIdAndAtivoFalse(idFornecedor, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(true);
         return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
@@ -132,7 +148,11 @@ public class FornecedorService {
     @CacheEvict(value = "fornecedores", allEntries = true)
     public void removerFornecedor(Integer idFornecedor) {
         User loggedUser = CurrentUser.get();
-        Fornecedor fornecedor = fornecedorRepository.findByIdAndOwnerUser(idFornecedor, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Fornecedor fornecedor = fornecedorRepository.findByIdAndOrganizationId(idFornecedor, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedorRepository.delete(fornecedor);
     }

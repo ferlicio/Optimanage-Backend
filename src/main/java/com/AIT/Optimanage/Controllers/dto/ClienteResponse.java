@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class ClienteResponse {
     private Integer id;
-    private Integer ownerUserId;
+    private Integer organizationId;
     private Integer atividadeId;
     private LocalDate dataCadastro;
     private TipoPessoa tipoPessoa;

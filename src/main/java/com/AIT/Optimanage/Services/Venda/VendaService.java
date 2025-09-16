@@ -42,6 +42,7 @@ import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Validation.VendaValidator;
+import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -87,6 +88,10 @@ public class VendaService {
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
     public Page<VendaResponseDTO> listarVendas(User loggedUser, VendaSearch pesquisa) {
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -96,7 +101,7 @@ public class VendaService {
 
         // Realiza a busca no repositório com os filtros definidos e associando o usuario logado
         return vendaRepository.buscarVendas(
-                loggedUser.getId(),
+                organizationId,
                 pesquisa.getId(),
                 pesquisa.getClienteId(),
                 pesquisa.getDataInicial(),
@@ -108,7 +113,11 @@ public class VendaService {
     }
 
     private Venda getVenda(User loggedUser, Integer idVenda) {
-        return vendaRepository.findByIdAndOwnerUser(idVenda, loggedUser)
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return vendaRepository.findByIdAndOrganizationId(idVenda, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Venda não encontrada"));
     }
 
@@ -127,6 +136,10 @@ public class VendaService {
 
         Cliente cliente = clienteService.listarUmCliente(vendaDTO.getClienteId());
         Contador contador = contadorService.BuscarContador(Tabela.VENDA);
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         Venda novaVenda = Venda.builder()
                 .cliente(cliente)
                 .sequencialUsuario(contador.getContagemAtual())
@@ -163,6 +176,7 @@ public class VendaService {
         novaVenda.setValorPendente(valorFinal.subtract(valorPago));
         novaVenda.setVendaProdutos(vendaProdutos);
         novaVenda.setVendaServicos(vendaServicos);
+        novaVenda.setTenantId(organizationId);
 
         vendaRepository.save(novaVenda);
         vendaProdutoRepository.saveAll(vendaProdutos);
@@ -196,6 +210,7 @@ public class VendaService {
                 .status(vendaDTO.getStatus())
                 .observacoes(vendaDTO.getObservacoes())
                 .build();
+        vendaAtualizada.setTenantId(venda.getOrganizationId());
 
         // Devolve estoque dos produtos antigos e remove os registros
         venda.getVendaProdutos().forEach(vp ->

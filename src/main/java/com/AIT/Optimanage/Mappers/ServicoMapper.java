@@ -13,11 +13,10 @@ import org.mapstruct.ReportingPolicy;
 public interface ServicoMapper {
 
     @Mapping(target = "fornecedor", source = "fornecedorId", qualifiedByName = "idToFornecedor")
-    @Mapping(target = "ownerUser", ignore = true)
     Servico toEntity(ServicoRequest request);
 
     @Mapping(target = "fornecedorId", source = "fornecedor.id")
-    @Mapping(target = "ownerUserId", source = "ownerUser.id")
+    @Mapping(target = "organizationId", source = "organizationId")
     ServicoResponse toResponse(Servico servico);
 
     @Mapping(target = "fornecedorId", source = "fornecedor.id")

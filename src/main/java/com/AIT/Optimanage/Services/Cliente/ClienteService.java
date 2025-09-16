@@ -37,6 +37,10 @@ public class ClienteService {
     @Transactional(readOnly = true)
     public Page<ClienteResponse> listarClientes(ClienteSearch pesquisa) {
         User loggedUser = CurrentUser.get();
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -47,7 +51,7 @@ public class ClienteService {
 
         // Realiza a busca no repositório com os filtros definidos e associando o usuário logado
         return clienteRepository.buscarClientes(
-                loggedUser.getId(),
+                organizationId,
                 pesquisa.getId(),
                 pesquisa.getNome(),
                 pesquisa.getCpfOuCnpj(),
@@ -60,8 +64,11 @@ public class ClienteService {
     }
 
     public Cliente listarUmCliente(Integer idCliente) {
-        User loggedUser = CurrentUser.get();
-        return clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return clienteRepository.findByIdAndOrganizationIdAndAtivoTrue(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
     }
 
@@ -86,6 +93,7 @@ public class ClienteService {
         validarLimiteClientes(plano, clientesAtivos, 1);
         Cliente cliente = clienteMapper.toEntity(request);
         cliente.setId(null);
+        cliente.setTenantId(organizationId);
         cliente.setDataCadastro(LocalDate.now());
         validarCliente(cliente);
         Cliente salvo = clienteRepository.save(cliente);
@@ -96,11 +104,16 @@ public class ClienteService {
     @Transactional(rollbackFor = Exception.class)
     public ClienteResponse editarCliente(Integer idCliente, ClienteRequest request) {
         User loggedUser = CurrentUser.get();
-        Cliente clienteSalvo = clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Cliente clienteSalvo = clienteRepository.findByIdAndOrganizationIdAndAtivoTrue(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         Cliente cliente = clienteMapper.toEntity(request);
         cliente.setId(clienteSalvo.getId());
         cliente.setDataCadastro(clienteSalvo.getDataCadastro());
+        cliente.setTenantId(clienteSalvo.getOrganizationId());
         validarCliente(cliente);
         Cliente atualizado = clienteRepository.save(cliente);
         return clienteMapper.toResponse(atualizado);
@@ -110,7 +123,11 @@ public class ClienteService {
     @Transactional(rollbackFor = Exception.class)
     public void inativarCliente(Integer idCliente) {
         User loggedUser = CurrentUser.get();
-        Cliente cliente = clienteRepository.findByIdAndOwnerUserAndAtivoTrue(idCliente, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Cliente cliente = clienteRepository.findByIdAndOrganizationIdAndAtivoTrue(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         cliente.setAtivo(false);
         clienteRepository.save(cliente);
@@ -120,16 +137,16 @@ public class ClienteService {
     @Transactional(rollbackFor = Exception.class)
     public ClienteResponse reativarCliente(Integer idCliente) {
         User loggedUser = CurrentUser.get();
-        Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Cliente cliente = clienteRepository.findByIdAndOrganizationId(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         if (loggedUser == null) {
             throw new EntityNotFoundException("Usuário não autenticado");
         }
         if (!Boolean.TRUE.equals(cliente.getAtivo())) {
-            Integer organizationId = CurrentUser.getOrganizationId();
-            if (organizationId == null) {
-                throw new EntityNotFoundException("Organização não encontrada");
-            }
             Plano plano = planoService.obterPlanoUsuario(loggedUser)
                     .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
             long clientesAtivos = clienteRepository.countByOrganizationIdAndAtivoTrue(organizationId);
@@ -144,7 +161,11 @@ public class ClienteService {
     @Transactional(rollbackFor = Exception.class)
     public void removerCliente(Integer idCliente) {
         User loggedUser = CurrentUser.get();
-        Cliente cliente = clienteRepository.findByIdAndOwnerUser(idCliente, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        Cliente cliente = clienteRepository.findByIdAndOrganizationId(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         clienteRepository.delete(cliente);
     }

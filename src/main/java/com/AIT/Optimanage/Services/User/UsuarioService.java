@@ -71,7 +71,7 @@ public class UsuarioService {
     @Transactional
     public UserResponse atualizarPlanoAtivo(Integer id, Integer novoPlanoId) {
         User usuario = getUsuario(id);
-        Organization organization = organizationRepository.findByOwnerUser(usuario)
+        Organization organization = organizationRepository.findById(usuario.getOrganizationId())
                 .orElseThrow(() -> new EntityNotFoundException("Informações do usuário não encontradas"));
         Plano plano = planoRepository.findById(novoPlanoId)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));

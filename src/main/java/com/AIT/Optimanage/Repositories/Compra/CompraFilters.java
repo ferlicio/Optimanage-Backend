@@ -21,8 +21,8 @@ public class CompraFilters {
         // Classe utilitária
     }
 
-    public static Specification<Compra> hasOwner(Integer ownerId) {
-        return (root, query, cb) -> cb.equal(root.get("ownerUser").get("id"), ownerId);
+    public static Specification<Compra> hasOrganization(Integer organizationId) {
+        return (root, query, cb) -> cb.equal(root.get("organizationId"), organizationId);
     }
 
     public static Specification<Compra> hasSequencialUsuario(Integer id) {
