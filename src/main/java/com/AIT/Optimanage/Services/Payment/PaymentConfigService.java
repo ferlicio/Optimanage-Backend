@@ -15,11 +15,11 @@ public class PaymentConfigService {
 
     public PaymentConfig getConfig(User user, PaymentProvider provider) {
         return repository.findByUserAndProvider(user, provider)
-                .orElseThrow(() -> new IllegalArgumentException("Configuração de pagamento não encontrada"));
+                .orElseThrow(() -> new MissingPaymentConfigurationException(provider));
     }
 
     public PaymentConfig getConfig(PaymentProvider provider) {
         return repository.findFirstByProvider(provider)
-                .orElseThrow(() -> new IllegalArgumentException("Configuração de pagamento não encontrada"));
+                .orElseThrow(() -> new MissingPaymentConfigurationException(provider));
     }
 }
