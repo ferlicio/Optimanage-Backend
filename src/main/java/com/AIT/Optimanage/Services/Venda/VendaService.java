@@ -1,7 +1,10 @@
 package com.AIT.Optimanage.Services.Venda;
 
+import com.AIT.Optimanage.Events.InventoryAdjustment;
+import com.AIT.Optimanage.Events.VendaRegistradaEvent;
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
+import com.AIT.Optimanage.Models.Inventory.InventorySource;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.Contador;
@@ -27,12 +30,12 @@ import com.AIT.Optimanage.Payments.PaymentService;
 import com.AIT.Optimanage.Models.Payment.PaymentProvider;
 import com.AIT.Optimanage.Models.Payment.PaymentConfig;
 import com.AIT.Optimanage.Services.Payment.PaymentConfigService;
-import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaServicoRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
+import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
@@ -42,6 +45,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -68,12 +72,13 @@ public class VendaService {
     private final VendaServicoRepository vendaServicoRepository;
     private final ContadorService contadorService;
     private final PagamentoVendaService pagamentoVendaService;
-    private final ProdutoRepository produtoRepository;
     private final PaymentService paymentService;
     private final PaymentConfigService paymentConfigService;
     private final VendaMapper vendaMapper;
     private final VendaValidator vendaValidator;
     private final OrganizationRepository organizationRepository;
+    private final InventoryService inventoryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
     @Transactional(readOnly = true)
@@ -155,14 +160,7 @@ public class VendaService {
         vendaProdutoRepository.saveAll(vendaProdutos);
         vendaServicoRepository.saveAll(vendaServicos);
 
-        vendaProdutos.forEach(vp -> {
-            log.info("Reduzindo estoque do produto {} em {} unidades", vp.getProduto().getId(), vp.getQuantidade());
-            int updated = produtoRepository.reduzirEstoque(vp.getProduto().getId(), vp.getQuantidade());
-            if (updated == 0) {
-                log.warn("Estoque insuficiente para o produto {}", vp.getProduto().getId());
-                throw new IllegalArgumentException("Estoque insuficiente para o produto " + vp.getProduto().getNome());
-            }
-        });
+        publicarVendaRegistrada(novaVenda, vendaProdutos, loggedUser);
 
         contadorService.IncrementarContador(Tabela.VENDA);
         return vendaMapper.toResponse(novaVenda);
@@ -188,14 +186,9 @@ public class VendaService {
                 .build();
 
         // Devolve estoque dos produtos antigos e remove os registros
-        venda.getVendaProdutos().forEach(vp -> {
-            log.info("Restaurando estoque do produto {} em {} unidades", vp.getProduto().getId(), vp.getQuantidade());
-            int updated = produtoRepository.incrementarEstoque(vp.getProduto().getId(), vp.getQuantidade());
-            if (updated == 0) {
-                log.warn("Falha ao restaurar estoque do produto {}", vp.getProduto().getId());
-                throw new IllegalArgumentException("Falha ao restaurar estoque do produto " + vp.getProduto().getNome());
-            }
-        });
+        venda.getVendaProdutos().forEach(vp ->
+                inventoryService.incrementar(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
+                        venda.getId(), "Reversão da venda #" + venda.getId()));
         vendaProdutoRepository.deleteByVenda(venda);
         vendaServicoRepository.deleteByVenda(venda);
 
@@ -226,14 +219,9 @@ public class VendaService {
         vendaProdutoRepository.saveAll(vendaProdutos);
         vendaServicoRepository.saveAll(vendaServicos);
 
-        vendaProdutos.forEach(vp -> {
-            log.info("Reduzindo estoque do produto {} em {} unidades", vp.getProduto().getId(), vp.getQuantidade());
-            int updated = produtoRepository.reduzirEstoque(vp.getProduto().getId(), vp.getQuantidade());
-            if (updated == 0) {
-                log.warn("Estoque insuficiente para o produto {}", vp.getProduto().getId());
-                throw new IllegalArgumentException("Estoque insuficiente para o produto " + vp.getProduto().getNome());
-            }
-        });
+        vendaProdutos.forEach(vp ->
+                inventoryService.reduzir(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
+                        venda.getId(), "Atualização da venda #" + venda.getId()));
 
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
@@ -429,6 +417,21 @@ public class VendaService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private void publicarVendaRegistrada(Venda venda, List<VendaProduto> itens, User owner) {
+        if (itens == null || itens.isEmpty()) {
+            return;
+        }
+
+        Integer organizationId = Optional.ofNullable(venda.getOrganizationId())
+                .orElse(owner != null ? owner.getTenantId() : null);
+
+        List<InventoryAdjustment> ajustes = itens.stream()
+                .map(item -> new InventoryAdjustment(item.getProduto().getId(), item.getQuantidade()))
+                .collect(Collectors.toList());
+
+        eventPublisher.publishEvent(new VendaRegistradaEvent(venda.getId(), organizationId, ajustes));
     }
 
     private List<VendaServico> criarListaServicos(List<VendaServicoDTO> servicosDTO, Venda venda) {
