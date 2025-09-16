@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 
 import java.math.BigDecimal;
 
@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class VendaProduto extends BaseEntity {
+public class VendaProduto extends AuditableEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venda_id", referencedColumnName = "id", nullable = false)

@@ -1,6 +1,6 @@
 package com.AIT.Optimanage.Models.Payment;
 
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 import com.AIT.Optimanage.Models.User.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class PaymentConfig extends BaseEntity {
+public class PaymentConfig extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)

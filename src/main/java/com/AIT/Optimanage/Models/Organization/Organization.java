@@ -1,6 +1,6 @@
 package com.AIT.Optimanage.Models.Organization;
 
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 import com.AIT.Optimanage.Models.OwnableEntity;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
@@ -21,7 +21,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Entity
 @EntityListeners(OwnerEntityListener.class)
-public class Organization extends BaseEntity implements OwnableEntity {
+public class Organization extends AuditableEntity implements OwnableEntity {
     @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)

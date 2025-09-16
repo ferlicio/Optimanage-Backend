@@ -2,7 +2,7 @@ package com.AIT.Optimanage.Models.User;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 import com.AIT.Optimanage.Models.Organization.Organization;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class User extends BaseEntity implements UserDetails {
+public class User extends AuditableEntity implements UserDetails {
     @Column(nullable = false)
     private String nome;
     @Column(nullable = false)

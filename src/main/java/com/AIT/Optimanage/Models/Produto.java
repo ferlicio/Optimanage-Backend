@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import lombok.*;
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.List;
 @AllArgsConstructor
 @Entity
 @EntityListeners(OwnerEntityListener.class)
-public class Produto extends BaseEntity implements OwnableEntity {
+public class Produto extends AuditableEntity implements OwnableEntity {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)

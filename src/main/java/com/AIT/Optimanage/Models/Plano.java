@@ -2,14 +2,14 @@ package com.AIT.Optimanage.Models;
 
 import jakarta.persistence.*;
 import lombok.*;
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class Plano extends BaseEntity {
+public class Plano extends AuditableEntity {
     @Column(nullable = false)
     private String nome;
     @Column(nullable = false, precision = 2)
