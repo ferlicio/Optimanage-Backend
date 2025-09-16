@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Repositories.Payment.ProcessedPaymentEventRepository;
 import java.time.LocalDateTime;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -35,6 +36,7 @@ public class PaymentService {
         return getProvider(config.getProvider()).confirmPayment(paymentIntentId, config);
     }
 
+    @Transactional
     public PagamentoDTO handleWebhook(PaymentProvider provider, String payload, Map<String, String> headers, PaymentConfig config) {
         PaymentProviderStrategy strategy = getProvider(provider);
         String eventId = strategy.extractWebhookEventId(payload, headers, config);
@@ -46,23 +48,19 @@ public class PaymentService {
         if (organizationId == null) {
             throw new IllegalStateException("Configuração de pagamento sem organização associada");
         }
-        if (processedPaymentEventRepository
-                .existsByProviderAndEventIdAndOrganizationId(provider, eventId, organizationId)) {
-            return null;
-        }
-
-        PagamentoDTO result = strategy.handleWebhook(payload, headers, config);
-
         ProcessedPaymentEvent event = new ProcessedPaymentEvent();
         event.setEventId(eventId);
         event.setProvider(provider);
         event.setProcessedAt(LocalDateTime.now());
         event.setOrganizationId(organizationId);
         try {
-            processedPaymentEventRepository.save(event);
+            processedPaymentEventRepository.saveAndFlush(event);
         } catch (DataIntegrityViolationException ignored) {
             // Se outro processo registrou o evento simultaneamente, ignoramos o erro.
+            return null;
         }
+
+        PagamentoDTO result = strategy.handleWebhook(payload, headers, config);
 
         return result;
     }

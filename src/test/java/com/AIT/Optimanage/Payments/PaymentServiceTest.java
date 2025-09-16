@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,11 +18,13 @@ import com.AIT.Optimanage.Payments.Providers.PaymentProviderStrategy;
 import com.AIT.Optimanage.Repositories.Payment.ProcessedPaymentEventRepository;
 import java.util.List;
 import java.util.Map;
+import org.mockito.InOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
@@ -48,14 +50,15 @@ class PaymentServiceTest {
         PagamentoDTO dto = PagamentoDTO.builder().observacoes("processed").build();
 
         when(providerStrategy.extractWebhookEventId(anyString(), anyMap(), same(config))).thenReturn("evt_123");
-        when(processedPaymentEventRepository.existsByProviderAndEventIdAndOrganizationId(
-                eq(PaymentProvider.STRIPE), eq("evt_123"), eq(1))).thenReturn(false);
+        when(processedPaymentEventRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(providerStrategy.handleWebhook(anyString(), anyMap(), same(config))).thenReturn(dto);
 
         PagamentoDTO result = paymentService.handleWebhook(PaymentProvider.STRIPE, "{}", Map.of(), config);
 
         assertSame(dto, result);
-        verify(processedPaymentEventRepository).save(any());
+        InOrder inOrder = inOrder(processedPaymentEventRepository, providerStrategy);
+        inOrder.verify(processedPaymentEventRepository).saveAndFlush(any());
+        inOrder.verify(providerStrategy).handleWebhook(anyString(), anyMap(), same(config));
     }
 
     @Test
@@ -64,13 +67,12 @@ class PaymentServiceTest {
         config.setOrganizationId(1);
 
         when(providerStrategy.extractWebhookEventId(anyString(), anyMap(), same(config))).thenReturn("evt_123");
-        when(processedPaymentEventRepository.existsByProviderAndEventIdAndOrganizationId(
-                eq(PaymentProvider.STRIPE), eq("evt_123"), eq(1))).thenReturn(true);
+        when(processedPaymentEventRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
 
         PagamentoDTO result = paymentService.handleWebhook(PaymentProvider.STRIPE, "{}", Map.of(), config);
 
         assertNull(result);
         verify(providerStrategy, never()).handleWebhook(anyString(), anyMap(), same(config));
-        verify(processedPaymentEventRepository, never()).save(any());
+        verify(processedPaymentEventRepository).saveAndFlush(any());
     }
 }
