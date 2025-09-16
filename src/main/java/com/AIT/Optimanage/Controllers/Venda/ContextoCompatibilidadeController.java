@@ -6,6 +6,8 @@ import com.AIT.Optimanage.Models.Venda.Compatibilidade.ContextoCompatibilidadeDT
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.Venda.ContextoCompatibilidadeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -25,8 +27,12 @@ public class ContextoCompatibilidadeController extends V1BaseController {
     @GetMapping
     @Operation(summary = "Listar contextos", description = "Retorna os contextos de compatibilidade")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<ContextoCompatibilidade> listarContextos(@AuthenticationPrincipal User loggedUser) {
-        return ok(contextoService.listarContextos(loggedUser));
+    public ResponseEntity<Page<ContextoCompatibilidade>> listarContextos(@AuthenticationPrincipal User loggedUser,
+                                                                         @RequestParam(value = "page", required = false) Integer page,
+                                                                         @RequestParam(value = "pageSize", required = false) Integer pageSize,
+                                                                         @RequestParam(value = "sort", required = false) String sort,
+                                                                         @RequestParam(value = "order", required = false) Sort.Direction order) {
+        return ok(contextoService.listarContextos(loggedUser, page, pageSize, sort, order));
     }
 
     @GetMapping("/{idContexto}")
