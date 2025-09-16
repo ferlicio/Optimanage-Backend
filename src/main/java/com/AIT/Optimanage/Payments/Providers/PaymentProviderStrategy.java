@@ -11,6 +11,10 @@ public interface PaymentProviderStrategy {
     PaymentProvider getProvider();
     PaymentResponseDTO createPayment(PaymentRequestDTO request, PaymentConfig config);
     PagamentoDTO confirmPayment(String paymentIntentId, PaymentConfig config);
+    default String extractWebhookEventId(String payload, Map<String, String> headers, PaymentConfig config) {
+        throw new UnsupportedOperationException("Webhook not supported");
+    }
+
     default PagamentoDTO handleWebhook(String payload, Map<String, String> headers, PaymentConfig config) {
         throw new UnsupportedOperationException("Webhook not supported");
     }

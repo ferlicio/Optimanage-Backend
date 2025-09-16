@@ -3,7 +3,11 @@ package com.AIT.Optimanage.Payments;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Payment.PaymentConfig;
 import com.AIT.Optimanage.Models.Payment.PaymentProvider;
+import com.AIT.Optimanage.Models.Payment.ProcessedPaymentEvent;
 import com.AIT.Optimanage.Payments.Providers.PaymentProviderStrategy;
+import com.AIT.Optimanage.Repositories.Payment.ProcessedPaymentEventRepository;
+import java.time.LocalDateTime;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.EnumMap;
@@ -14,10 +18,13 @@ import java.util.Map;
 public class PaymentService {
 
     private final Map<PaymentProvider, PaymentProviderStrategy> providers;
+    private final ProcessedPaymentEventRepository processedPaymentEventRepository;
 
-    public PaymentService(List<PaymentProviderStrategy> strategies) {
+    public PaymentService(List<PaymentProviderStrategy> strategies,
+                          ProcessedPaymentEventRepository processedPaymentEventRepository) {
         this.providers = new EnumMap<>(PaymentProvider.class);
         strategies.forEach(s -> this.providers.put(s.getProvider(), s));
+        this.processedPaymentEventRepository = processedPaymentEventRepository;
     }
 
     public PaymentResponseDTO createPayment(PaymentRequestDTO request, PaymentConfig config) {
@@ -29,7 +36,35 @@ public class PaymentService {
     }
 
     public PagamentoDTO handleWebhook(PaymentProvider provider, String payload, Map<String, String> headers, PaymentConfig config) {
-        return getProvider(provider).handleWebhook(payload, headers, config);
+        PaymentProviderStrategy strategy = getProvider(provider);
+        String eventId = strategy.extractWebhookEventId(payload, headers, config);
+        if (eventId == null || eventId.isBlank()) {
+            throw new IllegalArgumentException("ID do evento inválido");
+        }
+
+        Integer organizationId = config.getOrganizationId();
+        if (organizationId == null) {
+            throw new IllegalStateException("Configuração de pagamento sem organização associada");
+        }
+        if (processedPaymentEventRepository
+                .existsByProviderAndEventIdAndOrganizationId(provider, eventId, organizationId)) {
+            return null;
+        }
+
+        PagamentoDTO result = strategy.handleWebhook(payload, headers, config);
+
+        ProcessedPaymentEvent event = new ProcessedPaymentEvent();
+        event.setEventId(eventId);
+        event.setProvider(provider);
+        event.setProcessedAt(LocalDateTime.now());
+        event.setOrganizationId(organizationId);
+        try {
+            processedPaymentEventRepository.save(event);
+        } catch (DataIntegrityViolationException ignored) {
+            // Se outro processo registrou o evento simultaneamente, ignoramos o erro.
+        }
+
+        return result;
     }
 
     private PaymentProviderStrategy getProvider(PaymentProvider provider) {

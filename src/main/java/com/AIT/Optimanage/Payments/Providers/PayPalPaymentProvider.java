@@ -96,29 +96,38 @@ public class PayPalPaymentProvider implements PaymentProviderStrategy {
     }
 
     @Override
+    public String extractWebhookEventId(String payload, Map<String, String> headers, PaymentConfig config) {
+        return parseWebhookPayload(payload, headers).path("id").asText();
+    }
+
+    @Override
     public PagamentoDTO handleWebhook(String payload, Map<String, String> headers, PaymentConfig config) {
+        JsonNode node = parseWebhookPayload(payload, headers);
+        JsonNode resource = node.path("resource");
+        String status = resource.path("status").asText();
+        JsonNode amountNode = resource.path("amount");
+        BigDecimal amount = BigDecimal.ZERO;
+        if (amountNode.has("value")) {
+            amount = new BigDecimal(amountNode.path("value").asText("0"));
+        }
+        boolean completed = "COMPLETED".equalsIgnoreCase(status);
+        return PagamentoDTO.builder()
+                .valorPago(amount)
+                .dataPagamento(LocalDate.now())
+                .dataVencimento(LocalDate.now())
+                .formaPagamento(FormaPagamento.CARTAO_CREDITO)
+                .statusPagamento(completed ? StatusPagamento.PAGO : StatusPagamento.PENDENTE)
+                .observacoes("PayPal webhook " + node.path("id").asText())
+                .build();
+    }
+
+    private JsonNode parseWebhookPayload(String payload, Map<String, String> headers) {
         if (!headers.containsKey("paypal-transmission-sig")) {
             throw new RuntimeException("Cabeçalhos do PayPal inválidos");
         }
         try {
             ObjectMapper mapper = new ObjectMapper();
-            JsonNode node = mapper.readTree(payload);
-            JsonNode resource = node.path("resource");
-            String status = resource.path("status").asText();
-            JsonNode amountNode = resource.path("amount");
-            BigDecimal amount = BigDecimal.ZERO;
-            if (amountNode.has("value")) {
-                amount = new BigDecimal(amountNode.path("value").asText("0"));
-            }
-            boolean completed = "COMPLETED".equalsIgnoreCase(status);
-            return PagamentoDTO.builder()
-                    .valorPago(amount)
-                    .dataPagamento(LocalDate.now())
-                    .dataVencimento(LocalDate.now())
-                    .formaPagamento(FormaPagamento.CARTAO_CREDITO)
-                    .statusPagamento(completed ? StatusPagamento.PAGO : StatusPagamento.PENDENTE)
-                    .observacoes("PayPal webhook " + node.path("id").asText())
-                    .build();
+            return mapper.readTree(payload);
         } catch (Exception e) {
             throw new RuntimeException("Evento PayPal inválido", e);
         }
