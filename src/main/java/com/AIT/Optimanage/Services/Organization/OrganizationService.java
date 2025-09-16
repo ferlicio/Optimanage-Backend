@@ -12,9 +12,11 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Support.PlatformConstants;
 import com.AIT.Optimanage.Support.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +34,8 @@ public class OrganizationService {
     private final JwtService jwtService;
 
     @Transactional
-    public OrganizationResponse criarOrganizacao(OrganizationRequest request) {
+    public OrganizationResponse criarOrganizacao(OrganizationRequest request, User creator) {
+        validarPermissaoCriacao(creator);
         // Create owner user first
         UserRequest ownerReq = request.getOwner();
         User owner = User.builder()
@@ -79,6 +82,18 @@ public class OrganizationService {
                 .nomeFantasia(organization.getNomeFantasia())
                 .ownerUserId(owner.getId())
                 .build();
+    }
+
+    private void validarPermissaoCriacao(User creator) {
+        if (creator == null) {
+            throw new AccessDeniedException("Usuário não autenticado");
+        }
+        if (!PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(creator.getTenantId())) {
+            throw new AccessDeniedException("Apenas membros da organização base podem criar novas organizações");
+        }
+        if (creator.getRole() != Role.ADMIN && creator.getRole() != Role.OWNER) {
+            throw new AccessDeniedException("Permissões insuficientes para criar organização");
+        }
     }
 
     @Transactional
