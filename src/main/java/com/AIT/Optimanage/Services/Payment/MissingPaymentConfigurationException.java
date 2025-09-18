@@ -9,7 +9,18 @@ import com.AIT.Optimanage.Models.Payment.PaymentProvider;
 public class MissingPaymentConfigurationException extends RuntimeException {
 
     public MissingPaymentConfigurationException(PaymentProvider provider) {
-        super("Nenhuma configuração de pagamento disponível para o provedor " + provider
-                + ". Cadastre as credenciais antes de iniciar cobranças.");
+        this(provider, null);
+    }
+
+    public MissingPaymentConfigurationException(PaymentProvider provider, Integer organizationId) {
+        super(buildMessage(provider, organizationId));
+    }
+
+    private static String buildMessage(PaymentProvider provider, Integer organizationId) {
+        String base = "Nenhuma configuração de pagamento disponível para o provedor " + provider;
+        if (organizationId != null) {
+            base += " na organização " + organizationId;
+        }
+        return base + ". Cadastre as credenciais antes de iniciar cobranças.";
     }
 }

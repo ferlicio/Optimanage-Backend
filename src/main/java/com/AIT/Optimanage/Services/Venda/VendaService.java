@@ -294,7 +294,7 @@ public class VendaService {
                 .description("Venda " + idVenda)
                 .provider(provider)
                 .build();
-        PaymentConfig config = paymentConfigService.getConfig(loggedUser, provider);
+        PaymentConfig config = paymentConfigService.getConfig(loggedUser.getOrganizationId(), provider);
         req.setProvider(provider);
         return paymentService.createPayment(req, config);
     }
@@ -305,7 +305,7 @@ public class VendaService {
         Venda venda = getVenda(loggedUser, idVenda);
         podePagarVenda(venda);
         PaymentProvider provider = confirmDTO.getProvider() != null ? confirmDTO.getProvider() : PaymentProvider.STRIPE;
-        PaymentConfig config = paymentConfigService.getConfig(loggedUser, provider);
+        PaymentConfig config = paymentConfigService.getConfig(loggedUser.getOrganizationId(), provider);
         PagamentoDTO pagamentoDTO = paymentService.confirmPayment(confirmDTO.getPaymentIntentId(), config);
         pagamentoVendaService.lancarPagamento(venda, pagamentoDTO);
         atualizarVendaPosPagamento(loggedUser, venda);
