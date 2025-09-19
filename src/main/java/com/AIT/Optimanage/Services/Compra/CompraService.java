@@ -386,15 +386,17 @@ public class CompraService {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
                     Produto produto = produtoService.buscarProdutoAtivo(produtoDTO.getProdutoId());
-                    BigDecimal valorFinalProduto = produto.getValorVenda()
+                    BigDecimal valorUnitario = Optional.ofNullable(produtoDTO.getValorUnitario())
+                            .orElse(produto.getCusto());
+                    BigDecimal valorTotal = valorUnitario
                             .multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
 
                     return CompraProduto.builder()
                             .compra(compra)
                             .produto(produto)
-                            .valorUnitario(produto.getValorVenda())
+                            .valorUnitario(valorUnitario)
                             .quantidade(produtoDTO.getQuantidade())
-                            .valorTotal(valorFinalProduto)
+                            .valorTotal(valorTotal)
                             .build();
                 })
                 .collect(Collectors.toList());
