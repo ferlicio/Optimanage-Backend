@@ -119,6 +119,17 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `GET /api/v1/compatibilidades/{contexto}` &ndash; buscar compatibilidades.
 - `POST /api/v1/compatibilidades` &ndash; adicionar compatibilidade.
 
+### Recomendações
+- `GET /api/v1/recommendations/{clienteId}` &ndash; sugere produtos considerando apenas itens ativos, disponíveis para venda e (por padrão) com estoque positivo.
+  - Query params opcionais:
+    - `contexto`: nome do contexto de compatibilidade que concede bônus para produtos previamente marcados como compatíveis.
+    - `estoquePositivo`: define se somente itens com estoque maior que zero devem ser retornados (padrão: `true`).
+- Critérios de pontuação:
+  - Coocorrência em vendas compartilhadas com o cliente.
+  - Recência das vendas (vendas mais recentes geram peso maior).
+  - Bônus adicional para produtos compatíveis com o contexto informado.
+- A lista final é limitada a dez sugestões ordenadas pela pontuação calculada.
+
 ### Analytics
 - `GET /api/v1/analytics/resumo` &ndash; resumo de vendas, compras e lucro.
 - `GET /api/v1/analytics/previsao` &ndash; previsão de demanda com regressão linear.
