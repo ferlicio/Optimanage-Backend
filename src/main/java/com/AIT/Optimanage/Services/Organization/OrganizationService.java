@@ -12,6 +12,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Support.PlatformConstants;
 import com.AIT.Optimanage.Support.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
@@ -100,6 +101,8 @@ public class OrganizationService {
 
     @Transactional
     public AuthenticationResponse adicionarUsuario(Integer organizationId, UserRequest request) {
+        validarOrganizacaoDestino(organizationId);
+
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Organização não encontrada"));
 
@@ -137,6 +140,18 @@ public class OrganizationService {
         return AuthenticationResponse.builder()
                 .token(token)
                 .build();
+    }
+
+    private void validarOrganizacaoDestino(Integer organizationId) {
+        Integer currentOrganizationId = CurrentUser.getOrganizationId();
+        if (currentOrganizationId == null) {
+            throw new AccessDeniedException("Usuário não autenticado");
+        }
+
+        boolean isPlatformUser = PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(currentOrganizationId);
+        if (!isPlatformUser && !organizationId.equals(currentOrganizationId)) {
+            throw new AccessDeniedException("Usuário não pertence à organização");
+        }
     }
 
     private void validarLimiteUsuarios(Plano plano, long usuariosAtivos, int novosUsuarios) {
