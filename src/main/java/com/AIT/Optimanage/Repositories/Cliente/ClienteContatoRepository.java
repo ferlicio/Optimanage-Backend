@@ -13,4 +13,6 @@ public interface ClienteContatoRepository extends JpaRepository<ClienteContato, 
     List<ClienteContato> findAllByCliente_IdAndClienteOrganizationId(Integer idCliente, Integer organizationId);
 
     Optional<ClienteContato> findByIdAndCliente_IdAndClienteOrganizationId(Integer idContato, Integer idCliente, Integer organizationId);
+
+    List<ClienteContato> findAllByClienteOrganizationIdAndCreatedBy(Integer organizationId, Integer userId);
 }

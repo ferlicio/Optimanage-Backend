@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,4 +58,17 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
             "JOIN FETCH vp.produto p " +
             "WHERE v.organizationId = :organizationId")
     List<Venda> findAllWithProdutosByOrganization(@Param("organizationId") Integer organizationId);
+
+    @Query("""
+            SELECT v FROM Venda v
+            WHERE v.organizationId = :organizationId
+              AND v.createdBy = :userId
+              AND v.dataAgendada IS NOT NULL
+              AND (:inicio IS NULL OR v.dataAgendada >= :inicio)
+              AND (:fim IS NULL OR v.dataAgendada <= :fim)
+            """)
+    List<Venda> findAgendadasNoPeriodo(@Param("organizationId") Integer organizationId,
+                                       @Param("userId") Integer userId,
+                                       @Param("inicio") LocalDate inicio,
+                                       @Param("fim") LocalDate fim);
 }
