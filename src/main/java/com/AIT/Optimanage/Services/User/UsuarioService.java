@@ -9,6 +9,8 @@ import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Support.PlatformConstants;
+import java.util.Optional;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.Cache;
@@ -60,7 +62,14 @@ public class UsuarioService {
     }
 
     public Page<UserResponse> listarUsuarios(Pageable pageable) {
-        return userRepository.findAll(pageable)
+        Integer organizationId = requireOrganizationId();
+
+        if (isPlatformOrganization(organizationId)) {
+            return userRepository.findAll(pageable)
+                    .map(this::toResponse);
+        }
+
+        return userRepository.findAllByOrganizationId(organizationId, pageable)
                 .map(this::toResponse);
     }
 
@@ -96,8 +105,24 @@ public class UsuarioService {
     }
 
     private User getUsuario(Integer id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+        Integer organizationId = requireOrganizationId();
+
+        Optional<User> usuario;
+        if (isPlatformOrganization(organizationId)) {
+            usuario = userRepository.findById(id);
+        } else {
+            usuario = userRepository.findByIdAndOrganizationId(id, organizationId);
+        }
+
+        if (usuario.isPresent()) {
+            return usuario.get();
+        }
+
+        if (!isPlatformOrganization(organizationId) && userRepository.existsById(id)) {
+            throw new AccessDeniedException("Usuário não pertence à organização atual");
+        }
+
+        throw new EntityNotFoundException("Usuário não encontrado");
     }
 
     private UserResponse toResponse(User usuario) {
@@ -129,6 +154,22 @@ public class UsuarioService {
         if (cache != null) {
             cache.evict(organizationId);
         }
+    }
+
+    private Integer requireOrganizationId() {
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new AccessDeniedException("Organização do usuário atual não encontrada");
+        }
+        return organizationId;
+    }
+
+    /**
+     * Usuários vinculados à organização-plataforma mantêm acesso global
+     * às informações para permitir operações administrativas multi-tenant.
+     */
+    private boolean isPlatformOrganization(Integer organizationId) {
+        return PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(organizationId);
     }
 }
 
