@@ -53,6 +53,12 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
     List<Object[]> findTopProdutosByCliente(@Param("clienteId") Integer clienteId,
                                             @Param("organizationId") Integer organizationId);
 
+    @Query("SELECT vp.produto.id AS produtoId, SUM(vp.quantidade) AS totalQuantidade " +
+            "FROM Venda v JOIN v.vendaProdutos vp " +
+            "WHERE v.organizationId = :organizationId " +
+            "GROUP BY vp.produto.id ORDER BY totalQuantidade DESC")
+    List<Object[]> findTopProdutosByOrganization(@Param("organizationId") Integer organizationId);
+
     @Query("SELECT DISTINCT v FROM Venda v " +
             "JOIN FETCH v.vendaProdutos vp " +
             "JOIN FETCH vp.produto p " +

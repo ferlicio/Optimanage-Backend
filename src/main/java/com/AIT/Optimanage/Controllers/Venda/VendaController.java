@@ -1,13 +1,15 @@
 package com.AIT.Optimanage.Controllers.Venda;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
-import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
 import com.AIT.Optimanage.Models.PagamentoDTO;
-import com.AIT.Optimanage.Models.Venda.DTOs.VendaDTO;
+import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
+import com.AIT.Optimanage.Models.Venda.DTOs.VendaDTO;
+import com.AIT.Optimanage.Models.Venda.DTOs.VendaResponseDTO;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Models.Venda.Search.VendaSearch;
-import com.AIT.Optimanage.Models.Venda.DTOs.VendaResponseDTO;
+import com.AIT.Optimanage.Services.RecommendationService;
 import com.AIT.Optimanage.Services.Venda.VendaService;
 import com.AIT.Optimanage.Payments.PaymentConfirmationDTO;
 import com.AIT.Optimanage.Payments.PaymentRequestDTO;
@@ -32,6 +34,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class VendaController extends V1BaseController {
 
     private final VendaService vendaService;
+    private final RecommendationService recommendationService;
 
     @GetMapping
     @Operation(summary = "Listar vendas", description = "Retorna uma página de vendas")
@@ -187,6 +190,17 @@ public class VendaController extends V1BaseController {
     public ResponseEntity<VendaResponseDTO> cancelarVenda(@AuthenticationPrincipal User loggedUser,
                                                @PathVariable("idVenda") Integer idVenda) {
         return ok(vendaService.cancelarVenda(loggedUser, idVenda));
+    }
+
+    @GetMapping("/recomendacoes")
+    @Operation(summary = "Recomendar produtos",
+            description = "Sugere itens com base no histórico de vendas, priorizando recorrência, margem e compatibilidade")
+    @ApiResponse(responseCode = "200", description = "Sucesso")
+    public ResponseEntity<List<ProdutoResponse>> recomendarProdutos(@AuthenticationPrincipal User loggedUser,
+                                                                    @RequestParam(value = "clienteId", required = false) Integer clienteId,
+                                                                    @RequestParam(value = "contexto", required = false) String contexto,
+                                                                    @RequestParam(value = "estoquePositivo", required = false) Boolean estoquePositivo) {
+        return ok(recommendationService.recomendarProdutos(clienteId, contexto, estoquePositivo));
     }
 }
 

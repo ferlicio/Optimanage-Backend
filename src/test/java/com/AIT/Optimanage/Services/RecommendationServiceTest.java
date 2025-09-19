@@ -21,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -36,6 +38,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.springframework.security.access.AccessDeniedException;
 
 @ExtendWith(MockitoExtension.class)
 class RecommendationServiceTest {
@@ -83,20 +87,8 @@ class RecommendationServiceTest {
 
         when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(vendaRecente, vendaAntiga));
 
-        Produto disponivel = Produto.builder()
-                .id(200)
-                .organizationId(1)
-                .qtdEstoque(5)
-                .disponivelVenda(true)
-                .ativo(true)
-                .build();
-        Produto semEstoque = Produto.builder()
-                .id(300)
-                .organizationId(1)
-                .qtdEstoque(0)
-                .disponivelVenda(true)
-                .ativo(true)
-                .build();
+        Produto disponivel = produtoComEstoque(200, 5, BigDecimal.valueOf(15), BigDecimal.valueOf(30));
+        Produto semEstoque = produtoComEstoque(300, 0, BigDecimal.valueOf(15), BigDecimal.valueOf(30));
 
         when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
                 .thenReturn(List.of(disponivel, semEstoque));
@@ -123,20 +115,8 @@ class RecommendationServiceTest {
 
         when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
 
-        Produto produtoA = Produto.builder()
-                .id(200)
-                .organizationId(1)
-                .qtdEstoque(10)
-                .disponivelVenda(true)
-                .ativo(true)
-                .build();
-        Produto produtoB = Produto.builder()
-                .id(300)
-                .organizationId(1)
-                .qtdEstoque(10)
-                .disponivelVenda(true)
-                .ativo(true)
-                .build();
+        Produto produtoA = produtoComEstoque(200, 10, BigDecimal.valueOf(10), BigDecimal.valueOf(20));
+        Produto produtoB = produtoComEstoque(300, 10, BigDecimal.valueOf(5), BigDecimal.valueOf(25));
 
         when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
                 .thenReturn(List.of(produtoA, produtoB));
@@ -169,13 +149,7 @@ class RecommendationServiceTest {
 
         List<Produto> produtos = new ArrayList<>();
         for (int i = 0; i < 12; i++) {
-            produtos.add(Produto.builder()
-                    .id(200 + i)
-                    .organizationId(1)
-                    .qtdEstoque(2)
-                    .disponivelVenda(true)
-                    .ativo(true)
-                    .build());
+            produtos.add(produtoComEstoque(200 + i, 2, BigDecimal.valueOf(5), BigDecimal.valueOf(12)));
         }
 
         when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
@@ -185,6 +159,60 @@ class RecommendationServiceTest {
 
         assertEquals(10, recomendados.size());
         assertTrue(recomendados.stream().map(ProdutoResponse::getQtdEstoque).allMatch(qtd -> qtd != null && qtd > 0));
+    }
+
+    @Test
+    void recomendarProdutosPriorizaMaiorMargemERecorrencia() {
+        when(vendaRepository.findTopProdutosByCliente(555, 1)).thenReturn(List.of(new Object[]{100, 4L}));
+
+        Venda venda = criarVenda(LocalDate.of(2024, 2, 1),
+                criarVendaProduto(100, 1),
+                criarVendaProduto(200, 3),
+                criarVendaProduto(300, 1));
+
+        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
+
+        Produto margemAlta = produtoComEstoque(200, 5, BigDecimal.valueOf(10), BigDecimal.valueOf(40));
+        Produto recorrente = produtoComEstoque(300, 5, BigDecimal.valueOf(15), BigDecimal.valueOf(25));
+
+        when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
+                .thenReturn(List.of(margemAlta, recorrente));
+
+        List<ProdutoResponse> recomendados = recommendationService.recomendarProdutos(555, null, false);
+
+        assertEquals(2, recomendados.size());
+        assertEquals(200, recomendados.get(0).getId());
+    }
+
+    @Test
+    void recomendarProdutosRespeitaPlano() {
+        Plano plano = new Plano();
+        plano.setRecomendacoesHabilitadas(false);
+        when(planoService.obterPlanoUsuario(any(User.class))).thenReturn(Optional.of(plano));
+
+        assertThrows(AccessDeniedException.class, () -> recommendationService.recomendarProdutos(1));
+    }
+
+    @Test
+    void recomendarProdutosFuncionaSemCliente() {
+        when(vendaRepository.findTopProdutosByOrganization(1)).thenReturn(List.of(new Object[]{400, 6L}));
+
+        Venda venda = criarVenda(LocalDate.of(2024, 3, 10),
+                criarVendaProduto(400, 2),
+                criarVendaProduto(500, 1));
+
+        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
+
+        Produto candidatoA = produtoComEstoque(400, 2, BigDecimal.valueOf(10), BigDecimal.valueOf(30));
+        Produto candidatoB = produtoComEstoque(500, 2, BigDecimal.valueOf(5), BigDecimal.valueOf(35));
+
+        when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
+                .thenReturn(List.of(candidatoA, candidatoB));
+
+        List<ProdutoResponse> recomendados = recommendationService.recomendarProdutos(null, null, true);
+
+        assertEquals(2, recomendados.size());
+        assertTrue(recomendados.stream().anyMatch(produto -> produto.getId() == 500));
     }
 
     private Venda criarVenda(LocalDate dataEfetuacao, VendaProduto... itens) {
@@ -200,11 +228,23 @@ class RecommendationServiceTest {
     }
 
     private VendaProduto criarVendaProduto(int produtoId, int quantidade) {
-        Produto produto = Produto.builder().id(produtoId).build();
+        Produto produto = Produto.builder().id(produtoId).custo(BigDecimal.TEN).valorVenda(BigDecimal.valueOf(20)).build();
         VendaProduto vendaProduto = new VendaProduto();
         vendaProduto.setProduto(produto);
         vendaProduto.setQuantidade(quantidade);
         return vendaProduto;
+    }
+
+    private Produto produtoComEstoque(int id, int estoque, BigDecimal custo, BigDecimal valorVenda) {
+        return Produto.builder()
+                .id(id)
+                .organizationId(1)
+                .qtdEstoque(estoque)
+                .disponivelVenda(true)
+                .ativo(true)
+                .custo(custo)
+                .valorVenda(valorVenda)
+                .build();
     }
 }
 
