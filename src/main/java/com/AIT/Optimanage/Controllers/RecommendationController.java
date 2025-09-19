@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -26,7 +27,9 @@ public class RecommendationController extends V1BaseController {
     @GetMapping("/{clienteId}")
     @Operation(summary = "Recomendar produtos", description = "Sugere produtos com base no histórico de vendas")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<List<ProdutoResponse>> recomendar(@PathVariable Integer clienteId) {
-        return ok(recommendationService.recomendarProdutos(clienteId));
+    public ResponseEntity<List<ProdutoResponse>> recomendar(@PathVariable Integer clienteId,
+                                                            @RequestParam(value = "contexto", required = false) String contexto,
+                                                            @RequestParam(value = "estoquePositivo", required = false) Boolean estoquePositivo) {
+        return ok(recommendationService.recomendarProdutos(clienteId, contexto, estoquePositivo));
     }
 }
