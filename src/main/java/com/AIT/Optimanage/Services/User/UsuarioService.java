@@ -15,6 +15,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,6 +74,9 @@ public class UsuarioService {
         User usuario = getUsuario(id);
         Organization organization = organizationRepository.findById(usuario.getOrganizationId())
                 .orElseThrow(() -> new EntityNotFoundException("Informações do usuário não encontradas"));
+        if (organization.getOwnerUser() == null || !organization.getOwnerUser().getId().equals(usuario.getId())) {
+            throw new AccessDeniedException("Usuário não autorizado a alterar o plano da organização");
+        }
         Plano plano = planoRepository.findById(novoPlanoId)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
 
