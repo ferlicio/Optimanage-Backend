@@ -18,13 +18,6 @@ public class CompraValidator {
         if (compraDTO.getDataAgendada() == null && compraDTO.getStatus() == StatusCompra.AGENDADA) {
             throw new IllegalArgumentException("Data agendada não informada para compra agendada");
         }
-        if (compraDTO.getDataCobranca() == null) {
-            if (compraDTO.getStatus() == StatusCompra.AGUARDANDO_PAG) {
-                throw new IllegalArgumentException("Data de cobrança não informada para venda aguardando pagamento");
-            } else if (compraDTO.getStatus() == StatusCompra.CONCRETIZADO) {
-                throw new IllegalArgumentException("Data de cobrança não informada para venda concretizada");
-            }
-        }
         boolean permiteOrcamento = loggedUser != null
                 && loggedUser.getOrganization() != null
                 && Boolean.TRUE.equals(loggedUser.getOrganization().getPermiteOrcamento());
