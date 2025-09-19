@@ -86,6 +86,10 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `PUT /api/v1/compras/{idCompra}/finalizar` &ndash; finalizar compra.
 - `PUT /api/v1/compras/{idCompra}/cancelar` &ndash; cancelar compra.
 
+> **Contrato da API de compras**
+> - O campo `valorFinal` é calculado exclusivamente pelo servidor com base nos produtos e serviços enviados.
+> - O payload de criação/edição não aceita mais `dataCobranca`; utilize os endpoints de pagamento para definir vencimentos.
+
 ### Vendas
 - `GET /api/v1/vendas` &ndash; listar vendas (`id`, `cliente_id`, `data_inicial`, `data_final`, `pago`, `status`, `forma_pagamento`, `sort`, `order`, `page`, `pagesize`).
 - `GET /api/v1/vendas/{idVenda}` &ndash; obter venda.

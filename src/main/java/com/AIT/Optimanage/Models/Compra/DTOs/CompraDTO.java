@@ -28,7 +28,6 @@ public class CompraDTO {
     private Duration duracaoEstimada = Duration.ofHours(1);
     private LocalDate dataCobranca;
     @DecimalMin(value = "0.0")
-    @NotNull
     private BigDecimal valorFinal;
     private String condicaoPagamento;
     @NotNull
