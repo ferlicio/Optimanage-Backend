@@ -22,9 +22,7 @@ public class CompraDTO {
     @NotNull
     private LocalDate dataEfetuacao = LocalDate.now();
     private LocalDate dataAgendada = null;
-    private LocalDate dataCobranca;
     @DecimalMin(value = "0.0")
-    @NotNull
     private BigDecimal valorFinal;
     private String condicaoPagamento;
     @NotNull
