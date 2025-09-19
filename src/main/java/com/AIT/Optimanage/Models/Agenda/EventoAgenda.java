@@ -14,6 +14,9 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class EventoAgenda {
     private TipoEvento tipo;
+    private TipoEvento referencia;
     private LocalDate data;
     private Integer id;
+    private String titulo;
+    private String descricao;
 }
