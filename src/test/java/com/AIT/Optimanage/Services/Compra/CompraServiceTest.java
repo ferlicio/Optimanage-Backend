@@ -2,20 +2,30 @@ package com.AIT.Optimanage.Services.Compra;
 
 import com.AIT.Optimanage.Mappers.CompraMapper;
 import com.AIT.Optimanage.Models.Compra.Compra;
+import com.AIT.Optimanage.Models.Compra.CompraPagamento;
 import com.AIT.Optimanage.Models.Compra.CompraProduto;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraResponseDTO;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraDTO;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraProdutoDTO;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoDTO;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
+import com.AIT.Optimanage.Models.Enums.FormaPagamento;
+import com.AIT.Optimanage.Models.Enums.StatusPagamento;
+import com.AIT.Optimanage.Models.Produto;
+import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Compra.CompraProdutoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import com.AIT.Optimanage.Services.Compra.PagamentoCompraService;
+import com.AIT.Optimanage.Validation.CompraValidator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +40,8 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +57,8 @@ class CompraServiceTest {
     @Mock private PagamentoCompraService pagamentoCompraService;
     @Mock private ProdutoRepository produtoRepository;
     @Mock private CompraMapper compraMapper;
+    @Mock private InventoryService inventoryService;
+    @Mock private CompraValidator compraValidator;
 
     @InjectMocks
     private CompraService compraService;
@@ -129,6 +143,77 @@ class CompraServiceTest {
         compraService.finalizarAgendamentoCompra(12);
 
         assertEquals(StatusCompra.CONCRETIZADO, compra.getStatus());
+    }
+
+    @Test
+    void editarCompraAtualizaItensTotaisEPendencias() {
+        Produto produtoAntigo = Produto.builder()
+                .valorVenda(BigDecimal.TEN)
+                .build();
+        produtoAntigo.setId(8);
+
+        Compra compra = Compra.builder()
+                .sequencialUsuario(1)
+                .dataEfetuacao(LocalDate.now().minusDays(5))
+                .valorFinal(BigDecimal.valueOf(50))
+                .valorPendente(BigDecimal.valueOf(20))
+                .status(StatusCompra.AGUARDANDO_PAG)
+                .compraProdutos(Collections.singletonList(CompraProduto.builder()
+                        .produto(produtoAntigo)
+                        .quantidade(1)
+                        .valorTotal(BigDecimal.TEN)
+                        .build()))
+                .compraServicos(Collections.emptyList())
+                .pagamentos(Collections.singletonList(CompraPagamento.builder()
+                        .valorPago(BigDecimal.valueOf(80))
+                        .dataVencimento(LocalDate.now())
+                        .formaPagamento(FormaPagamento.PIX)
+                        .statusPagamento(StatusPagamento.PAGO)
+                        .build()))
+                .build();
+        compra.setId(15);
+        compra.setTenantId(1);
+
+        Produto produtoAtualizado = Produto.builder()
+                .valorVenda(BigDecimal.valueOf(100))
+                .build();
+        produtoAtualizado.setId(5);
+
+        Servico servicoAtualizado = Servico.builder()
+                .valorVenda(BigDecimal.valueOf(50))
+                .build();
+        servicoAtualizado.setId(3);
+
+        CompraDTO compraDTO = CompraDTO.builder()
+                .fornecedorId(1)
+                .dataEfetuacao(LocalDate.now())
+                .dataAgendada(null)
+                .valorFinal(BigDecimal.ZERO)
+                .condicaoPagamento("30 dias")
+                .status(StatusCompra.AGUARDANDO_PAG)
+                .observacoes("Atualizado")
+                .produtos(Collections.singletonList(new CompraProdutoDTO(produtoAtualizado.getId(), 2)))
+                .servicos(Collections.singletonList(new CompraServicoDTO(servicoAtualizado.getId(), 1)))
+                .build();
+
+        when(compraRepository.findByIdAndOrganizationId(15, 1)).thenReturn(Optional.of(compra));
+        when(produtoService.buscarProdutoAtivo(produtoAtualizado.getId())).thenReturn(produtoAtualizado);
+        when(servicoService.buscarServicoAtivo(servicoAtualizado.getId())).thenReturn(servicoAtualizado);
+        when(compraRepository.save(compra)).thenReturn(compra);
+        CompraResponseDTO expectedResponse = new CompraResponseDTO();
+        when(compraMapper.toResponse(compra)).thenReturn(expectedResponse);
+
+        CompraResponseDTO response = compraService.editarCompra(15, compraDTO);
+
+        assertEquals(BigDecimal.valueOf(250), compra.getValorFinal());
+        assertEquals(BigDecimal.valueOf(170), compra.getValorPendente());
+        assertEquals(compraDTO.getDataEfetuacao(), compra.getDataEfetuacao());
+        assertEquals("Atualizado", compra.getObservacoes());
+        assertEquals(1, compra.getCompraProdutos().size());
+        assertEquals(1, compra.getCompraServicos().size());
+        verify(compraProdutoRepository).saveAll(anyList());
+        verify(compraServicoRepository).saveAll(anyList());
+        assertEquals(expectedResponse, response);
     }
 }
 
