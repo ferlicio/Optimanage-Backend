@@ -11,6 +11,7 @@ import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoDTO;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
+import com.AIT.Optimanage.Models.Inventory.InventorySource;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
@@ -146,9 +147,10 @@ class CompraServiceTest {
     }
 
     @Test
-    void editarCompraAtualizaItensTotaisEPendencias() {
+    void editarCompraAtualizaItensTotaisEPendenciasConsiderandoValorNegociado() {
         Produto produtoAntigo = Produto.builder()
                 .valorVenda(BigDecimal.TEN)
+                .custo(BigDecimal.valueOf(8))
                 .build();
         produtoAntigo.setId(8);
 
@@ -161,6 +163,7 @@ class CompraServiceTest {
                 .compraProdutos(Collections.singletonList(CompraProduto.builder()
                         .produto(produtoAntigo)
                         .quantidade(1)
+                        .valorUnitario(produtoAntigo.getCusto())
                         .valorTotal(BigDecimal.TEN)
                         .build()))
                 .compraServicos(Collections.emptyList())
@@ -176,6 +179,7 @@ class CompraServiceTest {
 
         Produto produtoAtualizado = Produto.builder()
                 .valorVenda(BigDecimal.valueOf(100))
+                .custo(BigDecimal.valueOf(70))
                 .build();
         produtoAtualizado.setId(5);
 
@@ -184,6 +188,7 @@ class CompraServiceTest {
                 .build();
         servicoAtualizado.setId(3);
 
+        BigDecimal custoNegociado = BigDecimal.valueOf(75);
         CompraDTO compraDTO = CompraDTO.builder()
                 .fornecedorId(1)
                 .dataEfetuacao(LocalDate.now())
@@ -192,7 +197,7 @@ class CompraServiceTest {
                 .condicaoPagamento("30 dias")
                 .status(StatusCompra.AGUARDANDO_PAG)
                 .observacoes("Atualizado")
-                .produtos(Collections.singletonList(new CompraProdutoDTO(produtoAtualizado.getId(), 2)))
+                .produtos(Collections.singletonList(new CompraProdutoDTO(produtoAtualizado.getId(), 2, custoNegociado)))
                 .servicos(Collections.singletonList(new CompraServicoDTO(servicoAtualizado.getId(), 1)))
                 .build();
 
@@ -205,14 +210,91 @@ class CompraServiceTest {
 
         CompraResponseDTO response = compraService.editarCompra(15, compraDTO);
 
-        assertEquals(BigDecimal.valueOf(250), compra.getValorFinal());
-        assertEquals(BigDecimal.valueOf(170), compra.getValorPendente());
+        CompraProduto compraProdutoAtualizado = compra.getCompraProdutos().get(0);
+        assertEquals(custoNegociado, compraProdutoAtualizado.getValorUnitario());
+        assertEquals(custoNegociado.multiply(BigDecimal.valueOf(2)), compraProdutoAtualizado.getValorTotal());
+        assertEquals(BigDecimal.valueOf(200), compra.getValorFinal());
+        assertEquals(BigDecimal.valueOf(120), compra.getValorPendente());
         assertEquals(compraDTO.getDataEfetuacao(), compra.getDataEfetuacao());
         assertEquals("Atualizado", compra.getObservacoes());
         assertEquals(1, compra.getCompraProdutos().size());
         assertEquals(1, compra.getCompraServicos().size());
         verify(compraProdutoRepository).saveAll(anyList());
         verify(compraServicoRepository).saveAll(anyList());
+        verify(inventoryService).reduzir(produtoAntigo.getId(), 1, InventorySource.COMPRA, compra.getId(),
+                "Ajuste de edição da compra #" + compra.getId());
+        verify(inventoryService).incrementar(produtoAtualizado.getId(), 2, InventorySource.COMPRA, compra.getId(),
+                "Atualização da compra #" + compra.getId());
+        assertEquals(expectedResponse, response);
+    }
+
+    @Test
+    void editarCompraSemValorUnitarioUsaCustoDoProduto() {
+        Produto produtoAntigo = Produto.builder()
+                .valorVenda(BigDecimal.valueOf(30))
+                .custo(BigDecimal.valueOf(20))
+                .build();
+        produtoAntigo.setId(18);
+
+        Compra compra = Compra.builder()
+                .sequencialUsuario(1)
+                .dataEfetuacao(LocalDate.now().minusDays(3))
+                .valorFinal(BigDecimal.valueOf(20))
+                .valorPendente(BigDecimal.valueOf(20))
+                .status(StatusCompra.AGUARDANDO_PAG)
+                .compraProdutos(Collections.singletonList(CompraProduto.builder()
+                        .produto(produtoAntigo)
+                        .quantidade(1)
+                        .valorUnitario(produtoAntigo.getCusto())
+                        .valorTotal(produtoAntigo.getCusto())
+                        .build()))
+                .compraServicos(Collections.emptyList())
+                .pagamentos(null)
+                .build();
+        compra.setId(25);
+        compra.setTenantId(1);
+
+        Produto produtoAtualizado = Produto.builder()
+                .valorVenda(BigDecimal.valueOf(60))
+                .custo(BigDecimal.valueOf(40))
+                .build();
+        produtoAtualizado.setId(30);
+
+        CompraProdutoDTO produtoDTO = new CompraProdutoDTO();
+        produtoDTO.setProdutoId(produtoAtualizado.getId());
+        produtoDTO.setQuantidade(3);
+
+        CompraDTO compraDTO = CompraDTO.builder()
+                .fornecedorId(1)
+                .dataEfetuacao(LocalDate.now())
+                .dataAgendada(null)
+                .valorFinal(BigDecimal.ZERO)
+                .condicaoPagamento("À vista")
+                .status(StatusCompra.AGUARDANDO_PAG)
+                .observacoes("Sem custo informado")
+                .produtos(Collections.singletonList(produtoDTO))
+                .servicos(Collections.emptyList())
+                .build();
+
+        when(compraRepository.findByIdAndOrganizationId(25, 1)).thenReturn(Optional.of(compra));
+        when(produtoService.buscarProdutoAtivo(produtoAtualizado.getId())).thenReturn(produtoAtualizado);
+        when(compraRepository.save(compra)).thenReturn(compra);
+        CompraResponseDTO expectedResponse = new CompraResponseDTO();
+        when(compraMapper.toResponse(compra)).thenReturn(expectedResponse);
+
+        CompraResponseDTO response = compraService.editarCompra(25, compraDTO);
+
+        CompraProduto produtoSalvo = compra.getCompraProdutos().get(0);
+        assertEquals(produtoAtualizado.getCusto(), produtoSalvo.getValorUnitario());
+        assertEquals(produtoAtualizado.getCusto().multiply(BigDecimal.valueOf(3)), produtoSalvo.getValorTotal());
+        assertEquals(produtoSalvo.getValorTotal(), compra.getValorFinal());
+        assertEquals(compra.getValorFinal(), compra.getValorPendente());
+        verify(compraProdutoRepository).saveAll(anyList());
+        verify(compraServicoRepository).saveAll(anyList());
+        verify(inventoryService).reduzir(produtoAntigo.getId(), 1, InventorySource.COMPRA, compra.getId(),
+                "Ajuste de edição da compra #" + compra.getId());
+        verify(inventoryService).incrementar(produtoAtualizado.getId(), 3, InventorySource.COMPRA, compra.getId(),
+                "Atualização da compra #" + compra.getId());
         assertEquals(expectedResponse, response);
     }
 }
