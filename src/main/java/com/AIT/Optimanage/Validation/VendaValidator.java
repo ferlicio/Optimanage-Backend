@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Models.Venda.DTOs.VendaDTO;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Component
@@ -33,6 +34,21 @@ public class VendaValidator {
         }
         if (vendaDTO.hasNoItems()) {
             throw new IllegalArgumentException("Uma venda deve ter no mínimo um produto ou serviço");
+        }
+
+        vendaDTO.getProdutos().forEach(produtoDTO -> validarDescontoPercentual(
+                produtoDTO.getDesconto(), "de produto"));
+        vendaDTO.getServicos().forEach(servicoDTO -> validarDescontoPercentual(
+                servicoDTO.getDesconto(), "de serviço"));
+        validarDescontoPercentual(vendaDTO.getDescontoGeral(), "geral");
+    }
+
+    private void validarDescontoPercentual(BigDecimal desconto, String contexto) {
+        if (desconto == null) {
+            return;
+        }
+        if (desconto.compareTo(BigDecimal.ZERO) < 0 || desconto.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("Desconto " + contexto + " deve estar entre 0% e 100%");
         }
     }
 }

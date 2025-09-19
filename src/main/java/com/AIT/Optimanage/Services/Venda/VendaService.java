@@ -65,6 +65,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -173,15 +174,15 @@ public class VendaService {
         BigDecimal valorServicos = vendaServicos.stream()
                 .map(VendaServico::getValorFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal valorTotal = valorProdutos.add(valorServicos);
+        BigDecimal valorTotal = valorProdutos.add(valorServicos).setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal valorPago = BigDecimal.ZERO;
 
         novaVenda.setValorTotal(valorTotal);
         BigDecimal valorFinal = valorTotal.multiply(BigDecimal.valueOf(100).subtract(novaVenda.getDescontoGeral()))
-                .divide(BigDecimal.valueOf(100));
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         novaVenda.setValorFinal(valorFinal);
-        novaVenda.setValorPendente(valorFinal.subtract(valorPago));
+        novaVenda.setValorPendente(valorFinal.subtract(valorPago).setScale(2, RoundingMode.HALF_UP));
         novaVenda.setVendaProdutos(vendaProdutos);
         novaVenda.setVendaServicos(vendaServicos);
         novaVenda.setTenantId(organizationId);
@@ -234,7 +235,7 @@ public class VendaService {
         BigDecimal valorServicos = vendaServicos.stream()
                 .map(VendaServico::getValorFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal valorTotal = valorProdutos.add(valorServicos);
+        BigDecimal valorTotal = valorProdutos.add(valorServicos).setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal valorPago = venda.getPagamentos() == null
                 ? BigDecimal.ZERO
@@ -242,9 +243,9 @@ public class VendaService {
 
         venda.setValorTotal(valorTotal);
         BigDecimal valorFinalAtualizado = valorTotal.multiply(BigDecimal.valueOf(100).subtract(descontoGeralAtualizado))
-                .divide(BigDecimal.valueOf(100));
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         venda.setValorFinal(valorFinalAtualizado);
-        venda.setValorPendente(valorFinalAtualizado.subtract(valorPago));
+        venda.setValorPendente(valorFinalAtualizado.subtract(valorPago).setScale(2, RoundingMode.HALF_UP));
         venda.setVendaProdutos(vendaProdutos);
         venda.setVendaServicos(vendaServicos);
         atualizarStatus(venda, vendaDTO.getStatus());
@@ -480,11 +481,14 @@ public class VendaService {
         return produtosDTO.stream()
                 .map(produtoDTO -> {
                     Produto produto = produtoService.buscarProdutoAtivo(produtoDTO.getProdutoId());
-                    BigDecimal valorProduto = produto.getValorVenda().multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
+                    BigDecimal valorProduto = produto.getValorVenda()
+                            .multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()))
+                            .setScale(2, RoundingMode.HALF_UP);
                     BigDecimal descontoPercentual = Optional.ofNullable(produtoDTO.getDesconto()).orElse(BigDecimal.ZERO);
-                    BigDecimal descontoProduto = valorProduto
-                            .multiply(descontoPercentual.divide(BigDecimal.valueOf(100)));
-                    BigDecimal valorFinalProduto = valorProduto.subtract(descontoProduto);
+                    BigDecimal descontoProduto = valorProduto.multiply(descontoPercentual)
+                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    BigDecimal valorFinalProduto = valorProduto.subtract(descontoProduto)
+                            .setScale(2, RoundingMode.HALF_UP);
 
                     VendaProduto vendaProduto = new VendaProduto();
                     vendaProduto.setVenda(venda);
@@ -517,11 +521,14 @@ public class VendaService {
         return servicosDTO.stream()
             .map(servicoDTO -> {
                 Servico servico = servicoService.buscarServicoAtivo(servicoDTO.getServicoId());
-                BigDecimal valorServico = servico.getValorVenda().multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
+                BigDecimal valorServico = servico.getValorVenda()
+                        .multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()))
+                        .setScale(2, RoundingMode.HALF_UP);
                 BigDecimal descontoPercentual = Optional.ofNullable(servicoDTO.getDesconto()).orElse(BigDecimal.ZERO);
-                BigDecimal descontoServico = valorServico
-                        .multiply(descontoPercentual.divide(BigDecimal.valueOf(100)));
-                BigDecimal valorFinalServico = valorServico.subtract(descontoServico);
+                BigDecimal descontoServico = valorServico.multiply(descontoPercentual)
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                BigDecimal valorFinalServico = valorServico.subtract(descontoServico)
+                        .setScale(2, RoundingMode.HALF_UP);
 
                 VendaServico vendaServico = new VendaServico();
                 vendaServico.setVenda(venda);

@@ -28,6 +28,7 @@ public class VendaDTO {
     private Duration duracaoEstimada = Duration.ofHours(1);
     private LocalDate dataCobranca;
     @DecimalMin(value = "0.0")
+    @DecimalMax(value = "100.0")
     private BigDecimal descontoGeral = BigDecimal.ZERO;
     private String condicaoPagamento;
     @Min(0)

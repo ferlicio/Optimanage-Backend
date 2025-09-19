@@ -158,7 +158,7 @@ class VendaServiceTest {
         doNothing().when(vendaProdutoRepository).deleteByVenda(any(Venda.class));
         doNothing().when(vendaServicoRepository).deleteByVenda(any(Venda.class));
 
-        VendaProdutoDTO novoProdutoDTO = new VendaProdutoDTO(3, 2, new BigDecimal("10.00"));
+        VendaProdutoDTO novoProdutoDTO = new VendaProdutoDTO(3, 2, new BigDecimal("33.333"));
         VendaServicoDTO novoServicoDTO = new VendaServicoDTO(4, 1, BigDecimal.ZERO);
 
         VendaDTO vendaDTO = VendaDTO.builder()
@@ -187,9 +187,12 @@ class VendaServiceTest {
         assertSame(venda, novoProduto.getVenda());
         assertNotNull(venda.getVendaServicos());
         assertEquals(1, venda.getVendaServicos().size());
-        assertSame(venda, venda.getVendaServicos().get(0).getVenda());
-        assertEquals(0, new BigDecimal("180.00").compareTo(venda.getValorPendente()));
-        assertEquals(0, new BigDecimal("230.00").compareTo(venda.getValorTotal()));
+        VendaServico novoServico = venda.getVendaServicos().get(0);
+        assertSame(venda, novoServico.getVenda());
+        assertEquals(0, new BigDecimal("50.00").compareTo(novoServico.getValorFinal()));
+        assertEquals(0, new BigDecimal("133.33").compareTo(venda.getValorPendente()));
+        assertEquals(0, new BigDecimal("183.33").compareTo(venda.getValorTotal()));
+        assertEquals(0, new BigDecimal("183.33").compareTo(venda.getValorFinal()));
         assertEquals(StatusVenda.AGUARDANDO_PAG, venda.getStatus());
         assertEquals(BigDecimal.ZERO, venda.getDescontoGeral());
 
@@ -203,7 +206,9 @@ class VendaServiceTest {
         ArgumentCaptor<List<VendaProduto>> produtosCaptor = ArgumentCaptor.forClass(List.class);
         verify(vendaProdutoRepository).saveAll(produtosCaptor.capture());
         assertEquals(1, produtosCaptor.getValue().size());
-        assertSame(venda, produtosCaptor.getValue().get(0).getVenda());
+        VendaProduto produtoCapturado = produtosCaptor.getValue().get(0);
+        assertSame(venda, produtoCapturado.getVenda());
+        assertEquals(0, new BigDecimal("133.33").compareTo(produtoCapturado.getValorFinal()));
     }
 
     private Produto criarProdutoNovo() {
