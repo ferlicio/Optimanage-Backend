@@ -1,8 +1,6 @@
 package com.AIT.Optimanage.Repositories;
 
 import com.AIT.Optimanage.Models.Produto;
-import com.AIT.Optimanage.Models.User.Role;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Support.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,28 +27,16 @@ class ProdutoRepositoryConcurrencyTest {
     private ProdutoRepository produtoRepository;
 
     @Autowired
-    private UserRepository userRepository;
-
     @Autowired
     private PlatformTransactionManager transactionManager;
 
     private TransactionTemplate transactionTemplate;
-
-    private User owner;
 
     @BeforeEach
     void setup() {
         TenantContext.setTenantId(1);
         transactionTemplate = new TransactionTemplate(transactionManager);
         transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        owner = User.builder()
-                .nome("John")
-                .sobrenome("Doe")
-                .email("john@doe.com")
-                .senha("pwd")
-                .role(Role.OPERADOR)
-                .build();
-        userRepository.save(owner);
     }
 
     @AfterEach
@@ -60,7 +46,6 @@ class ProdutoRepositoryConcurrencyTest {
 
     private Produto novoProduto(int estoqueInicial) {
         Produto produto = Produto.builder()
-                .ownerUser(owner)
                 .sequencialUsuario(1)
                 .codigoReferencia("SKU")
                 .nome("Produto")
@@ -69,6 +54,7 @@ class ProdutoRepositoryConcurrencyTest {
                 .qtdEstoque(estoqueInicial)
                 .ativo(true)
                 .build();
+        produto.setTenantId(1);
         return produtoRepository.save(produto);
     }
 

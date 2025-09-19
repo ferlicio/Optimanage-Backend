@@ -55,8 +55,9 @@ public class AgendaService {
 
         List<EventoAgenda> eventos = new ArrayList<>();
 
+        Integer organizationId = loggedUser.getTenantId();
         List<CompraPagamento> compras = pagamentoCompraRepository
-                .findAllByCompraOwnerUserAndStatusPagamentoAndDataVencimentoAfter(loggedUser, StatusPagamento.PENDENTE, now);
+                .findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(organizationId, StatusPagamento.PENDENTE, now);
         compras.stream()
                 .filter(p -> !p.getDataVencimento().isBefore(inicio) && !p.getDataVencimento().isAfter(fim))
                 .forEach(p -> eventos.add(EventoAgenda.builder()
@@ -66,7 +67,7 @@ public class AgendaService {
                         .build()));
 
         List<VendaPagamento> vendas = pagamentoVendaRepository
-                .findAllByVendaOwnerUserAndStatusPagamentoAndDataVencimentoAfter(loggedUser, StatusPagamento.PENDENTE, now);
+                .findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(organizationId, StatusPagamento.PENDENTE, now);
         vendas.stream()
                 .filter(p -> !p.getDataVencimento().isBefore(inicio) && !p.getDataVencimento().isAfter(fim))
                 .forEach(p -> eventos.add(EventoAgenda.builder()

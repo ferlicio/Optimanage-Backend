@@ -81,7 +81,6 @@ public class InventoryService {
                                     Integer referenciaId, String descricao) {
         InventoryHistory historico = InventoryHistory.builder()
                 .produto(produto)
-                .ownerUser(produto.getOwnerUser())
                 .action(action)
                 .source(source)
                 .referenceId(referenciaId)

@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Repositories.User.ContadorRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,19 +16,23 @@ public class ContadorService {
     private final ContadorRepository contadorRepository;
 
     public Contador BuscarContador(Tabela tabela) {
-        Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, CurrentUser.get());
-        if (contador == null) {
-            return contadorRepository.save(Contador.builder()
-                    .nomeTabela(tabela)
-                    .contagemAtual(1)
-                    .build()
-            );
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
         }
-        return contador;
+        return contadorRepository.findByNomeTabelaAndOrganizationId(tabela, organizationId)
+                .orElseGet(() -> {
+                    Contador contador = Contador.builder()
+                            .nomeTabela(tabela)
+                            .contagemAtual(1)
+                            .build();
+                    contador.setTenantId(organizationId);
+                    return contadorRepository.save(contador);
+                });
     }
 
     public void IncrementarContador(Tabela tabela) {
-        Contador contador = contadorRepository.getByNomeTabelaAndOwnerUser(tabela, CurrentUser.get());
+        Contador contador = BuscarContador(tabela);
         contador.setContagemAtual(contador.getContagemAtual() + 1);
         contadorRepository.save(contador);
     }

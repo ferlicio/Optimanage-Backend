@@ -83,6 +83,10 @@ public class CompraService {
     @Transactional(readOnly = true)
     public Page<CompraResponseDTO> listarCompras(CompraSearch pesquisa) {
         User loggedUser = CurrentUser.get();
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         // Configuração de paginação e ordenação
         Sort.Direction direction = Optional.ofNullable(pesquisa.getOrder()).filter(Sort.Direction::isDescending)
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
@@ -91,7 +95,7 @@ public class CompraService {
         Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
 
         Specification<Compra> spec = FilterBuilder
-                .of(CompraFilters.hasOwner(loggedUser.getId()))
+                .of(CompraFilters.hasOrganization(organizationId))
                 .and(pesquisa.getId(), CompraFilters::hasSequencialUsuario)
                 .and(pesquisa.getFornecedorId(), CompraFilters::hasFornecedor)
                 .and(pesquisa.getDataInicial(), d -> CompraFilters.dataEfetuacaoAfter(LocalDate.parse(d)))
@@ -106,8 +110,11 @@ public class CompraService {
     }
 
     private Compra getCompra(Integer idCompra) {
-        User loggedUser = CurrentUser.get();
-        return compraRepository.findByIdAndOwnerUser(idCompra, loggedUser)
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return compraRepository.findByIdAndOrganizationId(idCompra, organizationId)
                 .orElseThrow(() -> new RuntimeException("Compra não encontrada"));
     }
 
@@ -124,6 +131,10 @@ public class CompraService {
             garantirAgendaHabilitada(plano);
         }
 
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(compraDTO.getFornecedorId());
         Contador contador = contadorService.BuscarContador(Tabela.COMPRA);
         Compra novaCompra = Compra.builder()
@@ -156,6 +167,7 @@ public class CompraService {
         novaCompra.setValorPendente(valorTotal.subtract(valorPago));
 
         
+        novaCompra.setTenantId(organizationId);
         compraRepository.save(novaCompra);
         compraProdutoRepository.saveAll(compraProdutos);
         compraServicoRepository.saveAll(compraServicos);
@@ -187,6 +199,7 @@ public class CompraService {
                 .status(compraDTO.getStatus())
                 .observacoes(compraDTO.getObservacoes())
                 .build();
+        compraAtualizada.setTenantId(compra.getOrganizationId());
 
         compra.getCompraProdutos().forEach(cp ->
                 inventoryService.reduzir(cp.getProduto().getId(), cp.getQuantidade(), InventorySource.COMPRA,

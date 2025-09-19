@@ -2,7 +2,6 @@ package com.AIT.Optimanage.Services.Fornecedor;
 
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.FornecedorEndereco;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorEnderecoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 
@@ -20,13 +19,20 @@ public class FornecedorEnderecoService {
     private final FornecedorService fornecedorService;
 
     public List<FornecedorEndereco> listarEnderecos(Integer idFornecedor) {
-        User loggedUser = CurrentUser.get();
-        return fornecedorEnderecoRepository.findAllByFornecedor_IdAndFornecedorOwnerUser(idFornecedor, loggedUser);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return fornecedorEnderecoRepository.findAllByFornecedor_IdAndFornecedorOrganizationId(idFornecedor, organizationId);
     }
 
     public FornecedorEndereco listarUmEndereco(Integer idFornecedor, Integer idEndereco) {
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(idFornecedor);
-        return fornecedorEnderecoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idEndereco, fornecedor.getId(), CurrentUser.get())
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return fornecedorEnderecoRepository.findByIdAndFornecedor_IdAndFornecedorOrganizationId(idEndereco, fornecedor.getId(), organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
     }
 
@@ -35,6 +41,7 @@ public class FornecedorEnderecoService {
 
         endereco.setId(null);
         endereco.setFornecedor(fornecedor);
+        endereco.setTenantId(fornecedor.getOrganizationId());
         return fornecedorEnderecoRepository.save(endereco);
     }
 
@@ -43,6 +50,7 @@ public class FornecedorEnderecoService {
 
         endereco.setId(enderecoExistente.getId());
         endereco.setFornecedor(enderecoExistente.getFornecedor());
+        endereco.setTenantId(enderecoExistente.getOrganizationId());
         return fornecedorEnderecoRepository.save(endereco);
     }
 

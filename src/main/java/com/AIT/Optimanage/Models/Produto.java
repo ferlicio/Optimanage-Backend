@@ -2,9 +2,7 @@ package com.AIT.Optimanage.Models;
 
 import com.AIT.Optimanage.Models.Venda.Compatibilidade.Compatibilidade;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
-import com.AIT.Optimanage.Models.User.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import lombok.*;
@@ -20,16 +18,6 @@ import java.util.List;
 @Entity
 @EntityListeners(OwnerEntityListener.class)
 public class Produto extends AuditableEntity implements OwnableEntity {
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_user_id", referencedColumnName = "id", nullable = false)
-    private User ownerUser;
-
-    @JsonProperty("owner_user_id")
-    public Integer getOwnerUserId() {
-        return ownerUser != null ? ownerUser.getId() : null;
-    }
-
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fornecedor_id", referencedColumnName = "id", nullable = true)

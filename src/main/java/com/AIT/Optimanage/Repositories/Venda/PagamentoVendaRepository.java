@@ -1,7 +1,6 @@
 package com.AIT.Optimanage.Repositories.Venda;
 
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,13 +12,13 @@ import java.util.Optional;
 
 @Repository
 public interface PagamentoVendaRepository extends JpaRepository<VendaPagamento, Integer> {
-    List<VendaPagamento> findAllByVendaIdAndVendaOwnerUser(Integer idVenda, User loggedUser);
+    List<VendaPagamento> findAllByVendaIdAndVendaOrganizationId(Integer idVenda, Integer organizationId);
 
-    List<VendaPagamento> findAllByVendaIdAndVendaOwnerUserAndStatusPagamento(Integer idVenda, User loggedUser, StatusPagamento statusPagamento);
+    List<VendaPagamento> findAllByVendaIdAndVendaOrganizationIdAndStatusPagamento(Integer idVenda, Integer organizationId, StatusPagamento statusPagamento);
 
-    Optional<VendaPagamento> findByIdAndVendaOwnerUser(Integer idPagamento, User loggedUser);
+    Optional<VendaPagamento> findByIdAndVendaOrganizationId(Integer idPagamento, Integer organizationId);
 
-    Optional<VendaPagamento> findByIdAndVendaAndVendaOwnerUser(Integer idPagamento, Venda venda, User loggedUser);
+    Optional<VendaPagamento> findByIdAndVendaAndVendaOrganizationId(Integer idPagamento, Venda venda, Integer organizationId);
 
-    List<VendaPagamento> findAllByVendaOwnerUserAndStatusPagamentoAndDataVencimentoAfter(User loggedUser, StatusPagamento statusPagamento, LocalDate dataVencimento);
+    List<VendaPagamento> findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(Integer organizationId, StatusPagamento statusPagamento, LocalDate dataVencimento);
 }

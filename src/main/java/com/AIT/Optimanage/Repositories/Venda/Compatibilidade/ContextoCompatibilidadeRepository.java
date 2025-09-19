@@ -1,7 +1,6 @@
 package com.AIT.Optimanage.Repositories.Venda.Compatibilidade;
 
 import com.AIT.Optimanage.Models.Venda.Compatibilidade.ContextoCompatibilidade;
-import com.AIT.Optimanage.Models.User.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,7 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface ContextoCompatibilidadeRepository extends JpaRepository<ContextoCompatibilidade, Integer> {
-    Optional<ContextoCompatibilidade> findByOwnerUserAndNome(User loggedUser, String nome);
+    Optional<ContextoCompatibilidade> findByOrganizationIdAndNome(Integer organizationId, String nome);
 
-    Page<ContextoCompatibilidade> findAllByOwnerUser(User loggedUser, Pageable pageable);
+    Page<ContextoCompatibilidade> findAllByOrganizationId(Integer organizationId, Pageable pageable);
 }

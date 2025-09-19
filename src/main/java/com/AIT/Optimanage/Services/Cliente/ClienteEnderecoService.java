@@ -2,7 +2,6 @@ package com.AIT.Optimanage.Services.Cliente;
 
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.ClienteEndereco;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteEnderecoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.EntityNotFoundException;
@@ -19,23 +18,29 @@ public class ClienteEnderecoService {
     private final ClienteService clienteService;
 
     public List<ClienteEndereco> listarEnderecos(Integer idCliente) {
-        User loggedUser = CurrentUser.get();
-        return clienteEnderecoRepository.findAllByCliente_IdAndClienteOwnerUser(idCliente, loggedUser);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return clienteEnderecoRepository.findAllByCliente_IdAndClienteOrganizationId(idCliente, organizationId);
     }
 
     public ClienteEndereco listarUmEndereco(Integer idCliente, Integer idEndereco) {
-        User loggedUser = CurrentUser.get();
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         Cliente cliente = clienteService.listarUmCliente(idCliente);
-        return clienteEnderecoRepository.findByIdAndCliente_IdAndClienteOwnerUser(idEndereco, cliente.getId(), loggedUser)
+        return clienteEnderecoRepository.findByIdAndCliente_IdAndClienteOrganizationId(idEndereco, cliente.getId(), organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
     }
 
     public ClienteEndereco cadastrarEndereco(Integer idCliente, ClienteEndereco endereco) {
-        User loggedUser = CurrentUser.get();
         Cliente cliente = clienteService.listarUmCliente(idCliente);
 
         endereco.setId(null);
         endereco.setCliente(cliente);
+        endereco.setTenantId(cliente.getOrganizationId());
         return clienteEnderecoRepository.save(endereco);
     }
 
@@ -44,6 +49,7 @@ public class ClienteEnderecoService {
 
         endereco.setId(enderecoExistente.getId());
         endereco.setCliente(enderecoExistente.getCliente());
+        endereco.setTenantId(enderecoExistente.getOrganizationId());
         return clienteEnderecoRepository.save(endereco);
     }
 

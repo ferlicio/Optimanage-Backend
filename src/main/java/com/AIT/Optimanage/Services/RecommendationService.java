@@ -12,8 +12,8 @@ import com.AIT.Optimanage.Services.PlanoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
+import jakarta.persistence.EntityNotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,7 +37,11 @@ public class RecommendationService {
         if (!Boolean.TRUE.equals(plano.getRecomendacoesHabilitadas())) {
             throw new AccessDeniedException("Recomendações não estão habilitadas no plano atual");
         }
-        List<Object[]> historicoCliente = vendaRepository.findTopProdutosByCliente(clienteId, loggedUser.getId());
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        List<Object[]> historicoCliente = vendaRepository.findTopProdutosByCliente(clienteId, organizationId);
 
         Set<Integer> produtosCliente = historicoCliente.stream()
                 .map(r -> (Integer) r[0])
@@ -47,7 +51,7 @@ public class RecommendationService {
             return Collections.emptyList();
         }
 
-        List<Venda> vendas = vendaRepository.findAllWithProdutosByOwnerUser(loggedUser.getId());
+        List<Venda> vendas = vendaRepository.findAllWithProdutosByOrganization(organizationId);
 
         Map<Integer, Integer> contagemRecomendacoes = new HashMap<>();
         for (Venda venda : vendas) {
@@ -77,7 +81,7 @@ public class RecommendationService {
     private ProdutoResponse toResponse(Produto produto) {
         return ProdutoResponse.builder()
                 .id(produto.getId())
-                .ownerUserId(produto.getOwnerUser() != null ? produto.getOwnerUser().getId() : null)
+                .organizationId(produto.getOrganizationId())
                 .fornecedorId(produto.getFornecedor() != null ? produto.getFornecedor().getId() : null)
                 .sequencialUsuario(produto.getSequencialUsuario())
                 .codigoReferencia(produto.getCodigoReferencia())

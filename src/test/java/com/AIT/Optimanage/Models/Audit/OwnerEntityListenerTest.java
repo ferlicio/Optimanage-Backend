@@ -29,7 +29,7 @@ class OwnerEntityListenerTest {
     }
 
     @Test
-    void prePersistSetsOwnerUserWhenNull() {
+    void prePersistSetsOrganizationWhenNull() {
         TenantContext.setTenantId(1);
         User user = User.builder()
                 .nome("John")
@@ -49,7 +49,7 @@ class OwnerEntityListenerTest {
 
         ctx = entityManager.persistAndFlush(ctx);
 
-        assertNotNull(ctx.getOwnerUser());
-        assertEquals(user.getId(), ctx.getOwnerUser().getId());
+        assertNotNull(ctx.getOrganizationId());
+        assertEquals(1, ctx.getOrganizationId());
     }
 }

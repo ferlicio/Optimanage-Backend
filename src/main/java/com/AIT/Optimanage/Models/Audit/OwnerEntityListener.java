@@ -1,7 +1,6 @@
 package com.AIT.Optimanage.Models.Audit;
 
 import com.AIT.Optimanage.Models.OwnableEntity;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -10,21 +9,20 @@ public class OwnerEntityListener {
 
     @PrePersist
     public void prePersist(Object entity) {
-        setOwnerUser(entity);
+        ensureOrganization(entity);
     }
 
     @PreUpdate
     public void preUpdate(Object entity) {
-        setOwnerUser(entity);
+        ensureOrganization(entity);
     }
 
-    private void setOwnerUser(Object entity) {
-        if (entity instanceof OwnableEntity) {
-            OwnableEntity ownable = (OwnableEntity) entity;
-            if (ownable.getOwnerUser() == null) {
-                User current = CurrentUser.get();
-                if (current != null) {
-                    ownable.setOwnerUser(current);
+    private void ensureOrganization(Object entity) {
+        if (entity instanceof OwnableEntity ownable) {
+            if (ownable.getOrganizationId() == null) {
+                Integer organizationId = CurrentUser.getOrganizationId();
+                if (organizationId != null) {
+                    ownable.setOrganizationId(organizationId);
                 }
             }
         }

@@ -2,9 +2,7 @@ package com.AIT.Optimanage.Services.Fornecedor;
 
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.FornecedorContato;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorContatoRepository;
-import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -21,14 +19,20 @@ public class FornecedorContatoService {
     private final FornecedorService fornecedorService;
 
     public List<FornecedorContato> listarContatos(Integer idFornecedor) {
-        User loggedUser = CurrentUser.get();
-        return fornecedorContatoRepository.findAllByFornecedor_IdAndFornecedorOwnerUser(idFornecedor, loggedUser);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return fornecedorContatoRepository.findAllByFornecedor_IdAndFornecedorOrganizationId(idFornecedor, organizationId);
     }
 
     public FornecedorContato listarUmContato(Integer idFornecedor, Integer idContato) {
-        User loggedUser = CurrentUser.get();
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(idFornecedor);
-        return fornecedorContatoRepository.findByIdAndFornecedor_IdAndFornecedorOwnerUser(idContato, fornecedor.getId(), loggedUser)
+        return fornecedorContatoRepository.findByIdAndFornecedor_IdAndFornecedorOrganizationId(idContato, fornecedor.getId(), organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Contato não encontrado"));
     }
 
@@ -37,6 +41,7 @@ public class FornecedorContatoService {
 
         contato.setId(null);
         contato.setFornecedor(fornecedor);
+        contato.setTenantId(fornecedor.getOrganizationId());
         return fornecedorContatoRepository.save(contato);
     }
 
@@ -45,7 +50,8 @@ public class FornecedorContatoService {
 
         contato.setId(contatoExistente.getId());
         contato.setFornecedor(contatoExistente.getFornecedor());
-        return fornecedorContatoRepository.save(contatoExistente);
+        contato.setTenantId(contatoExistente.getOrganizationId());
+        return fornecedorContatoRepository.save(contato);
     }
 
     public void excluirContato(Integer idFornecedor, Integer idContato) {

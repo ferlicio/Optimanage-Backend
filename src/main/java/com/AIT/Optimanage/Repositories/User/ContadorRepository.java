@@ -2,12 +2,13 @@ package com.AIT.Optimanage.Repositories.User;
 
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
-import com.AIT.Optimanage.Models.User.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
 
 @Repository
 public interface ContadorRepository extends JpaRepository<Contador, Integer> {
 
-    Contador getByNomeTabelaAndOwnerUser(Tabela nomeTabela, User loggedUser);
+    Optional<Contador> findByNomeTabelaAndOrganizationId(Tabela nomeTabela, Integer organizationId);
 }

@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 public class ServicoResponse {
 
     private Integer id;
-    private Integer ownerUserId;
+    private Integer organizationId;
     private Integer fornecedorId;
     private Integer sequencialUsuario;
     private String nome;

@@ -1,7 +1,6 @@
 package com.AIT.Optimanage.Repositories;
 
 import com.AIT.Optimanage.Models.Servico;
-import com.AIT.Optimanage.Models.User.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,11 +11,11 @@ import java.util.Optional;
 @Repository
 public interface ServicoRepository extends JpaRepository<Servico, Integer> {
 
-    Page<Servico> findAllByOwnerUserAndAtivoTrue(User ownerUser, Pageable pageable);
+    Page<Servico> findAllByOrganizationIdAndAtivoTrue(Integer organizationId, Pageable pageable);
 
-    Optional<Servico> findByIdAndOwnerUserAndAtivoTrue(Integer idServico, User ownerUser);
+    Optional<Servico> findByIdAndOrganizationIdAndAtivoTrue(Integer idServico, Integer organizationId);
 
-    Optional<Servico> findByIdAndOwnerUser(Integer idServico, User ownerUser);
+    Optional<Servico> findByIdAndOrganizationId(Integer idServico, Integer organizationId);
 
     long countByOrganizationIdAndAtivoTrue(Integer organizationId);
 }

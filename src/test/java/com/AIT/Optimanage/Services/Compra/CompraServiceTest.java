@@ -55,6 +55,7 @@ class CompraServiceTest {
     void setup() {
         user = User.builder().build();
         user.setId(1);
+        user.setTenantId(1);
         CurrentUser.set(user);
     }
 
@@ -66,7 +67,6 @@ class CompraServiceTest {
     @Test
     void agendarCompraAtualizaStatusEData() {
         Compra compra = Compra.builder()
-                .ownerUser(user)
                 .sequencialUsuario(1)
                 .dataEfetuacao(LocalDate.now())
                 .valorFinal(BigDecimal.valueOf(100))
@@ -75,8 +75,9 @@ class CompraServiceTest {
                 .compraProdutos(Collections.singletonList(new CompraProduto()))
                 .build();
         compra.setId(10);
+        compra.setTenantId(1);
 
-        when(compraRepository.findByIdAndOwnerUser(10, user)).thenReturn(Optional.of(compra));
+        when(compraRepository.findByIdAndOrganizationId(10, 1)).thenReturn(Optional.of(compra));
         when(compraRepository.save(compra)).thenReturn(compra);
         when(compraMapper.toResponse(compra)).thenReturn(new CompraResponseDTO());
 
@@ -89,7 +90,6 @@ class CompraServiceTest {
     @Test
     void finalizarAgendamentoCompraSemPagamentoDefineStatusAguardandoPag() {
         Compra compra = Compra.builder()
-                .ownerUser(user)
                 .sequencialUsuario(1)
                 .dataEfetuacao(LocalDate.now())
                 .valorFinal(BigDecimal.valueOf(100))
@@ -98,8 +98,9 @@ class CompraServiceTest {
                 .compraProdutos(Collections.singletonList(new CompraProduto()))
                 .build();
         compra.setId(11);
+        compra.setTenantId(1);
 
-        when(compraRepository.findByIdAndOwnerUser(11, user)).thenReturn(Optional.of(compra));
+        when(compraRepository.findByIdAndOrganizationId(11, 1)).thenReturn(Optional.of(compra));
         when(compraRepository.save(compra)).thenReturn(compra);
         when(compraMapper.toResponse(compra)).thenReturn(new CompraResponseDTO());
 
@@ -111,7 +112,6 @@ class CompraServiceTest {
     @Test
     void finalizarAgendamentoCompraComPagamentoCompletoDefineStatusConcretizado() {
         Compra compra = Compra.builder()
-                .ownerUser(user)
                 .sequencialUsuario(1)
                 .dataEfetuacao(LocalDate.now())
                 .valorFinal(BigDecimal.valueOf(100))
@@ -120,8 +120,9 @@ class CompraServiceTest {
                 .compraProdutos(Collections.singletonList(new CompraProduto()))
                 .build();
         compra.setId(12);
+        compra.setTenantId(1);
 
-        when(compraRepository.findByIdAndOwnerUser(12, user)).thenReturn(Optional.of(compra));
+        when(compraRepository.findByIdAndOrganizationId(12, 1)).thenReturn(Optional.of(compra));
         when(compraRepository.save(compra)).thenReturn(compra);
         when(compraMapper.toResponse(compra)).thenReturn(new CompraResponseDTO());
 

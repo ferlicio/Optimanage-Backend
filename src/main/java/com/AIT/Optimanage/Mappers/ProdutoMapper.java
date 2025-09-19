@@ -13,14 +13,13 @@ import org.mapstruct.ReportingPolicy;
 public interface ProdutoMapper {
 
     @Mapping(target = "fornecedor", source = "fornecedorId", qualifiedByName = "idToFornecedor")
-    @Mapping(target = "ownerUser", ignore = true)
     Produto toEntity(ProdutoRequest request);
 
     @Mapping(target = "fornecedorId", source = "fornecedor.id")
     ProdutoRequest toRequest(Produto produto);
 
     @Mapping(target = "fornecedorId", source = "fornecedor.id")
-    @Mapping(target = "ownerUserId", source = "ownerUser.id")
+    @Mapping(target = "organizationId", source = "organizationId")
     ProdutoResponse toResponse(Produto produto);
 
     @Named("idToFornecedor")
