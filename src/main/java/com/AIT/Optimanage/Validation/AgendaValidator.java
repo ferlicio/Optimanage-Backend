@@ -121,7 +121,8 @@ public class AgendaValidator {
         }
 
         Integer organizationId = venda.getOrganizationId();
-        Integer userId = Optional.ofNullable(usuario).map(User::getId).orElse(venda.getCreatedBy());
+        Integer userId = Optional.ofNullable(venda.getCreatedBy())
+                .orElseGet(() -> Optional.ofNullable(usuario).map(User::getId).orElse(null));
         Agendamentos agendamentos = carregarAgendamentos(organizationId, userId, data);
         verificarConflitosUsuario(agendamentos, data, hora, duracao, null, venda.getId());
 
