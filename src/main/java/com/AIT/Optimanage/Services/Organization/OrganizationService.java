@@ -42,49 +42,56 @@ public class OrganizationService {
 
         validarLimiteUsuarios(plano, 0, 1);
 
-        // Create owner user first
-        UserRequest ownerReq = request.getOwner();
-        User owner = User.builder()
-                .nome(ownerReq.getNome())
-                .sobrenome(ownerReq.getSobrenome())
-                .email(ownerReq.getEmail())
-                .senha(passwordEncoder.encode(ownerReq.getSenha()))
-                .role(Role.OWNER)
-                .ativo(true)
-                .build();
-        // Temporarily set tenant to 0 until organization is persisted
-        owner.setTenantId(0);
-        owner = userRepository.save(owner);
+        Integer previousTenant = TenantContext.getTenantId();
+        try {
+            TenantContext.setTenantId(PlatformConstants.PLATFORM_ORGANIZATION_ID);
 
-        Organization organization = Organization.builder()
-                .ownerUser(owner)
-                .planoAtivoId(plano)
-                .cnpj(request.getCnpj())
-                .razaoSocial(request.getRazaoSocial())
-                .nomeFantasia(request.getNomeFantasia())
-                .telefone(request.getTelefone())
-                .email(request.getEmail())
-                .permiteOrcamento(request.getPermiteOrcamento())
-                .dataAssinatura(request.getDataAssinatura())
-                .build();
-        organization.setTenantId(0);
-        organization = organizationRepository.save(organization);
+            UserRequest ownerReq = request.getOwner();
+            User owner = User.builder()
+                    .nome(ownerReq.getNome())
+                    .sobrenome(ownerReq.getSobrenome())
+                    .email(ownerReq.getEmail())
+                    .senha(passwordEncoder.encode(ownerReq.getSenha()))
+                    .role(Role.OWNER)
+                    .ativo(true)
+                    .build();
+            owner = userRepository.save(owner);
 
-        // Update tenant for owner and organization to the generated id
-        Integer orgId = organization.getId();
-        owner.setTenantId(orgId);
-        owner.setOrganization(organization);
-        userRepository.save(owner);
-        organization.setTenantId(orgId);
-        organizationRepository.save(organization);
+            Organization organization = Organization.builder()
+                    .ownerUser(owner)
+                    .planoAtivoId(plano)
+                    .cnpj(request.getCnpj())
+                    .razaoSocial(request.getRazaoSocial())
+                    .nomeFantasia(request.getNomeFantasia())
+                    .telefone(request.getTelefone())
+                    .email(request.getEmail())
+                    .permiteOrcamento(request.getPermiteOrcamento())
+                    .dataAssinatura(request.getDataAssinatura())
+                    .build();
+            organization = organizationRepository.save(organization);
 
-        return OrganizationResponse.builder()
-                .id(orgId)
-                .cnpj(organization.getCnpj())
-                .razaoSocial(organization.getRazaoSocial())
-                .nomeFantasia(organization.getNomeFantasia())
-                .ownerUserId(owner.getId())
-                .build();
+            Integer orgId = organization.getId();
+            userRepository.updateOrganizationTenant(owner.getId(), orgId);
+            organizationRepository.updateOrganizationTenant(orgId);
+
+            owner.setTenantId(orgId);
+            owner.setOrganization(organization);
+            organization.setTenantId(orgId);
+
+            return OrganizationResponse.builder()
+                    .id(orgId)
+                    .cnpj(organization.getCnpj())
+                    .razaoSocial(organization.getRazaoSocial())
+                    .nomeFantasia(organization.getNomeFantasia())
+                    .ownerUserId(owner.getId())
+                    .build();
+        } finally {
+            if (previousTenant != null) {
+                TenantContext.setTenantId(previousTenant);
+            } else {
+                TenantContext.clear();
+            }
+        }
     }
 
     private void validarPermissaoCriacao(User creator) {
