@@ -54,7 +54,7 @@ public class ProdutoService {
     }
 
     @Transactional
-    @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "produtos", allEntries = true)
     public ProdutoResponse cadastrarProduto(ProdutoRequest request) {
         User loggedUser = CurrentUser.get();
         if (loggedUser == null) {
@@ -77,7 +77,7 @@ public class ProdutoService {
     }
 
     @Transactional
-    @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "produtos", allEntries = true)
     public ProdutoResponse editarProduto(Integer idProduto, ProdutoRequest request) {
         Produto produtoSalvo = buscarProdutoAtivo(idProduto);
         Produto produto = produtoMapper.toEntity(request);
@@ -88,7 +88,7 @@ public class ProdutoService {
     }
 
     @Transactional
-    @CacheEvict(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "produtos", allEntries = true)
     public void excluirProduto(Integer idProduto) {
         Produto produto = buscarProdutoAtivo(idProduto);
         produto.setAtivo(false);
