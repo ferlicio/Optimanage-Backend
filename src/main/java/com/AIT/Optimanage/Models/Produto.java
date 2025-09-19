@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Models;
 import com.AIT.Optimanage.Models.Venda.Compatibilidade.Compatibilidade;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import lombok.*;
