@@ -9,7 +9,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -22,6 +24,8 @@ public class CompraDTO {
     @NotNull
     private LocalDate dataEfetuacao = LocalDate.now();
     private LocalDate dataAgendada = null;
+    private LocalTime horaAgendada;
+    private Duration duracaoEstimada = Duration.ofHours(1);
     private LocalDate dataCobranca;
     @DecimalMin(value = "0.0")
     @NotNull

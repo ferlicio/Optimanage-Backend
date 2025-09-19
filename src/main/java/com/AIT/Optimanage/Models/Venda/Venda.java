@@ -13,7 +13,9 @@ import lombok.*;
 import com.AIT.Optimanage.Models.AuditableEntity;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -39,6 +41,9 @@ public class Venda extends AuditableEntity implements OwnableEntity {
     @Column(nullable = false)
     private LocalDate dataEfetuacao;
     private LocalDate dataAgendada;
+    private LocalTime horaAgendada;
+    @Column(name = "duracao_estimada")
+    private Duration duracaoEstimada;
     @Column(nullable = false)
     private LocalDate dataCobranca;
     @DecimalMin(value = "0.0")

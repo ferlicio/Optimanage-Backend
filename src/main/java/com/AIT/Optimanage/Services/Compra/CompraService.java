@@ -35,6 +35,7 @@ import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Validation.AgendaValidator;
 import com.AIT.Optimanage.Validation.CompraValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +54,9 @@ import org.springframework.security.access.AccessDeniedException;
 
 import com.AIT.Optimanage.Repositories.Compra.CompraFilters;
 import com.AIT.Optimanage.Repositories.FilterBuilder;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -75,6 +78,7 @@ public class CompraService {
     private final PagamentoCompraService pagamentoCompraService;
     private final CompraMapper compraMapper;
     private final CompraValidator compraValidator;
+    private final AgendaValidator agendaValidator;
     private final OrganizationRepository organizationRepository;
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
@@ -142,6 +146,8 @@ public class CompraService {
                 .sequencialUsuario(contador.getContagemAtual())
                 .dataEfetuacao(compraDTO.getDataEfetuacao())
                 .dataAgendada(compraDTO.getDataAgendada())
+                .horaAgendada(compraDTO.getHoraAgendada())
+                .duracaoEstimada(compraDTO.getDuracaoEstimada())
                 .valorFinal(BigDecimal.ZERO)
                 .condicaoPagamento(compraDTO.getCondicaoPagamento())
                 .valorPendente(BigDecimal.ZERO)
@@ -191,6 +197,8 @@ public class CompraService {
 
         compra.setDataEfetuacao(compraDTO.getDataEfetuacao());
         compra.setDataAgendada(compraDTO.getDataAgendada());
+        compra.setHoraAgendada(compraDTO.getHoraAgendada());
+        compra.setDuracaoEstimada(compraDTO.getDuracaoEstimada());
         compra.setCondicaoPagamento(compraDTO.getCondicaoPagamento());
         compra.setObservacoes(compraDTO.getObservacoes());
 
@@ -327,7 +335,8 @@ public class CompraService {
         return compraMapper.toResponse(salvo);
     }
 
-    public CompraResponseDTO agendarCompra(Integer idCompra, String dataAgendada) {
+    public CompraResponseDTO agendarCompra(Integer idCompra, String dataAgendada, String horaAgendada,
+                                           Integer duracaoMinutos) {
         Plano plano = obterPlanoAtual();
         garantirAgendaHabilitada(plano);
         Compra compra = getCompra(idCompra);
@@ -343,7 +352,17 @@ public class CompraService {
                     "Não é possível agendar uma compra com status " + compra.getStatus() + ".");
         }
 
-        compra.setDataAgendada(LocalDate.parse(dataAgendada));
+        LocalDate data = agendaValidator.validarDataAgendamento(dataAgendada);
+        LocalTime hora = agendaValidator.validarHoraAgendada(horaAgendada);
+        Duration duracao = agendaValidator.validarDuracao(duracaoMinutos);
+
+        Integer userId = Optional.ofNullable(compra.getCreatedBy())
+                .orElseGet(() -> Optional.ofNullable(CurrentUser.get()).map(User::getId).orElse(null));
+        agendaValidator.validarConflitosAgendamentoCompra(compra, userId, data, hora, duracao);
+
+        compra.setDataAgendada(data);
+        compra.setHoraAgendada(hora);
+        compra.setDuracaoEstimada(duracao);
         atualizarStatus(compra, StatusCompra.AGENDADA);
 
         Compra salvo = compraRepository.save(compra);
