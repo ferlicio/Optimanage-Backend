@@ -188,18 +188,11 @@ public class CompraService {
         }
 
         Compra compra = getCompra(idCompra);
-        Compra compraAtualizada = Compra.builder()
-                .fornecedor(compra.getFornecedor())
-                .sequencialUsuario(compra.getSequencialUsuario())
-                .dataEfetuacao(compraDTO.getDataEfetuacao())
-                .dataAgendada(compraDTO.getDataAgendada())
-                .valorFinal(BigDecimal.ZERO)
-                .condicaoPagamento(compraDTO.getCondicaoPagamento())
-                .valorPendente(BigDecimal.ZERO)
-                .status(compraDTO.getStatus())
-                .observacoes(compraDTO.getObservacoes())
-                .build();
-        compraAtualizada.setTenantId(compra.getOrganizationId());
+
+        compra.setDataEfetuacao(compraDTO.getDataEfetuacao());
+        compra.setDataAgendada(compraDTO.getDataAgendada());
+        compra.setCondicaoPagamento(compraDTO.getCondicaoPagamento());
+        compra.setObservacoes(compraDTO.getObservacoes());
 
         compra.getCompraProdutos().forEach(cp ->
                 inventoryService.reduzir(cp.getProduto().getId(), cp.getQuantidade(), InventorySource.COMPRA,
@@ -208,10 +201,10 @@ public class CompraService {
         compraProdutoRepository.deleteAll(compra.getCompraProdutos());
         compraServicoRepository.deleteAll(compra.getCompraServicos());
 
-        List<CompraProduto> compraProdutos = criarListaProdutos(compraDTO.getProdutos(), compraAtualizada);
-        List<CompraServico> compraServicos = criarListaServicos(compraDTO.getServicos(), compraAtualizada);
-        compraAtualizada.setCompraProdutos(compraProdutos);
-        compraAtualizada.setCompraServicos(compraServicos);
+        List<CompraProduto> compraProdutos = criarListaProdutos(compraDTO.getProdutos(), compra);
+        List<CompraServico> compraServicos = criarListaServicos(compraDTO.getServicos(), compra);
+        compra.setCompraProdutos(compraProdutos);
+        compra.setCompraServicos(compraServicos);
 
         BigDecimal valorProdutos = compraProdutos.stream()
                 .map(CompraProduto::getValorTotal)
@@ -225,9 +218,12 @@ public class CompraService {
                 ? BigDecimal.ZERO
                 : compra.getPagamentos().stream().map(CompraPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        compraAtualizada.setValorFinal(valorTotal);
-        compraAtualizada.setValorPendente(valorTotal.subtract(valorPago));
-        atualizarStatus(compra, compraAtualizada.getStatus());
+        compra.setValorFinal(valorTotal);
+        compra.setValorPendente(valorTotal.subtract(valorPago));
+
+        if (compraDTO.getStatus() != null && compraDTO.getStatus() != compra.getStatus()) {
+            atualizarStatus(compra, compraDTO.getStatus());
+        }
 
         compraProdutoRepository.saveAll(compraProdutos);
         compraServicoRepository.saveAll(compraServicos);
