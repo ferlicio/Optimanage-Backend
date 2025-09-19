@@ -140,6 +140,8 @@ public class VendaService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        BigDecimal descontoGeral = Optional.ofNullable(vendaDTO.getDescontoGeral()).orElse(BigDecimal.ZERO);
+
         Venda novaVenda = Venda.builder()
                 .cliente(cliente)
                 .sequencialUsuario(contador.getContagemAtual())
@@ -147,7 +149,7 @@ public class VendaService {
                 .dataAgendada(vendaDTO.getDataAgendada())
                 .dataCobranca(vendaDTO.getDataCobranca())
                 .valorTotal(BigDecimal.ZERO)
-                .descontoGeral(vendaDTO.getDescontoGeral())
+                .descontoGeral(descontoGeral)
                 .valorFinal(BigDecimal.ZERO)
                 .condicaoPagamento(vendaDTO.getCondicaoPagamento())
                 .alteracoesPermitidas(vendaDTO.getAlteracoesPermitidas())
@@ -198,29 +200,25 @@ public class VendaService {
         }
 
         Venda venda = getVenda(loggedUser, vendaId);
-        Venda vendaAtualizada = Venda.builder()
-                .cliente(venda.getCliente())
-                .sequencialUsuario(venda.getSequencialUsuario())
-                .dataEfetuacao(vendaDTO.getDataEfetuacao())
-                .dataAgendada(vendaDTO.getDataAgendada())
-                .dataCobranca(vendaDTO.getDataCobranca())
-                .condicaoPagamento(vendaDTO.getCondicaoPagamento())
-                .alteracoesPermitidas(vendaDTO.getAlteracoesPermitidas())
-                .valorPendente(venda.getValorFinal())
-                .status(vendaDTO.getStatus())
-                .observacoes(vendaDTO.getObservacoes())
-                .build();
-        vendaAtualizada.setTenantId(venda.getOrganizationId());
+        BigDecimal descontoGeralAtualizado = Optional.ofNullable(vendaDTO.getDescontoGeral()).orElse(BigDecimal.ZERO);
+
+        venda.setDataEfetuacao(vendaDTO.getDataEfetuacao());
+        venda.setDataAgendada(vendaDTO.getDataAgendada());
+        venda.setDataCobranca(vendaDTO.getDataCobranca());
+        venda.setCondicaoPagamento(vendaDTO.getCondicaoPagamento());
+        venda.setAlteracoesPermitidas(Optional.ofNullable(vendaDTO.getAlteracoesPermitidas()).orElse(0));
+        venda.setObservacoes(vendaDTO.getObservacoes());
+        venda.setDescontoGeral(descontoGeralAtualizado);
 
         // Devolve estoque dos produtos antigos e remove os registros
-        venda.getVendaProdutos().forEach(vp ->
+        Optional.ofNullable(venda.getVendaProdutos()).orElseGet(List::of).forEach(vp ->
                 inventoryService.incrementar(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
                         venda.getId(), "Reversão da venda #" + venda.getId()));
         vendaProdutoRepository.deleteByVenda(venda);
         vendaServicoRepository.deleteByVenda(venda);
 
-        List<VendaProduto> vendaProdutos = criarListaProdutos(vendaDTO.getProdutos(), vendaAtualizada);
-        List<VendaServico> vendaServicos = criarListaServicos(vendaDTO.getServicos(), vendaAtualizada);
+        List<VendaProduto> vendaProdutos = criarListaProdutos(vendaDTO.getProdutos(), venda);
+        List<VendaServico> vendaServicos = criarListaServicos(vendaDTO.getServicos(), venda);
 
         BigDecimal valorProdutos = vendaProdutos.stream()
                 .map(VendaProduto::getValorFinal)
@@ -234,14 +232,14 @@ public class VendaService {
                 ? BigDecimal.ZERO
                 : venda.getPagamentos().stream().map(VendaPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        vendaAtualizada.setValorTotal(valorTotal);
-        BigDecimal valorFinalAtualizado = valorTotal.multiply(BigDecimal.valueOf(100).subtract(vendaAtualizada.getDescontoGeral()))
+        venda.setValorTotal(valorTotal);
+        BigDecimal valorFinalAtualizado = valorTotal.multiply(BigDecimal.valueOf(100).subtract(descontoGeralAtualizado))
                 .divide(BigDecimal.valueOf(100));
-        vendaAtualizada.setValorFinal(valorFinalAtualizado);
-        vendaAtualizada.setValorPendente(valorFinalAtualizado.subtract(valorPago));
-        vendaAtualizada.setVendaProdutos(vendaProdutos);
-        vendaAtualizada.setVendaServicos(vendaServicos);
-        atualizarStatus(venda, vendaAtualizada.getStatus());
+        venda.setValorFinal(valorFinalAtualizado);
+        venda.setValorPendente(valorFinalAtualizado.subtract(valorPago));
+        venda.setVendaProdutos(vendaProdutos);
+        venda.setVendaServicos(vendaServicos);
+        atualizarStatus(venda, vendaDTO.getStatus());
 
         vendaProdutoRepository.saveAll(vendaProdutos);
         vendaServicoRepository.saveAll(vendaServicos);
@@ -446,18 +444,19 @@ public class VendaService {
                 .map(produtoDTO -> {
                     Produto produto = produtoService.buscarProdutoAtivo(produtoDTO.getProdutoId());
                     BigDecimal valorProduto = produto.getValorVenda().multiply(BigDecimal.valueOf(produtoDTO.getQuantidade()));
+                    BigDecimal descontoPercentual = Optional.ofNullable(produtoDTO.getDesconto()).orElse(BigDecimal.ZERO);
                     BigDecimal descontoProduto = valorProduto
-                            .multiply(produtoDTO.getDesconto().divide(BigDecimal.valueOf(100)));
+                            .multiply(descontoPercentual.divide(BigDecimal.valueOf(100)));
                     BigDecimal valorFinalProduto = valorProduto.subtract(descontoProduto);
 
-                    return VendaProduto.builder()
-                            .venda(venda)
-                            .produto(produto)
-                            .valorUnitario(produto.getValorVenda())
-                            .quantidade(produtoDTO.getQuantidade())
-                            .desconto(produtoDTO.getDesconto())
-                            .valorFinal(valorFinalProduto)
-                            .build();
+                    VendaProduto vendaProduto = new VendaProduto();
+                    vendaProduto.setVenda(venda);
+                    vendaProduto.setProduto(produto);
+                    vendaProduto.setValorUnitario(produto.getValorVenda());
+                    vendaProduto.setQuantidade(produtoDTO.getQuantidade());
+                    vendaProduto.setDesconto(descontoPercentual);
+                    vendaProduto.setValorFinal(valorFinalProduto);
+                    return vendaProduto;
                 })
                 .collect(Collectors.toList());
     }
@@ -482,18 +481,19 @@ public class VendaService {
             .map(servicoDTO -> {
                 Servico servico = servicoService.buscarServicoAtivo(servicoDTO.getServicoId());
                 BigDecimal valorServico = servico.getValorVenda().multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
+                BigDecimal descontoPercentual = Optional.ofNullable(servicoDTO.getDesconto()).orElse(BigDecimal.ZERO);
                 BigDecimal descontoServico = valorServico
-                        .multiply(servicoDTO.getDesconto().divide(BigDecimal.valueOf(100)));
+                        .multiply(descontoPercentual.divide(BigDecimal.valueOf(100)));
                 BigDecimal valorFinalServico = valorServico.subtract(descontoServico);
 
-                return VendaServico.builder()
-                        .venda(venda)
-                        .servico(servico)
-                        .valorUnitario(servico.getValorVenda())
-                        .quantidade(servicoDTO.getQuantidade())
-                        .desconto(servicoDTO.getDesconto())
-                        .valorFinal(valorFinalServico)
-                        .build();
+                VendaServico vendaServico = new VendaServico();
+                vendaServico.setVenda(venda);
+                vendaServico.setServico(servico);
+                vendaServico.setValorUnitario(servico.getValorVenda());
+                vendaServico.setQuantidade(servicoDTO.getQuantidade());
+                vendaServico.setDesconto(descontoPercentual);
+                vendaServico.setValorFinal(valorFinalServico);
+                return vendaServico;
             })
             .collect(Collectors.toList());
     }
