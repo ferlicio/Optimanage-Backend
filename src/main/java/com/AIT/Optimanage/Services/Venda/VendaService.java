@@ -362,16 +362,34 @@ public class VendaService {
         } else {
             throw new IllegalArgumentException("O pagamento informado não pertence a esta venda.");
         }
-        BigDecimal valorPago = venda.getPagamentos().stream()
+        List<VendaPagamento> pagamentosRealizados = pagamentoVendaService.listarPagamentosRealizadosVenda(loggedUser, venda.getId());
+
+        BigDecimal valorPago = pagamentosRealizados.stream()
                 .map(VendaPagamento::getValorPago)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        venda.setValorPendente(venda.getValorFinal().subtract(valorPago));
-        if (venda.getValorPendente().compareTo(BigDecimal.ZERO) <= 0) {
-            if (venda.getStatus() == StatusVenda.AGUARDANDO_PAG || venda.getStatus() == StatusVenda.PENDENTE) {
+
+        BigDecimal valorPendente = venda.getValorFinal().subtract(valorPago);
+        if (valorPendente.compareTo(BigDecimal.ZERO) < 0) {
+            valorPendente = BigDecimal.ZERO;
+        }
+        venda.setValorPendente(valorPendente);
+
+        if (valorPendente.compareTo(BigDecimal.ZERO) <= 0) {
+            if (venda.getStatus() != StatusVenda.CONCRETIZADA) {
                 atualizarStatus(venda, StatusVenda.PAGA);
             }
         } else if (valorPago.compareTo(BigDecimal.ZERO) > 0) {
-            atualizarStatus(venda, StatusVenda.PARCIALMENTE_PAGA);
+            if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
+                venda.setStatus(StatusVenda.PARCIALMENTE_PAGA);
+            } else {
+                atualizarStatus(venda, StatusVenda.PARCIALMENTE_PAGA);
+            }
+        } else {
+            if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
+                venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+            } else {
+                atualizarStatus(venda, StatusVenda.AGUARDANDO_PAG);
+            }
         }
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);

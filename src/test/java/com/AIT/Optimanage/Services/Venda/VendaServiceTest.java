@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Inventory.InventorySource;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
@@ -217,5 +218,87 @@ class VendaServiceTest {
         servico.setId(4);
         servico.setValorVenda(new BigDecimal("50.00"));
         return servico;
+    }
+
+    @Test
+    void estornarPagamentoVendaAtualizaSaldoEStatusParaParcialQuandoHaPagamentosRestantes() {
+        User loggedUser = new User();
+        loggedUser.setTenantId(5);
+
+        Plano plano = new Plano();
+        plano.setPagamentosHabilitados(true);
+
+        Venda venda = new Venda();
+        venda.setId(11);
+        venda.setTenantId(5);
+        venda.setValorFinal(new BigDecimal("100.00"));
+        venda.setValorPendente(BigDecimal.ZERO);
+        venda.setStatus(StatusVenda.PAGA);
+
+        VendaPagamento pagamentoEstornado = new VendaPagamento();
+        pagamentoEstornado.setId(1);
+        pagamentoEstornado.setValorPago(new BigDecimal("60.00"));
+        pagamentoEstornado.setStatusPagamento(StatusPagamento.PAGO);
+
+        VendaPagamento pagamentoRemanescente = new VendaPagamento();
+        pagamentoRemanescente.setId(2);
+        pagamentoRemanescente.setValorPago(new BigDecimal("40.00"));
+        pagamentoRemanescente.setStatusPagamento(StatusPagamento.PAGO);
+
+        venda.setPagamentos(List.of(pagamentoEstornado, pagamentoRemanescente));
+
+        when(planoService.obterPlanoUsuario(loggedUser)).thenReturn(Optional.of(plano));
+        when(vendaRepository.findByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
+        when(pagamentoVendaService.listarUmPagamento(loggedUser, pagamentoEstornado.getId())).thenReturn(pagamentoEstornado);
+        when(pagamentoVendaService.listarPagamentosRealizadosVenda(loggedUser, venda.getId()))
+                .thenReturn(List.of(pagamentoRemanescente));
+        when(vendaRepository.save(venda)).thenReturn(venda);
+        when(vendaMapper.toResponse(venda)).thenReturn(new VendaResponseDTO());
+
+        VendaResponseDTO responseDTO = vendaService.estornarPagamentoVenda(loggedUser, venda.getId(), pagamentoEstornado.getId());
+
+        assertNotNull(responseDTO);
+        assertEquals(new BigDecimal("60.00"), venda.getValorPendente());
+        assertEquals(StatusVenda.PARCIALMENTE_PAGA, venda.getStatus());
+        verify(pagamentoVendaService).estornarPagamento(loggedUser, pagamentoEstornado);
+        verify(pagamentoVendaService).listarPagamentosRealizadosVenda(loggedUser, venda.getId());
+    }
+
+    @Test
+    void estornarPagamentoVendaAtualizaSaldoEStatusParaAguardandoQuandoNaoHaPagamentos() {
+        User loggedUser = new User();
+        loggedUser.setTenantId(6);
+
+        Plano plano = new Plano();
+        plano.setPagamentosHabilitados(true);
+
+        Venda venda = new Venda();
+        venda.setId(22);
+        venda.setTenantId(6);
+        venda.setValorFinal(new BigDecimal("150.00"));
+        venda.setValorPendente(BigDecimal.ZERO);
+        venda.setStatus(StatusVenda.PAGA);
+
+        VendaPagamento pagamentoEstornado = new VendaPagamento();
+        pagamentoEstornado.setId(3);
+        pagamentoEstornado.setValorPago(new BigDecimal("150.00"));
+        pagamentoEstornado.setStatusPagamento(StatusPagamento.PAGO);
+
+        venda.setPagamentos(List.of(pagamentoEstornado));
+
+        when(planoService.obterPlanoUsuario(loggedUser)).thenReturn(Optional.of(plano));
+        when(vendaRepository.findByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
+        when(pagamentoVendaService.listarUmPagamento(loggedUser, pagamentoEstornado.getId())).thenReturn(pagamentoEstornado);
+        when(pagamentoVendaService.listarPagamentosRealizadosVenda(loggedUser, venda.getId())).thenReturn(List.of());
+        when(vendaRepository.save(venda)).thenReturn(venda);
+        when(vendaMapper.toResponse(venda)).thenReturn(new VendaResponseDTO());
+
+        VendaResponseDTO responseDTO = vendaService.estornarPagamentoVenda(loggedUser, venda.getId(), pagamentoEstornado.getId());
+
+        assertNotNull(responseDTO);
+        assertEquals(new BigDecimal("150.00"), venda.getValorPendente());
+        assertEquals(StatusVenda.AGUARDANDO_PAG, venda.getStatus());
+        verify(pagamentoVendaService).estornarPagamento(loggedUser, pagamentoEstornado);
+        verify(pagamentoVendaService).listarPagamentosRealizadosVenda(loggedUser, venda.getId());
     }
 }
