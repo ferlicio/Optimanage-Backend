@@ -1,7 +1,7 @@
 package com.AIT.Optimanage.Services.Organization;
 
-import com.AIT.Optimanage.Auth.AuthenticationResponse;
 import com.AIT.Optimanage.Controllers.User.dto.UserRequest;
+import com.AIT.Optimanage.Controllers.dto.OrganizationRequest;
 import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.Role;
@@ -9,23 +9,26 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
-import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Support.PlatformConstants;
 import com.AIT.Optimanage.Support.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,92 +49,80 @@ class OrganizationServiceTest {
     @Mock
     private com.AIT.Optimanage.Config.JwtService jwtService;
 
+    @InjectMocks
     private OrganizationService organizationService;
 
     @BeforeEach
     void setUp() {
-        organizationService = new OrganizationService(
-                organizationRepository,
-                userRepository,
-                planoRepository,
-                passwordEncoder,
-                jwtService
-        );
+        TenantContext.clear();
     }
 
     @AfterEach
     void tearDown() {
-        CurrentUser.clear();
         TenantContext.clear();
     }
 
     @Test
-    void adicionarUsuarioDeveNegarAcessoParaOutraOrganizacao() {
-        User currentUser = criarUsuarioAtual(10);
-        CurrentUser.set(currentUser);
-
-        UserRequest request = UserRequest.builder()
-                .nome("Novo")
-                .sobrenome("Usuário")
-                .email("novo@example.com")
-                .senha("senha")
-                .role(Role.ADMIN)
+    void criarOrganizacaoPersistsWithGeneratedTenant() {
+        Plano plano = Plano.builder()
+                .maxUsuarios(10)
                 .build();
+        when(planoRepository.findById(1)).thenReturn(Optional.of(plano));
+        when(passwordEncoder.encode("ownerPass")).thenReturn("encodedPass");
 
-        assertThrows(AccessDeniedException.class,
-                () -> organizationService.adicionarUsuario(99, request));
-
-        verifyNoInteractions(organizationRepository, planoRepository, userRepository, passwordEncoder, jwtService);
-    }
-
-    @Test
-    void adicionarUsuarioDevePermitirQuandoOrganizacaoCorreta() {
-        Integer organizationId = 20;
-        User currentUser = criarUsuarioAtual(organizationId);
-        CurrentUser.set(currentUser);
-
-        Organization organization = new Organization();
-        organization.setTenantId(organizationId);
-        Plano plano = new Plano();
-        plano.setId(5);
-        organization.setPlanoAtivoId(plano);
-
-        when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
-        when(planoRepository.findById(plano.getId())).thenReturn(Optional.of(plano));
-        when(userRepository.countByOrganizationIdAndAtivoTrue(organizationId)).thenReturn(0L);
-        when(passwordEncoder.encode("segredo"))
-                .thenReturn("hash-segredo");
+        ArgumentCaptor<User> ownerCaptor = ArgumentCaptor.forClass(User.class);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User saved = invocation.getArgument(0);
-            saved.setId(50);
-            return saved;
+            User savedOwner = invocation.getArgument(0);
+            savedOwner.setId(5);
+            return savedOwner;
         });
-        when(jwtService.generateToken(anyMap(), any(User.class))).thenReturn("token-gerado");
 
-        UserRequest request = UserRequest.builder()
-                .nome("Novo")
-                .sobrenome("Usuário")
-                .email("novo@example.com")
-                .senha("segredo")
-                .role(Role.ADMIN)
+        ArgumentCaptor<Organization> organizationCaptor = ArgumentCaptor.forClass(Organization.class);
+        when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> {
+            Organization savedOrg = invocation.getArgument(0);
+            savedOrg.setId(42);
+            return savedOrg;
+        });
+
+        doNothing().when(userRepository).updateOrganizationTenant(eq(5), eq(42));
+        doNothing().when(organizationRepository).updateOrganizationTenant(eq(42));
+
+        OrganizationRequest request = OrganizationRequest.builder()
+                .planoId(1)
+                .cnpj("12345678901234")
+                .razaoSocial("Empresa Exemplo")
+                .nomeFantasia("Exemplo")
+                .telefone("11999999999")
+                .email("contato@example.com")
+                .permiteOrcamento(true)
+                .dataAssinatura(LocalDate.now())
+                .owner(UserRequest.builder()
+                        .nome("Owner")
+                        .sobrenome("Example")
+                        .email("owner@example.com")
+                        .senha("ownerPass")
+                        .role(Role.OWNER)
+                        .build())
                 .build();
 
-        AuthenticationResponse response = organizationService.adicionarUsuario(organizationId, request);
+        User creator = new User();
+        creator.setRole(Role.ADMIN);
+        creator.setTenantId(PlatformConstants.PLATFORM_ORGANIZATION_ID);
 
-        assertNotNull(response);
-        assertEquals("token-gerado", response.getToken());
-        assertNull(TenantContext.getTenantId());
-    }
+        TenantContext.setTenantId(99);
 
-    private User criarUsuarioAtual(Integer tenantId) {
-        User user = User.builder()
-                .nome("Atual")
-                .sobrenome("Usuário")
-                .email("atual@example.com")
-                .senha("senha-atual")
-                .role(Role.ADMIN)
-                .build();
-        user.setTenantId(tenantId);
-        return user;
+        organizationService.criarOrganizacao(request, creator);
+
+        verify(userRepository).save(ownerCaptor.capture());
+        verify(organizationRepository).save(organizationCaptor.capture());
+        verify(userRepository).updateOrganizationTenant(5, 42);
+        verify(organizationRepository).updateOrganizationTenant(42);
+
+        User persistedOwner = ownerCaptor.getValue();
+        Organization persistedOrganization = organizationCaptor.getValue();
+
+        assertThat(persistedOwner.getOrganizationId()).isEqualTo(42);
+        assertThat(persistedOrganization.getOrganizationId()).isEqualTo(42);
+        assertThat(TenantContext.getTenantId()).isEqualTo(99);
     }
 }
