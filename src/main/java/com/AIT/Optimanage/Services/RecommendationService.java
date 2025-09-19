@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.access.AccessDeniedException;
 import jakarta.persistence.EntityNotFoundException;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -62,22 +64,19 @@ public class RecommendationService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
-        List<Object[]> historicoCliente = vendaRepository.findTopProdutosByCliente(clienteId, organizationId);
+        List<Object[]> historicoCliente = buscarHistoricoBase(clienteId, organizationId);
 
         Set<Integer> produtosCliente = historicoCliente.stream()
                 .map(r -> (Integer) r[0])
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-
-        if (produtosCliente.isEmpty()) {
-            return Collections.emptyList();
-        }
 
         List<Venda> vendas = vendaRepository.findAllWithProdutosByOrganization(organizationId);
 
         Set<Integer> produtosCompativeis = buscarProdutosCompativeis(loggedUser, contexto);
         boolean filtrarEstoquePositivo = apenasEstoquePositivo == null || apenasEstoquePositivo;
 
-        Map<Integer, Double> pontuacaoRecomendacoes = new HashMap<>();
+        Map<Integer, ProdutoPontuacao> pontuacaoDetalhada = new HashMap<>();
         LocalDate referencia = calcularDataReferencia(vendas);
 
         for (Venda venda : vendas) {
@@ -90,12 +89,12 @@ public class RecommendationService {
                     .map(Produto::getId)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
-            if (Collections.disjoint(produtosVenda, produtosCliente)) {
+            if (!produtosCliente.isEmpty() && Collections.disjoint(produtosVenda, produtosCliente)) {
                 continue;
             }
 
             double fatorRecencia = calcularFatorRecencia(venda, referencia);
-            long itensClienteNaVenda = venda.getVendaProdutos().stream()
+            long itensClienteNaVenda = produtosCliente.isEmpty() ? 0 : venda.getVendaProdutos().stream()
                     .map(VendaProduto::getProduto)
                     .filter(Objects::nonNull)
                     .map(Produto::getId)
@@ -108,7 +107,7 @@ public class RecommendationService {
                     continue;
                 }
                 Integer produtoId = produto.getId();
-                if (produtosCliente.contains(produtoId)) {
+                if (!produtosCliente.isEmpty() && produtosCliente.contains(produtoId)) {
                     continue;
                 }
 
@@ -120,15 +119,22 @@ public class RecommendationService {
                     score += COMPATIBILIDADE_BONUS;
                 }
 
-                pontuacaoRecomendacoes.merge(produtoId, score, Double::sum);
+                ProdutoPontuacao dados = pontuacaoDetalhada.computeIfAbsent(produtoId, ProdutoPontuacao::new);
+                dados.adicionar(score, quantidade, produto);
             }
         }
 
-        if (pontuacaoRecomendacoes.isEmpty()) {
+        if (pontuacaoDetalhada.isEmpty()) {
+            if (!produtosCompativeis.isEmpty()) {
+                return carregarProdutosPorPrioridade(produtosCompativeis, filtrarEstoquePositivo, organizationId);
+            }
             return Collections.emptyList();
         }
 
-        List<Integer> ordenadosPorPontuacao = pontuacaoRecomendacoes.entrySet().stream()
+        Map<Integer, Double> pontuacaoFinal = pontuacaoDetalhada.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().calcularPontuacaoFinal()));
+
+        List<Integer> ordenadosPorPontuacao = pontuacaoFinal.entrySet().stream()
                 .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
                 .map(Map.Entry::getKey)
                 .toList();
@@ -166,8 +172,37 @@ public class RecommendationService {
                 .toList();
     }
 
+    private List<ProdutoResponse> carregarProdutosPorPrioridade(Set<Integer> idsProdutos,
+                                                                boolean filtrarEstoquePositivo,
+                                                                Integer organizationId) {
+        if (idsProdutos.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Produto> produtos = produtoRepository
+                .findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(new ArrayList<>(idsProdutos), organizationId);
+
+        return produtos.stream()
+                .filter(produto -> !filtrarEstoquePositivo || estoqueDisponivel(produto))
+                .sorted(Comparator.comparingDouble(this::calcularPrioridadeCompatibilidade).reversed())
+                .limit(MAX_SUGESTOES)
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private double calcularPrioridadeCompatibilidade(Produto produto) {
+        return calcularMargemPercentual(produto) + calcularMargemAbsoluta(produto);
+    }
+
     private boolean estoqueDisponivel(Produto produto) {
         return Optional.ofNullable(produto.getQtdEstoque()).orElse(0) > 0;
+    }
+
+    private List<Object[]> buscarHistoricoBase(Integer clienteId, Integer organizationId) {
+        if (clienteId != null) {
+            return vendaRepository.findTopProdutosByCliente(clienteId, organizationId);
+        }
+        return vendaRepository.findTopProdutosByOrganization(organizationId);
     }
 
     private Set<Integer> buscarProdutosCompativeis(User loggedUser, String contexto) {
@@ -224,5 +259,62 @@ public class RecommendationService {
                 .terceirizado(produto.getTerceirizado())
                 .ativo(produto.getAtivo())
                 .build();
+    }
+
+    private static double calcularMargemPercentual(Produto produto) {
+        BigDecimal valorVenda = produto.getValorVenda();
+        BigDecimal custo = produto.getCusto();
+        if (valorVenda == null || custo == null || valorVenda.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0.0;
+        }
+        BigDecimal margem = valorVenda.subtract(custo);
+        if (margem.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0.0;
+        }
+        return margem.divide(valorVenda, 4, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private static double calcularMargemAbsoluta(Produto produto) {
+        BigDecimal valorVenda = produto.getValorVenda();
+        BigDecimal custo = produto.getCusto();
+        if (valorVenda == null || custo == null) {
+            return 0.0;
+        }
+        BigDecimal margem = valorVenda.subtract(custo);
+        return margem.max(BigDecimal.ZERO).doubleValue();
+    }
+
+    private static class ProdutoPontuacao {
+        private double scoreAcumulado;
+        private int recorrencia;
+        private double melhorMargemPercentual;
+        private double melhorMargemAbsoluta;
+
+        private ProdutoPontuacao() {
+            this.scoreAcumulado = 0.0;
+            this.recorrencia = 0;
+            this.melhorMargemPercentual = 0.0;
+            this.melhorMargemAbsoluta = 0.0;
+        }
+
+        private void adicionar(double score, double quantidade, Produto produto) {
+            this.scoreAcumulado += score;
+            this.recorrencia += Math.max(1, (int) Math.round(quantidade));
+            this.melhorMargemPercentual = Math.max(this.melhorMargemPercentual, RecommendationService.calcularMargemPercentual(produto));
+            this.melhorMargemAbsoluta = Math.max(this.melhorMargemAbsoluta, RecommendationService.calcularMargemAbsoluta(produto));
+        }
+
+        private double calcularPontuacaoFinal() {
+            double fatorRecorrencia = 1.0 + Math.log1p(recorrencia);
+            double fatorMargem = 1.0 + melhorMargemPercentual + normalizarMargemAbsoluta(melhorMargemAbsoluta);
+            return scoreAcumulado * fatorRecorrencia * fatorMargem;
+        }
+
+        private double normalizarMargemAbsoluta(double margemAbsoluta) {
+            if (margemAbsoluta <= 0) {
+                return 0.0;
+            }
+            return Math.min(0.5, margemAbsoluta / 100.0);
+        }
     }
 }
