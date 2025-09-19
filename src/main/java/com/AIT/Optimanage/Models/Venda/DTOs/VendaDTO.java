@@ -24,6 +24,7 @@ public class VendaDTO {
     private LocalDate dataAgendada = null;
     private LocalDate dataCobranca;
     @DecimalMin(value = "0.0")
+    @DecimalMax(value = "100.0")
     private BigDecimal descontoGeral = BigDecimal.ZERO;
     private String condicaoPagamento;
     @Min(0)
