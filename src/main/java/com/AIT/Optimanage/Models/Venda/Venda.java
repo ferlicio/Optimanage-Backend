@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Venda.Related.Alteracao;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import com.AIT.Optimanage.Models.OwnableEntity;
