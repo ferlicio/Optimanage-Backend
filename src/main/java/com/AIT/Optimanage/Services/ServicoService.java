@@ -54,7 +54,7 @@ public class ServicoService {
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "servicos", allEntries = true)
     public ServicoResponse cadastrarServico(ServicoRequest request) {
         User loggedUser = CurrentUser.get();
         if (loggedUser == null) {
@@ -76,7 +76,7 @@ public class ServicoService {
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "servicos", allEntries = true)
     public ServicoResponse editarServico(Integer idServico, ServicoRequest request) {
         User loggedUser = CurrentUser.get();
         Servico servicoSalvo = buscarServicoAtivo(idServico);
@@ -88,7 +88,7 @@ public class ServicoService {
     }
 
     @Transactional
-    @CacheEvict(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId()")
+    @CacheEvict(value = "servicos", allEntries = true)
     public void excluirServico(Integer idServico) {
         User loggedUser = CurrentUser.get();
         Servico servico = buscarServicoAtivo(idServico);
