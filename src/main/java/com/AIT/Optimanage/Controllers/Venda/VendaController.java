@@ -153,10 +153,16 @@ public class VendaController extends V1BaseController {
     @PutMapping("/{idVenda}/agendar")
     @Operation(summary = "Agendar venda", description = "Agenda uma venda")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<VendaResponseDTO> agendarVenda(@AuthenticationPrincipal User loggedUser,
-                                              @PathVariable("idVenda") Integer idVenda,
-                                              @RequestParam String dataAgendada) {
-        return ok(vendaService.agendarVenda(loggedUser, idVenda, dataAgendada));
+    public ResponseEntity<?> agendarVenda(@AuthenticationPrincipal User loggedUser,
+                                          @PathVariable("idVenda") Integer idVenda,
+                                          @RequestParam String dataAgendada,
+                                          @RequestParam String horaAgendada,
+                                          @RequestParam(value = "duracaoMinutos", required = false) Integer duracaoMinutos) {
+        try {
+            return ok(vendaService.agendarVenda(loggedUser, idVenda, dataAgendada, horaAgendada, duracaoMinutos));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return badRequest(ex.getMessage());
+        }
     }
 
     @PutMapping("/{idVenda}/finalizar-agendamento")

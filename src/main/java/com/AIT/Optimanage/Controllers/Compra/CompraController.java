@@ -121,9 +121,15 @@ public class CompraController extends V1BaseController {
     @PutMapping("/{idCompra}/agendar")
     @Operation(summary = "Agendar compra", description = "Agenda uma compra")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-      public ResponseEntity<CompraResponseDTO> agendarCompra(@PathVariable("idCompra") Integer idCompra,
-                                                 @RequestParam String dataAgendada) {
-          return ok(compraService.agendarCompra(idCompra, dataAgendada));
+      public ResponseEntity<?> agendarCompra(@PathVariable("idCompra") Integer idCompra,
+                                             @RequestParam String dataAgendada,
+                                             @RequestParam String horaAgendada,
+                                             @RequestParam(value = "duracaoMinutos", required = false) Integer duracaoMinutos) {
+          try {
+              return ok(compraService.agendarCompra(idCompra, dataAgendada, horaAgendada, duracaoMinutos));
+          } catch (IllegalArgumentException | IllegalStateException ex) {
+              return badRequest(ex.getMessage());
+          }
       }
 
     @PutMapping("/{idCompra}/finalizar-agendamento")

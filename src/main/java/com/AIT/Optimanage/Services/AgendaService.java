@@ -26,7 +26,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.MonthDay;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -83,33 +85,34 @@ public class AgendaService {
                 .findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(organizationId, StatusPagamento.PENDENTE, now);
         compras.stream()
                 .filter(p -> withinRange(p.getDataVencimento(), inicio, fim))
-                .map(pagamento -> criarEvento(TipoEvento.PAGAMENTO, TipoEvento.COMPRA, pagamento.getDataVencimento(), pagamento.getId(),
-                        montarTituloPagamentoCompra(pagamento), montarDescricaoPagamentoCompra(pagamento)))
+                .map(pagamento -> criarEvento(TipoEvento.PAGAMENTO, TipoEvento.COMPRA, pagamento.getDataVencimento(), null, null,
+                        pagamento.getId(), montarTituloPagamentoCompra(pagamento), montarDescricaoPagamentoCompra(pagamento)))
                 .forEach(eventos::add);
 
         List<VendaPagamento> vendas = pagamentoVendaRepository
                 .findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(organizationId, StatusPagamento.PENDENTE, now);
         vendas.stream()
                 .filter(p -> withinRange(p.getDataVencimento(), inicio, fim))
-                .map(pagamento -> criarEvento(TipoEvento.PAGAMENTO, TipoEvento.VENDA, pagamento.getDataVencimento(), pagamento.getId(),
-                        montarTituloPagamentoVenda(pagamento), montarDescricaoPagamentoVenda(pagamento)))
+                .map(pagamento -> criarEvento(TipoEvento.PAGAMENTO, TipoEvento.VENDA, pagamento.getDataVencimento(), null, null,
+                        pagamento.getId(), montarTituloPagamentoVenda(pagamento), montarDescricaoPagamentoVenda(pagamento)))
                 .forEach(eventos::add);
 
         compraRepository.findAgendadasNoPeriodo(organizationId, userId, inicio, fim).stream()
                 .filter(compra -> withinRange(compra.getDataAgendada(), inicio, fim))
-                .map(compra -> criarEvento(TipoEvento.AGENDAMENTO, TipoEvento.COMPRA, compra.getDataAgendada(), compra.getId(),
-                        montarTituloCompra(compra), montarDescricaoCompra(compra)))
+                .map(compra -> criarEvento(TipoEvento.AGENDAMENTO, TipoEvento.COMPRA, compra.getDataAgendada(),
+                        compra.getHoraAgendada(), compra.getDuracaoEstimada(), compra.getId(), montarTituloCompra(compra),
+                        montarDescricaoCompra(compra)))
                 .forEach(eventos::add);
 
         vendaRepository.findAgendadasNoPeriodo(organizationId, userId, inicio, fim).stream()
                 .filter(venda -> withinRange(venda.getDataAgendada(), inicio, fim))
-                .map(venda -> criarEvento(TipoEvento.AGENDAMENTO, TipoEvento.VENDA, venda.getDataAgendada(), venda.getId(),
-                        montarTituloVenda(venda), montarDescricaoVenda(venda)))
+                .map(venda -> criarEvento(TipoEvento.AGENDAMENTO, TipoEvento.VENDA, venda.getDataAgendada(), venda.getHoraAgendada(),
+                        venda.getDuracaoEstimada(), venda.getId(), montarTituloVenda(venda), montarDescricaoVenda(venda)))
                 .forEach(eventos::add);
 
         clienteContatoRepository.findAllByClienteOrganizationIdAndCreatedBy(organizationId, userId).stream()
                 .map(contato -> normalizarAniversario(contato.getAniversario(), inicio, fim)
-                        .map(data -> criarEvento(TipoEvento.ANIVERSARIO, TipoEvento.ANIVERSARIO, data, contato.getId(),
+                        .map(data -> criarEvento(TipoEvento.ANIVERSARIO, TipoEvento.ANIVERSARIO, data, null, null, contato.getId(),
                                 contato.getNome(), "Aniversário de " + contato.getNome())))
                 .flatMap(Optional::stream)
                 .forEach(eventos::add);
@@ -127,6 +130,7 @@ public class AgendaService {
         }
 
         Comparator<EventoAgenda> comparator = Comparator.comparing(EventoAgenda::getData)
+                .thenComparing(evento -> ofNullable(evento.getHora()).orElse(LocalTime.MIN))
                 .thenComparing(evento -> ofNullable(evento.getTipo()).map(Enum::name).orElse(""))
                 .thenComparing(evento -> ofNullable(evento.getReferencia()).map(Enum::name).orElse(""))
                 .thenComparing(evento -> ofNullable(evento.getId()).orElse(0));
@@ -141,11 +145,14 @@ public class AgendaService {
         return new PageImpl<>(content, pageable, ordenados.size());
     }
 
-    private EventoAgenda criarEvento(TipoEvento tipo, TipoEvento referencia, LocalDate data, Integer id, String titulo, String descricao) {
+    private EventoAgenda criarEvento(TipoEvento tipo, TipoEvento referencia, LocalDate data, LocalTime hora, Duration duracao,
+            Integer id, String titulo, String descricao) {
         return EventoAgenda.builder()
                 .tipo(tipo)
                 .referencia(referencia)
                 .data(data)
+                .hora(hora)
+                .duracao(duracao)
                 .id(id)
                 .titulo(titulo)
                 .descricao(descricao)

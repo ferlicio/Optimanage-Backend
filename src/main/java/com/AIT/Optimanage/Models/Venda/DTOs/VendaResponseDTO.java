@@ -8,7 +8,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -22,6 +24,8 @@ public class VendaResponseDTO {
     private Integer sequencialUsuario;
     private LocalDate dataEfetuacao;
     private LocalDate dataAgendada;
+    private LocalTime horaAgendada;
+    private Duration duracaoEstimada;
     private LocalDate dataCobranca;
     private BigDecimal valorTotal;
     private BigDecimal descontoGeral;

@@ -41,6 +41,7 @@ import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Validation.AgendaValidator;
 import com.AIT.Optimanage.Validation.VendaValidator;
 import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.EntityNotFoundException;
@@ -57,7 +58,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -81,6 +84,7 @@ public class VendaService {
     private final PaymentConfigService paymentConfigService;
     private final VendaMapper vendaMapper;
     private final VendaValidator vendaValidator;
+    private final AgendaValidator agendaValidator;
     private final OrganizationRepository organizationRepository;
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
@@ -147,6 +151,8 @@ public class VendaService {
                 .sequencialUsuario(contador.getContagemAtual())
                 .dataEfetuacao(vendaDTO.getDataEfetuacao())
                 .dataAgendada(vendaDTO.getDataAgendada())
+                .horaAgendada(vendaDTO.getHoraAgendada())
+                .duracaoEstimada(vendaDTO.getDuracaoEstimada())
                 .dataCobranca(vendaDTO.getDataCobranca())
                 .valorTotal(BigDecimal.ZERO)
                 .descontoGeral(descontoGeral)
@@ -204,6 +210,8 @@ public class VendaService {
 
         venda.setDataEfetuacao(vendaDTO.getDataEfetuacao());
         venda.setDataAgendada(vendaDTO.getDataAgendada());
+        venda.setHoraAgendada(vendaDTO.getHoraAgendada());
+        venda.setDuracaoEstimada(vendaDTO.getDuracaoEstimada());
         venda.setDataCobranca(vendaDTO.getDataCobranca());
         venda.setCondicaoPagamento(vendaDTO.getCondicaoPagamento());
         venda.setAlteracoesPermitidas(Optional.ofNullable(vendaDTO.getAlteracoesPermitidas()).orElse(0));
@@ -377,7 +385,8 @@ public class VendaService {
         return vendaMapper.toResponse(salvo);
     }
 
-    public VendaResponseDTO agendarVenda(User loggedUser, Integer idVenda, String dataAgendada) {
+    public VendaResponseDTO agendarVenda(User loggedUser, Integer idVenda, String dataAgendada, String horaAgendada,
+                                         Integer duracaoMinutos) {
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirAgendaHabilitada(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -385,10 +394,20 @@ public class VendaService {
         if (venda.getVendaServicos().isEmpty()){
             throw new IllegalArgumentException("Não é possível agendar uma venda sem serviços.");
         }
-        if (venda.getStatus() == StatusVenda.PENDENTE || venda.getStatus() == StatusVenda.PAGA) {
-            venda.setDataAgendada(LocalDate.parse(dataAgendada));
-            venda.setStatus(StatusVenda.AGENDADA);
+        if (venda.getStatus() != StatusVenda.PENDENTE && venda.getStatus() != StatusVenda.PAGA) {
+            throw new IllegalStateException(
+                    "Não é possível agendar uma venda com status " + venda.getStatus() + ".");
         }
+
+        LocalDate data = agendaValidator.validarDataAgendamento(dataAgendada);
+        LocalTime hora = agendaValidator.validarHoraAgendada(horaAgendada);
+        Duration duracao = agendaValidator.validarDuracao(duracaoMinutos);
+        agendaValidator.validarConflitosAgendamentoVenda(loggedUser, venda, data, hora, duracao);
+
+        venda.setDataAgendada(data);
+        venda.setHoraAgendada(hora);
+        venda.setDuracaoEstimada(duracao);
+        venda.setStatus(StatusVenda.AGENDADA);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
