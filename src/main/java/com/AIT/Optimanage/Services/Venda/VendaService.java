@@ -225,9 +225,7 @@ public class VendaService {
         venda.setDescontoGeral(descontoGeralAtualizado);
 
         // Devolve estoque dos produtos antigos e remove os registros
-        Optional.ofNullable(venda.getVendaProdutos()).orElseGet(List::of).forEach(vp ->
-                inventoryService.incrementar(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
-                        venda.getId(), "Reversão da venda #" + venda.getId()));
+        devolverProdutosParaEstoque(venda, "Reversão da venda #" + venda.getId());
         vendaProdutoRepository.deleteByVenda(venda);
         vendaServicoRepository.deleteByVenda(venda);
 
@@ -354,14 +352,20 @@ public class VendaService {
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
-        if (venda.getStatus() == StatusVenda.CONCRETIZADA || venda.getStatus() == StatusVenda.PAGA) {
-            venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+        if (venda.getStatus() == StatusVenda.CANCELADA) {
+            throw new IllegalArgumentException("Não é possível estornar uma venda cancelada.");
         }
-        venda.setValorPendente(venda.getValorFinal());
-        venda.getPagamentos().forEach( pagamento
-                -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
-                        { pagamentoVendaService.estornarPagamento(loggedUser, pagamento); }
-                });
+        venda.getPagamentos().forEach(pagamento -> {
+            if (pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
+                pagamentoVendaService.estornarPagamento(loggedUser, pagamento);
+            }
+        });
+        venda.setValorPendente(Optional.ofNullable(venda.getValorFinal()).orElse(BigDecimal.ZERO));
+        if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
+            venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+        } else {
+            atualizarStatus(venda, StatusVenda.AGUARDANDO_PAG);
+        }
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
@@ -470,12 +474,18 @@ public class VendaService {
         return vendaMapper.toResponse(salvo);
     }
 
+    @Transactional
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO cancelarVenda(User loggedUser, Integer idVenda) {
         Venda venda = getVenda(loggedUser, idVenda);
+        if (venda.getStatus() == StatusVenda.CANCELADA) {
+            return vendaMapper.toResponse(venda);
+        }
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             throw new IllegalArgumentException("Uma venda concretizada não pode ser cancelada.");
         }
+        devolverProdutosParaEstoque(venda, "Cancelamento da venda #" + venda.getId());
+        venda.setValorPendente(BigDecimal.ZERO);
         venda.setStatus(StatusVenda.CANCELADA);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
@@ -596,5 +606,11 @@ public class VendaService {
         if (!Boolean.TRUE.equals(plano.getAgendaHabilitada())) {
             throw new AccessDeniedException("Agenda não está habilitada no plano atual");
         }
+    }
+
+    private void devolverProdutosParaEstoque(Venda venda, String descricao) {
+        Optional.ofNullable(venda.getVendaProdutos()).orElseGet(List::of).forEach(vp ->
+                inventoryService.incrementar(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
+                        venda.getId(), descricao));
     }
 }
