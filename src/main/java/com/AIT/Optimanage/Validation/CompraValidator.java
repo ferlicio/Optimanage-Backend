@@ -27,7 +27,7 @@ public class CompraValidator {
             throw new IllegalArgumentException("Usuário não tem permissão para criar orçamentos");
         }
         if (compraDTO.hasNoItems()) {
-            throw new IllegalArgumentException("Uma venda deve ter no mínimo um produto ou serviço");
+            throw new IllegalArgumentException("Uma compra deve ter no mínimo um produto ou serviço");
         }
     }
 }
