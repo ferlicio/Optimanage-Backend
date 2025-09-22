@@ -302,8 +302,10 @@ public class CompraService {
         Plano plano = obterPlanoAtual();
         garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
-        reverterEstoqueCompra(compra, "Estorno integral da compra #" + compra.getId());
-        if (compra.getStatus() == StatusCompra.CONCRETIZADO || compra.getStatus() == StatusCompra.PAGO) {
+        boolean deveReverterEstoque = compra.getStatus() == StatusCompra.CONCRETIZADO
+                || compra.getStatus() == StatusCompra.PAGO;
+        if (deveReverterEstoque) {
+            reverterEstoqueCompra(compra, "Estorno integral da compra #" + compra.getId());
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         }
         compra.setValorPendente(compra.getValorFinal());
@@ -402,8 +404,8 @@ public class CompraService {
     @CacheEvict(value = "compras", allEntries = true)
     public CompraResponseDTO cancelarCompra(Integer idCompra) {
         Compra compra = getCompra(idCompra);
-        reverterEstoqueCompra(compra, "Cancelamento da compra #" + compra.getId());
         atualizarStatus(compra, StatusCompra.CANCELADO);
+        reverterEstoqueCompra(compra, "Cancelamento da compra #" + compra.getId());
         Compra salvo = compraRepository.save(compra);
         return compraMapper.toResponse(salvo);
     }
