@@ -209,9 +209,7 @@ public class CompraService {
         compra.setCondicaoPagamento(compraDTO.getCondicaoPagamento());
         compra.setObservacoes(compraDTO.getObservacoes());
 
-        compra.getCompraProdutos().forEach(cp ->
-                inventoryService.reduzir(cp.getProduto().getId(), cp.getQuantidade(), InventorySource.COMPRA,
-                        compra.getId(), "Ajuste de edição da compra #" + compra.getId()));
+        reverterEstoqueCompra(compra, "Ajuste de edição da compra #" + compra.getId());
 
         compraProdutoRepository.deleteAll(compra.getCompraProdutos());
         compraServicoRepository.deleteAll(compra.getCompraServicos());
@@ -304,6 +302,7 @@ public class CompraService {
         Plano plano = obterPlanoAtual();
         garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
+        reverterEstoqueCompra(compra, "Estorno integral da compra #" + compra.getId());
         if (compra.getStatus() == StatusCompra.CONCRETIZADO || compra.getStatus() == StatusCompra.PAGO) {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         }
@@ -403,9 +402,30 @@ public class CompraService {
     @CacheEvict(value = "compras", allEntries = true)
     public CompraResponseDTO cancelarCompra(Integer idCompra) {
         Compra compra = getCompra(idCompra);
+        reverterEstoqueCompra(compra, "Cancelamento da compra #" + compra.getId());
         atualizarStatus(compra, StatusCompra.CANCELADO);
         Compra salvo = compraRepository.save(compra);
         return compraMapper.toResponse(salvo);
+    }
+
+    private void reverterEstoqueCompra(Compra compra, String descricao) {
+        if (compra == null) {
+            return;
+        }
+
+        List<CompraProduto> itens = compra.getCompraProdutos();
+        if (itens == null || itens.isEmpty()) {
+            return;
+        }
+
+        itens.stream()
+                .filter(item -> item != null && item.getProduto() != null)
+                .forEach(item -> inventoryService.reduzir(
+                        item.getProduto().getId(),
+                        item.getQuantidade(),
+                        InventorySource.COMPRA,
+                        compra.getId(),
+                        descricao));
     }
 
     private List<CompraProduto> criarListaProdutos(List<CompraProdutoDTO> produtosDTO, Compra compra) {
