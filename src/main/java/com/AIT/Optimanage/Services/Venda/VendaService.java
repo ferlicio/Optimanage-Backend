@@ -469,6 +469,7 @@ public class VendaService {
         return vendaMapper.toResponse(salvo);
     }
 
+    @Transactional
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO cancelarVenda(User loggedUser, Integer idVenda) {
         Venda venda = getVenda(loggedUser, idVenda);
