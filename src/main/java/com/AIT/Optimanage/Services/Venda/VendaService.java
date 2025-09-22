@@ -37,10 +37,12 @@ import com.AIT.Optimanage.Repositories.Venda.VendaServicoRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import com.AIT.Optimanage.Services.InventoryService;
+import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
-import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Services.common.StatusTransitionPolicy;
+import com.AIT.Optimanage.Services.common.StatusTransitionPolicies;
 import com.AIT.Optimanage.Validation.AgendaValidator;
 import com.AIT.Optimanage.Validation.VendaValidator;
 import com.AIT.Optimanage.Security.CurrentUser;
@@ -71,6 +73,9 @@ import java.math.RoundingMode;
 @RequiredArgsConstructor
 @Slf4j
 public class VendaService {
+
+    private static final StatusTransitionPolicy<StatusVenda, Venda> STATUS_TRANSITION_POLICY =
+            StatusTransitionPolicies.vendaPolicy();
 
     private final VendaRepository vendaRepository;
     private final ClienteService clienteService;
@@ -543,73 +548,7 @@ public class VendaService {
     }
 
     public void atualizarStatus(Venda venda, StatusVenda novoStatus) {
-        StatusVenda statusAtual = venda.getStatus();
-
-        if (statusAtual == novoStatus) {
-            throw new IllegalStateException("A venda já está neste status.");
-        }
-
-        switch (novoStatus) {
-            case ORCAMENTO:
-                throw new IllegalStateException("Não é possível voltar para o status ORÇAMENTO.");
-
-            case PENDENTE:
-                if (statusAtual != StatusVenda.ORCAMENTO) {
-                    throw new IllegalStateException("Só é possível transformar um orçamento em venda a partir do status ORCAMENTO.");
-                }
-
-            case AGENDADA:
-                if (statusAtual == StatusVenda.CONCRETIZADA || statusAtual == StatusVenda.CANCELADA) {
-                    throw new IllegalStateException("Não é possivel agendar uma venda cancelada ou concretizada.");
-                }
-                break;
-
-            case AGUARDANDO_PAG:
-                if (statusAtual == StatusVenda.CONCRETIZADA || statusAtual == StatusVenda.CANCELADA) {
-                    throw new IllegalStateException("Uma venda CONCRETIZADA ou CANCELADA não pode voltar para o estado de aguardando pagamento.");
-                }
-                break;
-
-            case PARCIALMENTE_PAGA:
-                if (statusAtual == StatusVenda.CONCRETIZADA || statusAtual == StatusVenda.CANCELADA) {
-                    throw new IllegalStateException("Uma venda CONCRETIZADA ou CANCELADA não pode voltar para o estado de parcialmente paga.");
-                }
-                if (venda.getValorFinal().equals(venda.getValorPendente()) || venda.getPagamentos().isEmpty()) {
-                    throw new IllegalStateException("A venda não pode ser parcialmente paga sem um pagamento anterior.");
-                }
-                break;
-
-            case PAGA:
-                if (statusAtual == StatusVenda.CONCRETIZADA || statusAtual == StatusVenda.CANCELADA) {
-                    throw new IllegalStateException("Uma venda CONCRETIZADA ou CANCELADA não pode voltar para o estado de paga.");
-                }
-                if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
-                    throw new IllegalStateException("A venda não pode ser paga sem o pagamento completo.");
-                }
-                break;
-
-            case CONCRETIZADA:
-                if (statusAtual == StatusVenda.CANCELADA) {
-                    throw new IllegalStateException("Uma venda cancelada não pode ser concretizada.");
-                }
-                if (statusAtual == StatusVenda.ORCAMENTO) {
-                    throw new IllegalStateException("Um orçamento não pode ser concretizado.");
-                }
-                if (venda.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
-                    throw new IllegalStateException("A venda não pode ser concretizada sem o pagamento completo.");
-                }
-                break;
-
-            case CANCELADA:
-                if (statusAtual == StatusVenda.CONCRETIZADA) {
-                    throw new IllegalStateException("Uma venda concretizada não pode ser cancelada.");
-                }
-                break;
-
-            default:
-                throw new IllegalArgumentException("Status desconhecido.");
-        }
-
+        STATUS_TRANSITION_POLICY.validate(venda.getStatus(), novoStatus, venda);
         venda.setStatus(novoStatus);
     }
 

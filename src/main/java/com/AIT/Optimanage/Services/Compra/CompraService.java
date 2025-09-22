@@ -1,40 +1,44 @@
 package com.AIT.Optimanage.Services.Compra;
 
+import com.AIT.Optimanage.Events.CompraCriadaEvent;
+import com.AIT.Optimanage.Events.InventoryAdjustment;
+import com.AIT.Optimanage.Mappers.CompraMapper;
 import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Compra.CompraPagamento;
 import com.AIT.Optimanage.Models.Compra.CompraProduto;
 import com.AIT.Optimanage.Models.Compra.CompraServico;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraDTO;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraProdutoDTO;
-import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoDTO;
 import com.AIT.Optimanage.Models.Compra.DTOs.CompraResponseDTO;
-import com.AIT.Optimanage.Mappers.CompraMapper;
+import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoDTO;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Compra.Search.CompraSearch;
-import com.AIT.Optimanage.Events.CompraCriadaEvent;
-import com.AIT.Optimanage.Events.InventoryAdjustment;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Inventory.InventorySource;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Models.PagamentoDTO;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
-import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
-import com.AIT.Optimanage.Models.Organization.Organization;
-import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Repositories.Compra.CompraFilters;
 import com.AIT.Optimanage.Repositories.Compra.CompraProdutoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
+import com.AIT.Optimanage.Repositories.FilterBuilder;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.InventoryService;
+import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
-import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Services.common.StatusTransitionPolicy;
+import com.AIT.Optimanage.Services.common.StatusTransitionPolicies;
 import com.AIT.Optimanage.Validation.AgendaValidator;
 import com.AIT.Optimanage.Validation.CompraValidator;
 import lombok.RequiredArgsConstructor;
@@ -66,6 +70,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class CompraService {
+
+    private static final StatusTransitionPolicy<StatusCompra, Compra> STATUS_TRANSITION_POLICY =
+            StatusTransitionPolicies.compraPolicy();
 
     private final CompraRepository compraRepository;
     private final FornecedorService fornecedorService;
@@ -455,65 +462,7 @@ public class CompraService {
     }
 
     private void atualizarStatus(Compra compra, StatusCompra novoStatus) {
-        StatusCompra statusAtual = compra.getStatus();
-
-        if (statusAtual == novoStatus) {
-            throw new IllegalStateException("A compra já está neste status.");
-        }
-
-        switch (novoStatus) {
-            case ORCAMENTO:
-                throw new IllegalStateException("Não é possível voltar para o status ORÇAMENTO.");
-
-            case AGUARDANDO_EXECUCAO:
-                if (statusAtual != StatusCompra.ORCAMENTO) {
-                    throw new IllegalStateException("Só é possível transformar um orçamento em pedido se estiver no status ORÇAMENTO.");
-                }
-                break;
-
-            case AGENDADA:
-                if (statusAtual == StatusCompra.CONCRETIZADO || statusAtual == StatusCompra.CANCELADO) {
-                    throw new IllegalStateException("Não é possivel agendar uma compra cancelada ou concretizada.");
-                }
-                break;
-
-            case AGUARDANDO_PAG:
-                if (statusAtual != StatusCompra.AGUARDANDO_EXECUCAO && statusAtual != StatusCompra.ORCAMENTO && statusAtual != StatusCompra.AGENDADA) {
-                    throw new IllegalStateException("A compra só pode aguardar pagamento se o pedido já foi realizado.");
-                }
-                break;
-
-            case PARCIALMENTE_PAGO:
-                if (statusAtual != StatusCompra.AGUARDANDO_PAG && statusAtual != StatusCompra.AGUARDANDO_EXECUCAO) {
-                    throw new IllegalStateException("Uma compra só pode ser parcialmente paga se estiver aguardando pagamento ou já parcialmente paga.");
-                }
-                break;
-
-            case PAGO:
-                if (statusAtual != StatusCompra.AGUARDANDO_PAG && statusAtual != StatusCompra.PARCIALMENTE_PAGO) {
-                    throw new IllegalStateException("A compra só pode ser paga se estiver aguardando pagamento ou parcialmente paga.");
-                }
-                break;
-
-            case CONCRETIZADO:
-                if (statusAtual != StatusCompra.PAGO && statusAtual != StatusCompra.AGUARDANDO_EXECUCAO && statusAtual != StatusCompra.AGENDADA) {
-                    throw new IllegalStateException("A compra só pode ser finalizada se estiver paga, aguardando execução ou agendada.");
-                }
-                if (compra.getValorPendente().compareTo(BigDecimal.ZERO) > 0) {
-                    throw new IllegalStateException("A compra não pode ser finalizada enquanto houver saldo pendente.");
-                }
-                break;
-
-            case CANCELADO:
-                if (statusAtual == StatusCompra.CONCRETIZADO) {
-                    throw new IllegalStateException("Uma compra finalizada não pode ser cancelada.");
-                }
-                break;
-
-            default:
-                throw new IllegalArgumentException("Status desconhecido.");
-        }
-
+        STATUS_TRANSITION_POLICY.validate(compra.getStatus(), novoStatus, compra);
         compra.setStatus(novoStatus);
     }
 
