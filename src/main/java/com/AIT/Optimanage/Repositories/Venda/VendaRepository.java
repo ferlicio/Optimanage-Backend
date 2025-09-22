@@ -24,8 +24,8 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
             "LEFT JOIN FETCH vs.servico s " +
             "LEFT JOIN v.pagamentos pag " +
             "WHERE " +
-            "((:id IS NOT NULL AND v.organizationId = :organizationId AND v.sequencialUsuario = :id) " +
-            "OR (:organizationId IS NULL OR v.organizationId = :organizationId)) " +
+            "(:organizationId IS NULL OR v.organizationId = :organizationId) " +
+            "AND (:id IS NULL OR v.sequencialUsuario = :id) " +
             "AND (:clienteId IS NULL OR v.cliente.id = :clienteId) " +
             "AND (:dataInicial IS NULL OR v.dataEfetuacao >= :dataInicial) " +
             "AND (:dataFinal IS NULL OR v.dataEfetuacao <= :dataFinal) " +
