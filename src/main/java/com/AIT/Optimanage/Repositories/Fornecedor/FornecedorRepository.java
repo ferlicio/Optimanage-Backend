@@ -25,7 +25,7 @@ public interface FornecedorRepository extends JpaRepository<Fornecedor, Integer>
             "    REPLACE(REPLACE(REPLACE(f.cpf, '.', ''), '-', ''), '/', '') = REPLACE(REPLACE(REPLACE(:cpfOuCnpj, '.', ''), '-', ''), '/', '') " +
             "    OR REPLACE(REPLACE(REPLACE(f.cnpj, '.', ''), '-', ''), '/', '') = REPLACE(REPLACE(REPLACE(:cpfOuCnpj, '.', ''), '-', ''), '/', '')) AND " +
             "(:atividade IS NULL OR f.atividade.id = :atividade) AND " +
-            "(:estado IS NULL OR EXISTS (SELECT 1 FROM ClienteEndereco e WHERE e.cliente.id = f.id AND e.estado = :estado)) AND " +
+            "(:estado IS NULL OR EXISTS (SELECT 1 FROM FornecedorEndereco e WHERE e.fornecedor.id = f.id AND e.estado = :estado)) AND " +
             "(:tipoPessoa IS NULL OR f.tipoPessoa = :tipoPessoa) AND " +
             "(:ativo IS NULL OR f.ativo = :ativo)")
     Page<Fornecedor> buscarFornecedores(
