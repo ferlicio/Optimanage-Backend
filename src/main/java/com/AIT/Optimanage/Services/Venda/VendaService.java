@@ -356,7 +356,11 @@ public class VendaService {
             }
         });
         venda.setValorPendente(Optional.ofNullable(venda.getValorFinal()).orElse(BigDecimal.ZERO));
-        atualizarStatus(venda, StatusVenda.AGUARDANDO_PAG);
+        if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
+            venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+        } else {
+            atualizarStatus(venda, StatusVenda.AGUARDANDO_PAG);
+        }
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
