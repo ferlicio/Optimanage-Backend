@@ -347,15 +347,16 @@ public class VendaService {
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
-        if (venda.getStatus() == StatusVenda.CONCRETIZADA || venda.getStatus() == StatusVenda.PAGA) {
-            venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+        if (venda.getStatus() == StatusVenda.CANCELADA) {
+            throw new IllegalArgumentException("Não é possível estornar uma venda cancelada.");
         }
-        venda.setValorPendente(venda.getValorFinal());
+        venda.setValorPendente(BigDecimal.ZERO);
         venda.getPagamentos().forEach( pagamento
                 -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
                         { pagamentoVendaService.estornarPagamento(loggedUser, pagamento); }
                 });
         devolverProdutosParaEstoque(venda, "Estorno integral da venda #" + venda.getId());
+        venda.setStatus(StatusVenda.CANCELADA);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
@@ -467,6 +468,9 @@ public class VendaService {
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO cancelarVenda(User loggedUser, Integer idVenda) {
         Venda venda = getVenda(loggedUser, idVenda);
+        if (venda.getStatus() == StatusVenda.CANCELADA) {
+            return vendaMapper.toResponse(venda);
+        }
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             throw new IllegalArgumentException("Uma venda concretizada não pode ser cancelada.");
         }
