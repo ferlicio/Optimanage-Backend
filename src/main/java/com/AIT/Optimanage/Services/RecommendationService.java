@@ -119,7 +119,7 @@ public class RecommendationService {
                     score += COMPATIBILIDADE_BONUS;
                 }
 
-                ProdutoPontuacao dados = pontuacaoDetalhada.computeIfAbsent(produtoId, ProdutoPontuacao::new);
+                ProdutoPontuacao dados = pontuacaoDetalhada.computeIfAbsent(produtoId, k -> new ProdutoPontuacao());
                 dados.adicionar(score, quantidade, produto);
             }
         }
