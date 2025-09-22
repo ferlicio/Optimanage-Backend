@@ -350,13 +350,13 @@ public class VendaService {
         if (venda.getStatus() == StatusVenda.CANCELADA) {
             throw new IllegalArgumentException("Não é possível estornar uma venda cancelada.");
         }
-        venda.setValorPendente(BigDecimal.ZERO);
-        venda.getPagamentos().forEach( pagamento
-                -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
-                        { pagamentoVendaService.estornarPagamento(loggedUser, pagamento); }
-                });
-        devolverProdutosParaEstoque(venda, "Estorno integral da venda #" + venda.getId());
-        venda.setStatus(StatusVenda.CANCELADA);
+        venda.getPagamentos().forEach(pagamento -> {
+            if (pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
+                pagamentoVendaService.estornarPagamento(loggedUser, pagamento);
+            }
+        });
+        venda.setValorPendente(Optional.ofNullable(venda.getValorFinal()).orElse(BigDecimal.ZERO));
+        atualizarStatus(venda, StatusVenda.AGUARDANDO_PAG);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }

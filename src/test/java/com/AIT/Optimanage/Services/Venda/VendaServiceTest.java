@@ -54,6 +54,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -386,7 +387,7 @@ class VendaServiceTest {
         assertNotNull(responseDTO);
         assertEquals(new BigDecimal("250.00"), venda.getValorPendente());
         assertEquals(StatusVenda.AGUARDANDO_PAG, venda.getStatus());
-        verify(inventoryService).incrementar(eq(produto.getId()), eq(2), eq(InventorySource.VENDA), eq(venda.getId()), contains("Estorno integral"));
+        verify(inventoryService, never()).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
         verify(pagamentoVendaService, times(2)).estornarPagamento(eq(loggedUser), any(VendaPagamento.class));
         verify(vendaRepository).save(venda);
     }
