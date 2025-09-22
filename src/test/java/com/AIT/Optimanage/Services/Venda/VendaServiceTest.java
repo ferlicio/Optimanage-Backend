@@ -54,6 +54,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -305,5 +306,88 @@ class VendaServiceTest {
         assertEquals(StatusVenda.AGUARDANDO_PAG, venda.getStatus());
         verify(pagamentoVendaService).estornarPagamento(loggedUser, pagamentoEstornado);
         verify(pagamentoVendaService).listarPagamentosRealizadosVenda(loggedUser, venda.getId());
+    }
+
+    @Test
+    void cancelarVendaDevolveEstoqueEZeraValorPendente() {
+        User loggedUser = new User();
+        loggedUser.setTenantId(8);
+
+        Venda venda = new Venda();
+        venda.setId(44);
+        venda.setTenantId(8);
+        venda.setValorFinal(new BigDecimal("120.00"));
+        venda.setValorPendente(new BigDecimal("80.00"));
+        venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+
+        Produto produto = new Produto();
+        produto.setId(77);
+
+        VendaProduto vendaProduto = new VendaProduto();
+        vendaProduto.setProduto(produto);
+        vendaProduto.setQuantidade(3);
+        vendaProduto.setVenda(venda);
+        venda.setVendaProdutos(List.of(vendaProduto));
+
+        when(vendaRepository.findByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
+        when(vendaRepository.save(venda)).thenReturn(venda);
+        when(vendaMapper.toResponse(venda)).thenReturn(new VendaResponseDTO());
+        doNothing().when(inventoryService).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
+
+        VendaResponseDTO responseDTO = vendaService.cancelarVenda(loggedUser, venda.getId());
+
+        assertNotNull(responseDTO);
+        assertEquals(BigDecimal.ZERO, venda.getValorPendente());
+        assertEquals(StatusVenda.CANCELADA, venda.getStatus());
+        verify(inventoryService).incrementar(eq(produto.getId()), eq(3), eq(InventorySource.VENDA), eq(venda.getId()), contains("Cancelamento"));
+        verify(vendaRepository).save(venda);
+    }
+
+    @Test
+    void estornarVendaIntegralDevolveEstoqueEAtualizaStatusEValores() {
+        User loggedUser = new User();
+        loggedUser.setTenantId(9);
+
+        Plano plano = new Plano();
+        plano.setPagamentosHabilitados(true);
+
+        Venda venda = new Venda();
+        venda.setId(45);
+        venda.setTenantId(9);
+        venda.setValorFinal(new BigDecimal("250.00"));
+        venda.setValorPendente(BigDecimal.ZERO);
+        venda.setStatus(StatusVenda.PAGA);
+
+        Produto produto = new Produto();
+        produto.setId(88);
+
+        VendaProduto vendaProduto = new VendaProduto();
+        vendaProduto.setProduto(produto);
+        vendaProduto.setQuantidade(2);
+        vendaProduto.setVenda(venda);
+        venda.setVendaProdutos(List.of(vendaProduto));
+
+        VendaPagamento pagamento1 = new VendaPagamento();
+        pagamento1.setStatusPagamento(StatusPagamento.PAGO);
+        VendaPagamento pagamento2 = new VendaPagamento();
+        pagamento2.setStatusPagamento(StatusPagamento.PAGO);
+        venda.setPagamentos(List.of(pagamento1, pagamento2));
+
+        when(planoService.obterPlanoUsuario(loggedUser)).thenReturn(Optional.of(plano));
+        when(vendaRepository.findByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
+        when(vendaRepository.save(venda)).thenReturn(venda);
+        when(vendaMapper.toResponse(venda)).thenReturn(new VendaResponseDTO());
+        doNothing().when(inventoryService).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
+        doNothing().when(pagamentoVendaService).estornarPagamento(loggedUser, pagamento1);
+        doNothing().when(pagamentoVendaService).estornarPagamento(loggedUser, pagamento2);
+
+        VendaResponseDTO responseDTO = vendaService.estornarVendaIntegral(loggedUser, venda.getId());
+
+        assertNotNull(responseDTO);
+        assertEquals(new BigDecimal("250.00"), venda.getValorPendente());
+        assertEquals(StatusVenda.AGUARDANDO_PAG, venda.getStatus());
+        verify(inventoryService).incrementar(eq(produto.getId()), eq(2), eq(InventorySource.VENDA), eq(venda.getId()), contains("Estorno integral"));
+        verify(pagamentoVendaService, times(2)).estornarPagamento(eq(loggedUser), any(VendaPagamento.class));
+        verify(vendaRepository).save(venda);
     }
 }

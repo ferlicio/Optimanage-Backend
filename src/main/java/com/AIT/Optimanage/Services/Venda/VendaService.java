@@ -220,9 +220,7 @@ public class VendaService {
         venda.setDescontoGeral(descontoGeralAtualizado);
 
         // Devolve estoque dos produtos antigos e remove os registros
-        Optional.ofNullable(venda.getVendaProdutos()).orElseGet(List::of).forEach(vp ->
-                inventoryService.incrementar(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
-                        venda.getId(), "Reversão da venda #" + venda.getId()));
+        devolverProdutosParaEstoque(venda, "Reversão da venda #" + venda.getId());
         vendaProdutoRepository.deleteByVenda(venda);
         vendaServicoRepository.deleteByVenda(venda);
 
@@ -357,6 +355,7 @@ public class VendaService {
                 -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
                         { pagamentoVendaService.estornarPagamento(loggedUser, pagamento); }
                 });
+        devolverProdutosParaEstoque(venda, "Estorno integral da venda #" + venda.getId());
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
@@ -471,6 +470,8 @@ public class VendaService {
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             throw new IllegalArgumentException("Uma venda concretizada não pode ser cancelada.");
         }
+        devolverProdutosParaEstoque(venda, "Cancelamento da venda #" + venda.getId());
+        venda.setValorPendente(BigDecimal.ZERO);
         venda.setStatus(StatusVenda.CANCELADA);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
@@ -657,5 +658,11 @@ public class VendaService {
         if (!Boolean.TRUE.equals(plano.getAgendaHabilitada())) {
             throw new AccessDeniedException("Agenda não está habilitada no plano atual");
         }
+    }
+
+    private void devolverProdutosParaEstoque(Venda venda, String descricao) {
+        Optional.ofNullable(venda.getVendaProdutos()).orElseGet(List::of).forEach(vp ->
+                inventoryService.incrementar(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
+                        venda.getId(), descricao));
     }
 }
