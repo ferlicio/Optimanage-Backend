@@ -500,7 +500,9 @@ public class VendaService {
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             throw new IllegalArgumentException("Uma venda concretizada não pode ser cancelada.");
         }
-        devolverProdutosParaEstoque(venda, "Cancelamento da venda #" + venda.getId());
+        if (venda.getStatus() != StatusVenda.ORCAMENTO) {
+            devolverProdutosParaEstoque(venda, "Cancelamento da venda #" + venda.getId());
+        }
         venda.setValorPendente(BigDecimal.ZERO);
         venda.setStatus(StatusVenda.CANCELADA);
         Venda salvo = vendaRepository.save(venda);

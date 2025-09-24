@@ -3,6 +3,8 @@ package com.AIT.Optimanage.Models.Venda.Search;
 import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
+import java.time.LocalDate;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,8 +19,8 @@ import lombok.experimental.SuperBuilder;
 public class VendaSearch extends Search {
     private Integer id;
     private Integer clienteId;
-    private String dataInicial;
-    private String dataFinal;
+    private LocalDate dataInicial;
+    private LocalDate dataFinal;
     private Boolean pago;
     private StatusVenda status;
     private FormaPagamento formaPagamento;
