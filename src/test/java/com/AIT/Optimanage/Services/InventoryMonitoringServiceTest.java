@@ -94,6 +94,41 @@ class InventoryMonitoringServiceTest {
     }
 
     @Test
+    void deveSugerirQuantidadeRespeitandoConsumoDurantePrazoEMinimo() {
+        Produto produto = Produto.builder()
+                .id(3)
+                .qtdEstoque(5)
+                .estoqueMinimo(10)
+                .prazoReposicaoDias(3)
+                .ativo(true)
+                .build();
+        produto.setTenantId(88);
+
+        InventoryHistory h1 = InventoryHistory.builder()
+                .quantidade(4)
+                .build();
+        h1.setCreatedAt(LocalDateTime.of(2024, 1, 28, 9, 0));
+        InventoryHistory h2 = InventoryHistory.builder()
+                .quantidade(2)
+                .build();
+        h2.setCreatedAt(LocalDateTime.of(2024, 1, 29, 9, 0));
+
+        when(planoService.isMonitoramentoEstoqueHabilitado(88)).thenReturn(true);
+        when(produtoRepository.findAllByOrganizationIdAndAtivoTrue(88)).thenReturn(List.of(produto));
+        when(historyRepository.findByProdutoIdAndOrganizationIdAndActionAndCreatedAtAfterOrderByCreatedAtAsc(
+                eq(3), eq(88), eq(InventoryAction.DECREMENT), any(LocalDateTime.class)))
+                .thenReturn(List.of(h1, h2));
+        when(alertRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<InventoryAlert> alertas = service.recalcularAlertasOrganizacao(88);
+
+        assertThat(alertas).hasSize(1);
+        InventoryAlert alerta = alertas.get(0);
+        assertThat(alerta.getQuantidadeSugerida()).isEqualTo(11);
+        assertThat(alerta.getSeverity()).isEqualTo(InventoryAlertSeverity.CRITICAL);
+    }
+
+    @Test
     void naoDeveGerarAlertasQuandoEstoqueSaudavel() {
         Produto produto = Produto.builder()
                 .id(2)

@@ -217,7 +217,7 @@ public class InventoryMonitoringService {
                     .setScale(0, RoundingMode.CEILING)
                     .intValue();
         }
-        int alvo = Math.max(minimo, consumoDurantePrazo) + minimo;
+        int alvo = minimo + consumoDurantePrazo;
         return Math.max(0, alvo - atual);
     }
 
