@@ -122,31 +122,39 @@ public class OrganizationService {
         long usuariosAtivos = userRepository.countByOrganizationIdAndAtivoTrue(organizationId);
         validarLimiteUsuarios(plano, usuariosAtivos, 1);
 
-        TenantContext.setTenantId(organizationId);
-        User user = User.builder()
-                .nome(request.getNome())
-                .sobrenome(request.getSobrenome())
-                .email(request.getEmail())
-                .senha(passwordEncoder.encode(request.getSenha()))
-                .role(request.getRole())
-                .ativo(true)
-                .organization(organization)
-                .build();
-        user.setTenantId(organizationId);
-        user = userRepository.save(user);
+        Integer previousTenant = TenantContext.getTenantId();
+        try {
+            TenantContext.setTenantId(organizationId);
+            User user = User.builder()
+                    .nome(request.getNome())
+                    .sobrenome(request.getSobrenome())
+                    .email(request.getEmail())
+                    .senha(passwordEncoder.encode(request.getSenha()))
+                    .role(request.getRole())
+                    .ativo(true)
+                    .organization(organization)
+                    .build();
+            user.setTenantId(organizationId);
+            user = userRepository.save(user);
 
-        String token = jwtService.generateToken(
-                Map.<String, Object>of(
-                        "tenantId", organizationId,
-                        "organizationId", organizationId,
-                        "role", user.getRole().name()
-                ),
-                user
-        );
-        TenantContext.clear();
-        return AuthenticationResponse.builder()
-                .token(token)
-                .build();
+            String token = jwtService.generateToken(
+                    Map.<String, Object>of(
+                            "tenantId", organizationId,
+                            "organizationId", organizationId,
+                            "role", user.getRole().name()
+                    ),
+                    user
+            );
+            return AuthenticationResponse.builder()
+                    .token(token)
+                    .build();
+        } finally {
+            if (previousTenant != null) {
+                TenantContext.setTenantId(previousTenant);
+            } else {
+                TenantContext.clear();
+            }
+        }
     }
 
     private void validarOrganizacaoDestino(Integer organizationId) {
