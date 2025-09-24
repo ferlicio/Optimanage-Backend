@@ -371,12 +371,13 @@ public class VendaService {
             }
         });
         devolverProdutosParaEstoque(venda, "Estorno integral da venda #" + venda.getId());
-        venda.setValorPendente(Optional.ofNullable(venda.getValorFinal()).orElse(BigDecimal.ZERO));
+        venda.setValorPendente(BigDecimal.ZERO);
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             venda.setStatus(StatusVenda.AGUARDANDO_PAG);
         } else {
             atualizarStatus(venda, StatusVenda.AGUARDANDO_PAG);
         }
+        atualizarStatus(venda, StatusVenda.CANCELADA);
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
     }
