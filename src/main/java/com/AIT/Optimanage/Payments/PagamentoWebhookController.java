@@ -20,9 +20,10 @@ public class PagamentoWebhookController {
 
     @PostMapping("/webhook")
     public ResponseEntity<PagamentoDTO> handleWebhook(@RequestParam PaymentProvider provider,
+                                                      @RequestParam("organizationId") Integer organizationId,
                                                       @RequestBody String payload,
                                                       @RequestHeader Map<String, String> headers) {
-        PaymentConfig config = paymentConfigService.getConfig(provider);
+        PaymentConfig config = paymentConfigService.getConfig(organizationId, provider);
         PagamentoDTO dto = paymentService.handleWebhook(provider, payload, headers, config);
         return ResponseEntity.ok(dto);
     }

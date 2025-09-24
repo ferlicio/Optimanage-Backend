@@ -3,7 +3,6 @@ package com.AIT.Optimanage.Services.Payment;
 import com.AIT.Optimanage.Models.Payment.PaymentConfig;
 import com.AIT.Optimanage.Models.Payment.PaymentProvider;
 import com.AIT.Optimanage.Repositories.Payment.PaymentConfigRepository;
-import com.AIT.Optimanage.Security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,8 +20,4 @@ public class PaymentConfigService {
                 .orElseThrow(() -> new MissingPaymentConfigurationException(provider, organizationId));
     }
 
-    public PaymentConfig getConfig(PaymentProvider provider) {
-        Integer organizationId = CurrentUser.getOrganizationId();
-        return getConfig(organizationId, provider);
-    }
 }
