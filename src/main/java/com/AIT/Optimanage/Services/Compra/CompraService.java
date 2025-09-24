@@ -255,6 +255,7 @@ public class CompraService {
         return compraMapper.toResponse(salvo);
     }
 
+    @Transactional
     public CompraResponseDTO confirmarCompra(Integer idCompra) {
         Compra compra = getCompra(idCompra);
         StatusCompra statusAnterior = compra.getStatus();
@@ -263,10 +264,11 @@ public class CompraService {
         } else {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_EXECUCAO);
         }
-        if (statusAnterior == StatusCompra.ORCAMENTO) {
-            publicarCompraCriada(compra, compra.getCompraProdutos());
-        }
+        boolean devePublicarEvento = statusAnterior == StatusCompra.ORCAMENTO;
         Compra salvo = compraRepository.save(compra);
+        if (devePublicarEvento) {
+            publicarCompraCriada(salvo, salvo.getCompraProdutos());
+        }
         return compraMapper.toResponse(salvo);
     }
 
