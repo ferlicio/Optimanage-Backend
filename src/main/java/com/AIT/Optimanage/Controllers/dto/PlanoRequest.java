@@ -58,5 +58,8 @@ public class PlanoRequest {
 
     @NotNull
     private Boolean suportePrioritario;
+
+    @NotNull
+    private Boolean monitoramentoEstoqueHabilitado;
 }
 

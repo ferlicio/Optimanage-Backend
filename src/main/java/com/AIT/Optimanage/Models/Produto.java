@@ -43,6 +43,14 @@ public class Produto extends AuditableEntity implements OwnableEntity {
     private BigDecimal valorVenda;
     @Column(nullable = false)
     private Integer qtdEstoque;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer estoqueMinimo = 0;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer prazoReposicaoDias = 0;
     private Boolean terceirizado;
     @Column(nullable = false)
     private Boolean ativo = true;

@@ -72,6 +72,7 @@ public class ProdutoService {
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(null);
         produto.setTenantId(organizationId);
+        aplicarValoresPadrao(produto);
         Produto salvo = produtoRepository.save(produto);
         return produtoMapper.toResponse(salvo);
     }
@@ -83,6 +84,7 @@ public class ProdutoService {
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(produtoSalvo.getId());
         produto.setTenantId(produtoSalvo.getOrganizationId());
+        aplicarValoresPadrao(produto);
         Produto atualizado = produtoRepository.save(produto);
         return produtoMapper.toResponse(atualizado);
     }
@@ -147,6 +149,15 @@ public class ProdutoService {
         Integer limite = plano.getMaxProdutos();
         if (limite != null && limite > 0 && produtosAtivos + novosProdutos > limite) {
             throw new IllegalStateException("Limite de produtos do plano atingido");
+        }
+    }
+
+    private void aplicarValoresPadrao(Produto produto) {
+        if (produto.getEstoqueMinimo() == null) {
+            produto.setEstoqueMinimo(0);
+        }
+        if (produto.getPrazoReposicaoDias() == null) {
+            produto.setPrazoReposicaoDias(0);
         }
     }
 }

@@ -30,6 +30,7 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `POST /api/v1/produtos` &ndash; criar produto.
 - `PUT /api/v1/produtos/{idProduto}` &ndash; atualizar produto.
 - `DELETE /api/v1/produtos/{idProduto}` &ndash; remover produto.
+- Campos de controle de estoque: `estoqueMinimo` e `prazoReposicaoDias` permitem definir limites mínimos e o tempo médio de reposição para alimentar o monitoramento automático.
 
 ### Serviços
 - `GET /api/v1/servicos`
@@ -137,6 +138,13 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 ### Analytics
 - `GET /api/v1/analytics/resumo` &ndash; resumo de vendas, compras e lucro.
 - `GET /api/v1/analytics/previsao` &ndash; previsão de demanda com regressão linear.
+- `GET /api/v1/analytics/estoque-critico` &ndash; lista itens com estoque crítico ou em risco de ruptura, incluindo projeção de dias restantes e sugestão de compra.
+  - Disponível apenas para organizações cujo plano tenha `monitoramentoEstoqueHabilitado = true`.
+
+### Monitoramento de estoque
+- Um job agendado diário (padrão `0 0 6 * * *`, configurável via `inventory.monitoring.cron`) reprocessa o consumo médio dos últimos 30 dias a partir do `InventoryHistory`.
+- Para cada produto ativo, o serviço calcula os dias restantes considerando o estoque atual, o consumo médio e o prazo de reposição configurado.
+- Alertas críticos ou de atenção são persistidos na tabela `inventory_alert` e expostos pelo endpoint de analytics quando o plano atual possuir a permissão de monitoramento de estoque.
 
 ## Execução
 1. Requisitos: Java 17+ e Maven.

@@ -1,7 +1,7 @@
 package com.AIT.Optimanage.Models.Inventory;
 
 import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
-import com.AIT.Optimanage.Models.BaseEntity;
+import com.AIT.Optimanage.Models.AuditableEntity;
 import com.AIT.Optimanage.Models.OwnableEntity;
 import com.AIT.Optimanage.Models.Produto;
 import jakarta.persistence.Column;
@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Entity
 @EntityListeners(OwnerEntityListener.class)
-public class InventoryHistory extends BaseEntity implements OwnableEntity {
+public class InventoryHistory extends AuditableEntity implements OwnableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "produto_id", referencedColumnName = "id", nullable = false)
