@@ -30,7 +30,7 @@ public class ProdutoService {
     private final ProdutoMapper produtoMapper;
     private final PlanoService planoService;
 
-    @Cacheable(value = "produtos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "produtos", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
     public Page<ProdutoResponse> listarProdutos(Search pesquisa) {
         Integer organizationId = CurrentUser.getOrganizationId();
         if (organizationId == null) {

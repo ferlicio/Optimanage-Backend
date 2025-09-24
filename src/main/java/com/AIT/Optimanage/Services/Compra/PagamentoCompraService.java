@@ -110,4 +110,10 @@ public class PagamentoCompraService {
         compraPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
         pagamentoCompraRepository.save(compraPagamento);
     }
+
+    public void cancelarPagamento(CompraPagamento pagamento) {
+        CompraPagamento compraPagamento = listarUmPagamento(pagamento.getId());
+        compraPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
+        pagamentoCompraRepository.save(compraPagamento);
+    }
 }

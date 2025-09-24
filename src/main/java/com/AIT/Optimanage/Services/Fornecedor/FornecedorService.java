@@ -33,7 +33,7 @@ public class FornecedorService {
     private final FornecedorMapper fornecedorMapper;
     private final PlanoService planoService;
 
-    @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
     @Transactional(readOnly = true)
     public Page<FornecedorResponse> listarFornecedores(FornecedorSearch pesquisa) {
         User loggedUser = CurrentUser.get();

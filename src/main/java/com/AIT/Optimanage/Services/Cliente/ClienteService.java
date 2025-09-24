@@ -33,7 +33,7 @@ public class ClienteService {
     private final ClienteMapper clienteMapper;
     private final PlanoService planoService;
 
-    @Cacheable(value = "clientes", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "clientes", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
     @Transactional(readOnly = true)
     public Page<ClienteResponse> listarClientes(ClienteSearch pesquisa) {
         User loggedUser = CurrentUser.get();
