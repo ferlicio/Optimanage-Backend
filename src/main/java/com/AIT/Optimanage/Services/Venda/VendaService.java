@@ -575,8 +575,13 @@ public class VendaService {
     private void atualizarVendaPosPagamento(User loggedUser, Venda venda) {
         List<VendaPagamento> pagamentos = pagamentoVendaService.listarPagamentosRealizadosVenda(loggedUser, venda.getId());
 
-        BigDecimal valorPago = pagamentos.stream().map(VendaPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
-        venda.setValorPendente(venda.getValorFinal().subtract(valorPago));
+        BigDecimal valorPago = pagamentos.stream().map(VendaPagamento::getValorPago)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorPendente = venda.getValorFinal().subtract(valorPago);
+        if (valorPendente.compareTo(BigDecimal.ZERO) < 0) {
+            valorPendente = BigDecimal.ZERO;
+        }
+        venda.setValorPendente(valorPendente);
         if (venda.getValorPendente().compareTo(BigDecimal.ZERO) <= 0) {
             if (venda.getStatus() == StatusVenda.AGUARDANDO_PAG || venda.getStatus() == StatusVenda.PENDENTE) {
                 atualizarStatus(venda, StatusVenda.PAGA);
