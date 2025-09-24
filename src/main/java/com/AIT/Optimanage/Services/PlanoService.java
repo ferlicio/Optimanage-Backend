@@ -143,6 +143,7 @@ public class PlanoService {
         }
         return organizationRepository.findById(organizationId)
                 .map(Organization::getPlanoAtivoId)
+                .flatMap(planoRepository::findById)
                 .map(Plano::getMonitoramentoEstoqueHabilitado)
                 .orElse(false);
     }
