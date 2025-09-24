@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -16,4 +17,10 @@ public interface InventoryHistoryRepository extends JpaRepository<InventoryHisto
             Integer organizationId,
             InventoryAction action,
             LocalDateTime createdAt);
+
+    List<InventoryHistory> findByOrganizationIdAndActionAndCreatedAtAfterAndProduto_IdInOrderByProduto_IdAscCreatedAtAsc(
+            Integer organizationId,
+            InventoryAction action,
+            LocalDateTime createdAt,
+            Collection<Integer> produtoIds);
 }

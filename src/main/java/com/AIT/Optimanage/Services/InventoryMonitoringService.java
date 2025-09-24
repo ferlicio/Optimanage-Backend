@@ -78,8 +78,18 @@ public class InventoryMonitoringService {
             alertRepository.deleteByOrganizationId(organizationId);
             return Collections.emptyList();
         }
+        LocalDate hoje = LocalDate.now(clock);
+        LocalDateTime inicioJanela = hoje.minusDays(CONSUMPTION_LOOKBACK_DAYS - 1L).atStartOfDay();
+        Map<Integer, List<InventoryHistory>> historicosPorProduto = carregarHistoricosConsumo(
+                organizationId,
+                produtos,
+                inicioJanela);
+
         List<InventoryAlert> alertas = produtos.stream()
-                .map(this::avaliarProduto)
+                .map(produto -> avaliarProduto(
+                        produto,
+                        hoje,
+                        historicosPorProduto.getOrDefault(produto.getId(), Collections.emptyList())))
                 .flatMap(Optional::stream)
                 .toList();
 
@@ -99,14 +109,14 @@ public class InventoryMonitoringService {
         return alertRepository.findByOrganizationIdOrderBySeverityDescDiasRestantesAsc(organizationId);
     }
 
-    private Optional<InventoryAlert> avaliarProduto(Produto produto) {
+    private Optional<InventoryAlert> avaliarProduto(Produto produto, LocalDate hoje, List<InventoryHistory> historicos) {
         Integer estoqueAtual = Optional.ofNullable(produto.getQtdEstoque()).orElse(0);
         Integer estoqueMinimo = Optional.ofNullable(produto.getEstoqueMinimo()).orElse(0);
         Integer prazoReposicao = Optional.ofNullable(produto.getPrazoReposicaoDias()).orElse(0);
 
-        BigDecimal consumoMedioDiario = calcularConsumoMedioDiario(produto);
+        BigDecimal consumoMedioDiario = calcularConsumoMedioDiario(produto, hoje, historicos);
         Integer diasRestantes = calcularDiasRestantes(consumoMedioDiario, estoqueAtual);
-        LocalDate dataRuptura = diasRestantes != null ? LocalDate.now(clock).plusDays(diasRestantes) : null;
+        LocalDate dataRuptura = diasRestantes != null ? hoje.plusDays(diasRestantes) : null;
 
         InventoryAlertSeverity severity = determinarSeveridade(estoqueAtual, estoqueMinimo, prazoReposicao, diasRestantes);
         if (severity == null) {
@@ -132,19 +142,11 @@ public class InventoryMonitoringService {
         return Optional.of(alerta);
     }
 
-    private BigDecimal calcularConsumoMedioDiario(Produto produto) {
+    private BigDecimal calcularConsumoMedioDiario(Produto produto, LocalDate hoje, List<InventoryHistory> historicos) {
         if (produto.getId() == null || produto.getOrganizationId() == null) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
-        LocalDate hoje = LocalDate.now(clock);
-        LocalDateTime inicioJanela = hoje.minusDays(CONSUMPTION_LOOKBACK_DAYS - 1L).atStartOfDay();
-        List<InventoryHistory> historicos = historyRepository
-                .findByProdutoIdAndOrganizationIdAndActionAndCreatedAtAfterOrderByCreatedAtAsc(
-                        produto.getId(),
-                        produto.getOrganizationId(),
-                        InventoryAction.DECREMENT,
-                        inicioJanela);
-        if (historicos.isEmpty()) {
+        if (historicos == null || historicos.isEmpty()) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
 
@@ -169,6 +171,37 @@ public class InventoryMonitoringService {
         long diasConsiderados = Math.max(1,
                 Math.min(CONSUMPTION_LOOKBACK_DAYS, ChronoUnit.DAYS.between(primeiraData, hoje) + 1));
         return totalConsumido.divide(BigDecimal.valueOf(diasConsiderados), 2, RoundingMode.HALF_UP);
+    }
+
+    private Map<Integer, List<InventoryHistory>> carregarHistoricosConsumo(Integer organizationId,
+                                                                           List<Produto> produtos,
+                                                                           LocalDateTime inicioJanela) {
+        if (produtos == null || produtos.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Integer> produtoIds = produtos.stream()
+                .map(Produto::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (produtoIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<InventoryHistory> historicos = historyRepository
+                .findByOrganizationIdAndActionAndCreatedAtAfterAndProduto_IdInOrderByProduto_IdAscCreatedAtAsc(
+                        organizationId,
+                        InventoryAction.DECREMENT,
+                        inicioJanela,
+                        produtoIds);
+
+        if (historicos.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return historicos.stream()
+                .filter(historico -> historico.getProduto() != null && historico.getProduto().getId() != null)
+                .collect(Collectors.groupingBy(historico -> historico.getProduto().getId()));
     }
 
     private Integer calcularDiasRestantes(BigDecimal consumoMedioDiario, Integer estoqueAtual) {
