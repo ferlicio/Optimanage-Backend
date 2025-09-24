@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,8 +29,9 @@ public class PaymentsController extends V1BaseController {
     @PostMapping("/webhook")
     @Operation(summary = "Webhook de pagamento", description = "Confirma pagamentos assíncronos")
     @ApiResponse(responseCode = "204", description = "Processado com sucesso")
-    public ResponseEntity<Void> handleWebhook(@RequestBody @Valid PaymentConfirmationDTO confirmDTO) {
-        PaymentConfig config = paymentConfigService.getConfig(confirmDTO.getProvider());
+    public ResponseEntity<Void> handleWebhook(@RequestParam("organizationId") Integer organizationId,
+                                              @RequestBody @Valid PaymentConfirmationDTO confirmDTO) {
+        PaymentConfig config = paymentConfigService.getConfig(organizationId, confirmDTO.getProvider());
         paymentService.confirmPayment(confirmDTO.getPaymentIntentId(), config);
         return noContent();
     }
