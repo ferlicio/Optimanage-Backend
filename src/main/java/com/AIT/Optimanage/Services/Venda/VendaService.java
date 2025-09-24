@@ -224,8 +224,12 @@ public class VendaService {
         venda.setObservacoes(vendaDTO.getObservacoes());
         venda.setDescontoGeral(descontoGeralAtualizado);
 
+        StatusVenda statusAnterior = venda.getStatus();
+
         // Devolve estoque dos produtos antigos e remove os registros
-        devolverProdutosParaEstoque(venda, "Reversão da venda #" + venda.getId());
+        if (statusAnterior != StatusVenda.ORCAMENTO) {
+            devolverProdutosParaEstoque(venda, "Reversão da venda #" + venda.getId());
+        }
         vendaProdutoRepository.deleteByVenda(venda);
         vendaServicoRepository.deleteByVenda(venda);
 
@@ -256,9 +260,11 @@ public class VendaService {
         vendaProdutoRepository.saveAll(vendaProdutos);
         vendaServicoRepository.saveAll(vendaServicos);
 
-        vendaProdutos.forEach(vp ->
-                inventoryService.reduzir(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
-                        venda.getId(), "Atualização da venda #" + venda.getId()));
+        if (venda.getStatus() != StatusVenda.ORCAMENTO) {
+            vendaProdutos.forEach(vp ->
+                    inventoryService.reduzir(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
+                            venda.getId(), "Atualização da venda #" + venda.getId()));
+        }
 
         Venda salvo = vendaRepository.save(venda);
         return vendaMapper.toResponse(salvo);
@@ -274,6 +280,7 @@ public class VendaService {
             throw new IllegalArgumentException("Esta venda já foi confirmada.");
         }
         Venda salvo = vendaRepository.save(venda);
+        publicarVendaRegistrada(salvo, salvo.getVendaProdutos(), loggedUser);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -518,7 +525,7 @@ public class VendaService {
     }
 
     private void publicarVendaRegistrada(Venda venda, List<VendaProduto> itens, User owner) {
-        if (itens == null || itens.isEmpty()) {
+        if (venda == null || venda.getStatus() == StatusVenda.ORCAMENTO || itens == null || itens.isEmpty()) {
             return;
         }
 
