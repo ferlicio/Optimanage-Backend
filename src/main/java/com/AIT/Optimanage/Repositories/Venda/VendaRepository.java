@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,6 +41,15 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
     );
 
     Optional<Venda> findByIdAndOrganizationId(Integer idVenda, Integer organizationId);
+
+    @EntityGraph(attributePaths = {
+            "vendaProdutos",
+            "vendaProdutos.produto",
+            "vendaServicos",
+            "vendaServicos.servico",
+            "pagamentos"
+    })
+    Optional<Venda> findDetailedByIdAndOrganizationId(Integer idVenda, Integer organizationId);
 
     @Query("SELECT vp.produto.id AS produtoId, SUM(vp.quantidade) AS totalQuantidade " +
             "FROM Venda v JOIN v.vendaProdutos vp " +
