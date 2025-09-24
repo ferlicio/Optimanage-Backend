@@ -279,8 +279,8 @@ public class VendaService {
         } else {
             throw new IllegalArgumentException("Esta venda já foi confirmada.");
         }
-        publicarVendaRegistrada(venda, venda.getVendaProdutos(), loggedUser);
         Venda salvo = vendaRepository.save(venda);
+        publicarVendaRegistrada(salvo, salvo.getVendaProdutos(), loggedUser);
         return vendaMapper.toResponse(salvo);
     }
 
