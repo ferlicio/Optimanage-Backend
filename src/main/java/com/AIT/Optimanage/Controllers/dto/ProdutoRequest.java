@@ -42,4 +42,10 @@ public class ProdutoRequest {
 
     private Boolean terceirizado;
     private Boolean ativo;
+
+    @PositiveOrZero
+    private Integer estoqueMinimo;
+
+    @PositiveOrZero
+    private Integer prazoReposicaoDias;
 }

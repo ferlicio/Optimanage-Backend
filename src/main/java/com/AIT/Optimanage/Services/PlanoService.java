@@ -123,6 +123,7 @@ public class PlanoService {
                 .recomendacoesHabilitadas(plano.getRecomendacoesHabilitadas())
                 .pagamentosHabilitados(plano.getPagamentosHabilitados())
                 .suportePrioritario(plano.getSuportePrioritario())
+                .monitoramentoEstoqueHabilitado(plano.getMonitoramentoEstoqueHabilitado())
                 .usuariosUtilizados(Math.toIntExact(usuariosAtivos))
                 .usuariosRestantes(calcularRestante(plano.getMaxUsuarios(), usuariosAtivos))
                 .produtosUtilizados(Math.toIntExact(produtosAtivos))
@@ -134,6 +135,16 @@ public class PlanoService {
                 .servicosUtilizados(Math.toIntExact(servicosAtivos))
                 .servicosRestantes(calcularRestante(plano.getMaxServicos(), servicosAtivos))
                 .build();
+    }
+
+    public boolean isMonitoramentoEstoqueHabilitado(Integer organizationId) {
+        if (organizationId == null) {
+            return false;
+        }
+        return organizationRepository.findById(organizationId)
+                .map(Organization::getPlanoAtivoId)
+                .map(Plano::getMonitoramentoEstoqueHabilitado)
+                .orElse(false);
     }
 
     private Integer calcularRestante(Integer maximo, long utilizado) {

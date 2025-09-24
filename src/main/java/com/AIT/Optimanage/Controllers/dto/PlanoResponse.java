@@ -25,5 +25,6 @@ public class PlanoResponse {
     private Boolean recomendacoesHabilitadas;
     private Boolean pagamentosHabilitados;
     private Boolean suportePrioritario;
+    private Boolean monitoramentoEstoqueHabilitado;
 }
 

@@ -25,6 +25,7 @@ public class PlanoQuotaResponse {
     private Boolean recomendacoesHabilitadas;
     private Boolean pagamentosHabilitados;
     private Boolean suportePrioritario;
+    private Boolean monitoramentoEstoqueHabilitado;
     private Integer usuariosUtilizados;
     private Integer usuariosRestantes;
     private Integer produtosUtilizados;

@@ -52,6 +52,7 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .recomendacoesHabilitadas(true)
                 .pagamentosHabilitados(true)
                 .suportePrioritario(true)
+                .monitoramentoEstoqueHabilitado(true)
                 .build();
         plan.setId(1);
         planoRepository.save(plan);

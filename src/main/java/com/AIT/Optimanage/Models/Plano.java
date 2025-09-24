@@ -55,4 +55,8 @@ public class Plano extends AuditableEntity {
     @Column(nullable = false)
     private Boolean suportePrioritario = false;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean monitoramentoEstoqueHabilitado = false;
+
 }

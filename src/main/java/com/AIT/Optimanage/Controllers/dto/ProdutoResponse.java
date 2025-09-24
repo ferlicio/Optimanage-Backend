@@ -26,4 +26,6 @@ public class ProdutoResponse {
     private Integer qtdEstoque;
     private Boolean terceirizado;
     private Boolean ativo;
+    private Integer estoqueMinimo;
+    private Integer prazoReposicaoDias;
 }
