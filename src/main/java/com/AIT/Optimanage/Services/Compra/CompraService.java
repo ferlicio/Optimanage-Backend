@@ -236,7 +236,11 @@ public class CompraService {
                 : compra.getPagamentos().stream().map(CompraPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
 
         compra.setValorFinal(valorTotal);
-        compra.setValorPendente(valorTotal.subtract(valorPago));
+        BigDecimal valorPendenteAtualizado = valorTotal.subtract(valorPago);
+        if (valorPendenteAtualizado.compareTo(BigDecimal.ZERO) < 0) {
+            valorPendenteAtualizado = BigDecimal.ZERO;
+        }
+        compra.setValorPendente(valorPendenteAtualizado);
 
         if (compraDTO.getStatus() != null && compraDTO.getStatus() != compra.getStatus()) {
             atualizarStatus(compra, compraDTO.getStatus());

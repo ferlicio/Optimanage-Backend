@@ -213,6 +213,69 @@ class VendaServiceTest {
         assertEquals(0, new BigDecimal("133.33").compareTo(produtoCapturado.getValorFinal()));
     }
 
+    @Test
+    void atualizarVendaComPagamentosSuperioresAoTotalNaoGeraSaldoNegativo() {
+        LocalDate hoje = LocalDate.now();
+
+        User loggedUser = new User();
+        loggedUser.setTenantId(12);
+
+        Venda venda = new Venda();
+        venda.setId(88);
+        venda.setTenantId(12);
+        venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+        venda.setValorTotal(new BigDecimal("180.00"));
+        venda.setDescontoGeral(BigDecimal.ZERO);
+        venda.setValorFinal(new BigDecimal("180.00"));
+        venda.setValorPendente(new BigDecimal("20.00"));
+
+        Produto produtoAntigo = new Produto();
+        produtoAntigo.setId(15);
+        produtoAntigo.setValorVenda(new BigDecimal("90.00"));
+        VendaProduto vendaProdutoAntigo = new VendaProduto();
+        vendaProdutoAntigo.setVenda(venda);
+        vendaProdutoAntigo.setProduto(produtoAntigo);
+        vendaProdutoAntigo.setQuantidade(1);
+        vendaProdutoAntigo.setValorFinal(new BigDecimal("90.00"));
+        venda.setVendaProdutos(List.of(vendaProdutoAntigo));
+        venda.setVendaServicos(List.of());
+
+        VendaPagamento pagamento = new VendaPagamento();
+        pagamento.setValorPago(new BigDecimal("150.00"));
+        pagamento.setStatusPagamento(StatusPagamento.PAGO);
+        venda.setPagamentos(List.of(pagamento));
+
+        Produto novoProduto = new Produto();
+        novoProduto.setId(16);
+        novoProduto.setValorVenda(new BigDecimal("30.00"));
+
+        VendaProdutoDTO novoProdutoDTO = new VendaProdutoDTO(novoProduto.getId(), 1, BigDecimal.ZERO);
+
+        VendaDTO vendaDTO = VendaDTO.builder()
+                .clienteId(5)
+                .dataEfetuacao(hoje)
+                .status(StatusVenda.AGUARDANDO_PAG)
+                .produtos(List.of(novoProdutoDTO))
+                .servicos(List.of())
+                .build();
+
+        when(vendaRepository.findDetailedByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId()))
+                .thenReturn(Optional.of(venda));
+        when(produtoService.buscarProdutoAtivo(novoProduto.getId())).thenReturn(novoProduto);
+        when(vendaRepository.save(any(Venda.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(vendaMapper.toResponse(any(Venda.class))).thenReturn(new VendaResponseDTO());
+
+        doNothing().when(vendaValidator).validarVenda(any(VendaDTO.class), any(User.class));
+        doNothing().when(inventoryService).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
+        doNothing().when(inventoryService).reduzir(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
+        doNothing().when(vendaProdutoRepository).deleteByVenda(any(Venda.class));
+        doNothing().when(vendaServicoRepository).deleteByVenda(any(Venda.class));
+
+        vendaService.atualizarVenda(loggedUser, venda.getId(), vendaDTO);
+
+        assertEquals(0, venda.getValorPendente().compareTo(BigDecimal.ZERO));
+    }
+
     private Produto criarProdutoNovo() {
         Produto produto = new Produto();
         produto.setId(3);
