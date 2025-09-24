@@ -56,12 +56,10 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 
-import com.AIT.Optimanage.Repositories.Compra.CompraFilters;
-import com.AIT.Optimanage.Repositories.FilterBuilder;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -91,7 +89,7 @@ public class CompraService {
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
     @Transactional(readOnly = true)
     public Page<CompraResponseDTO> listarCompras(CompraSearch pesquisa) {
         User loggedUser = CurrentUser.get();
@@ -322,17 +320,21 @@ public class CompraService {
         Plano plano = obterPlanoAtual();
         garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
+        if (compra.getStatus() == StatusCompra.CANCELADO) {
+            throw new IllegalArgumentException("Não é possível estornar uma compra cancelada.");
+        }
         boolean deveReverterEstoque = compra.getStatus() == StatusCompra.CONCRETIZADO
                 || compra.getStatus() == StatusCompra.PAGO;
         if (deveReverterEstoque) {
             reverterEstoqueCompra(compra, "Estorno integral da compra #" + compra.getId());
-            atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         }
-        compra.setValorPendente(compra.getValorFinal());
+        BigDecimal valorFinal = Optional.ofNullable(compra.getValorFinal()).orElse(BigDecimal.ZERO);
+        compra.setValorPendente(valorFinal);
         Optional.ofNullable(compra.getPagamentos()).orElseGet(List::of).forEach(pagamento
                 -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
                         { pagamentoCompraService.estornarPagamento(pagamento); }
                     });
+        compra.setStatus(StatusCompra.AGUARDANDO_PAG);
         Compra salvo = compraRepository.save(compra);
         return compraMapper.toResponse(salvo);
     }
@@ -422,6 +424,7 @@ public class CompraService {
     }
 
     @CacheEvict(value = "compras", allEntries = true)
+    @Transactional
     public CompraResponseDTO cancelarCompra(Integer idCompra) {
         Compra compra = getCompra(idCompra);
         StatusCompra statusAnterior = compra.getStatus();
@@ -430,6 +433,18 @@ public class CompraService {
         if (deveReverterEstoqueAoCancelar(compra, statusAnterior)) {
             reverterEstoqueCompra(compra, "Cancelamento da compra #" + compra.getId());
         }
+
+        Optional.ofNullable(compra.getPagamentos()).orElseGet(List::of).stream()
+                .filter(Objects::nonNull)
+                .forEach(pagamento -> {
+                    if (pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
+                        pagamentoCompraService.estornarPagamento(pagamento);
+                    } else if (pagamento.getStatusPagamento() == StatusPagamento.PENDENTE) {
+                        pagamentoCompraService.cancelarPagamento(pagamento);
+                    }
+                });
+
+        compra.setValorPendente(BigDecimal.ZERO);
 
         compra.setStatus(StatusCompra.CANCELADO);
         Compra salvo = compraRepository.save(compra);

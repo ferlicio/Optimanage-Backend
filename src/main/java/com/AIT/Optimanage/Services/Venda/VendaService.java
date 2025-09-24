@@ -95,7 +95,7 @@ public class VendaService {
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Cacheable(value = "vendas", key = "#loggedUser.id + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "vendas", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#loggedUser, #pesquisa)")
     @Transactional(readOnly = true)
     public Page<VendaResponseDTO> listarVendas(User loggedUser, VendaSearch pesquisa) {
         Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();

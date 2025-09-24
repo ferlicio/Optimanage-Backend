@@ -30,7 +30,7 @@ public class ServicoService {
     private final ServicoMapper servicoMapper;
     private final PlanoService planoService;
 
-    @Cacheable(value = "servicos", key = "T(com.AIT.Optimanage.Security.CurrentUser).get().getId() + '-' + #pesquisa.hashCode()")
+    @Cacheable(value = "servicos", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
     public Page<ServicoResponse> listarServicos(Search pesquisa) {
         User loggedUser = CurrentUser.get();
         Integer organizationId = CurrentUser.getOrganizationId();
