@@ -21,6 +21,12 @@ public interface VendaMapper {
     @Mapping(target = "pagamentos", source = "pagamentos")
     VendaResponseDTO toResponse(Venda venda);
 
+    @Mapping(target = "clienteId", source = "cliente.id")
+    @Mapping(target = "produtos", ignore = true)
+    @Mapping(target = "servicos", ignore = true)
+    @Mapping(target = "pagamentos", ignore = true)
+    VendaResponseDTO toResumo(Venda venda);
+
     @Mapping(target = "produtoId", source = "produto.id")
     VendaProdutoResponseDTO toResponse(VendaProduto vendaProduto);
 

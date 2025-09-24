@@ -147,7 +147,7 @@ class VendaServiceTest {
         pagamento.setFormaPagamento(FormaPagamento.DINHEIRO);
         venda.setPagamentos(List.of(pagamento));
 
-        when(vendaRepository.findByIdAndOrganizationId(eq(venda.getId()), eq(loggedUser.getTenantId())))
+        when(vendaRepository.findDetailedByIdAndOrganizationId(eq(venda.getId()), eq(loggedUser.getTenantId())))
                 .thenReturn(Optional.of(venda));
         when(produtoService.buscarProdutoAtivo(3)).thenReturn(criarProdutoNovo());
         when(servicoService.buscarServicoAtivo(4)).thenReturn(criarServicoNovo());
@@ -255,7 +255,7 @@ class VendaServiceTest {
         venda.setPagamentos(List.of(pagamentoEstornado, pagamentoRemanescente));
 
         when(planoService.obterPlanoUsuario(loggedUser)).thenReturn(Optional.of(plano));
-        when(vendaRepository.findByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
+        when(vendaRepository.findDetailedByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
         when(pagamentoVendaService.listarUmPagamento(loggedUser, pagamentoEstornado.getId())).thenReturn(pagamentoEstornado);
         when(pagamentoVendaService.listarPagamentosRealizadosVenda(loggedUser, venda.getId()))
                 .thenReturn(List.of(pagamentoRemanescente));
@@ -294,7 +294,7 @@ class VendaServiceTest {
         venda.setPagamentos(List.of(pagamentoEstornado));
 
         when(planoService.obterPlanoUsuario(loggedUser)).thenReturn(Optional.of(plano));
-        when(vendaRepository.findByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
+        when(vendaRepository.findDetailedByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
         when(pagamentoVendaService.listarUmPagamento(loggedUser, pagamentoEstornado.getId())).thenReturn(pagamentoEstornado);
         when(pagamentoVendaService.listarPagamentosRealizadosVenda(loggedUser, venda.getId())).thenReturn(List.of());
         when(vendaRepository.save(venda)).thenReturn(venda);
@@ -330,7 +330,7 @@ class VendaServiceTest {
         vendaProduto.setVenda(venda);
         venda.setVendaProdutos(List.of(vendaProduto));
 
-        when(vendaRepository.findByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
+        when(vendaRepository.findDetailedByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
         when(vendaRepository.save(venda)).thenReturn(venda);
         when(vendaMapper.toResponse(venda)).thenReturn(new VendaResponseDTO());
         doNothing().when(inventoryService).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
@@ -375,7 +375,7 @@ class VendaServiceTest {
         venda.setPagamentos(List.of(pagamento1, pagamento2));
 
         when(planoService.obterPlanoUsuario(loggedUser)).thenReturn(Optional.of(plano));
-        when(vendaRepository.findByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
+        when(vendaRepository.findDetailedByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
         when(vendaRepository.save(venda)).thenReturn(venda);
         when(vendaMapper.toResponse(venda)).thenReturn(new VendaResponseDTO());
         doNothing().when(inventoryService).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());

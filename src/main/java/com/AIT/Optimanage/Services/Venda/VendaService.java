@@ -119,7 +119,7 @@ public class VendaService {
                 pesquisa.getStatus(),
                 pesquisa.getPago(),
                 pesquisa.getFormaPagamento(),
-                pageable).map(vendaMapper::toResponse);
+                pageable).map(vendaMapper::toResumo);
     }
 
     private Venda getVenda(User loggedUser, Integer idVenda) {
@@ -127,7 +127,7 @@ public class VendaService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
-        return vendaRepository.findByIdAndOrganizationId(idVenda, organizationId)
+        return vendaRepository.findDetailedByIdAndOrganizationId(idVenda, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Venda não encontrada"));
     }
 
