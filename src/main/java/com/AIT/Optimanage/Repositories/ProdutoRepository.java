@@ -26,12 +26,14 @@ public interface ProdutoRepository extends JpaRepository<Produto, Integer> {
     List<Produto> findAllByOrganizationIdAndAtivoTrue(Integer organizationId);
 
     @Modifying
-    @Query("update Produto p set p.qtdEstoque = p.qtdEstoque - :quantidade where p.id = :id and p.qtdEstoque >= :quantidade")
-    int reduzirEstoque(Integer id, Integer quantidade);
+    @Query("update Produto p set p.qtdEstoque = p.qtdEstoque - :quantidade " +
+            "where p.id = :id and p.organizationId = :organizationId and p.qtdEstoque >= :quantidade")
+    int reduzirEstoque(Integer id, Integer quantidade, Integer organizationId);
 
     @Modifying
-    @Query("update Produto p set p.qtdEstoque = p.qtdEstoque + :quantidade where p.id = :id")
-    int incrementarEstoque(Integer id, Integer quantidade);
+    @Query("update Produto p set p.qtdEstoque = p.qtdEstoque + :quantidade " +
+            "where p.id = :id and p.organizationId = :organizationId")
+    int incrementarEstoque(Integer id, Integer quantidade, Integer organizationId);
 
     long countByOrganizationIdAndAtivoTrue(Integer organizationId);
 }
