@@ -202,6 +202,7 @@ public class CompraService {
         }
 
         Compra compra = getCompra(idCompra);
+        StatusCompra statusAnterior = compra.getStatus();
 
         compra.setDataEfetuacao(compraDTO.getDataEfetuacao());
         compra.setDataAgendada(compraDTO.getDataAgendada());
@@ -210,7 +211,9 @@ public class CompraService {
         compra.setCondicaoPagamento(compraDTO.getCondicaoPagamento());
         compra.setObservacoes(compraDTO.getObservacoes());
 
-        reverterEstoqueCompra(compra, "Ajuste de edição da compra #" + compra.getId());
+        if (statusAnterior != StatusCompra.ORCAMENTO) {
+            reverterEstoqueCompra(compra, "Ajuste de edição da compra #" + compra.getId());
+        }
 
         compraProdutoRepository.deleteAll(compra.getCompraProdutos());
         compraServicoRepository.deleteAll(compra.getCompraServicos());
@@ -242,22 +245,30 @@ public class CompraService {
         compraProdutoRepository.saveAll(compraProdutos);
         compraServicoRepository.saveAll(compraServicos);
 
-        compraProdutos.forEach(cp ->
-                inventoryService.incrementar(cp.getProduto().getId(), cp.getQuantidade(), InventorySource.COMPRA,
-                        compra.getId(), "Atualização da compra #" + compra.getId()));
+        if (compra.getStatus() != StatusCompra.ORCAMENTO) {
+            compraProdutos.forEach(cp ->
+                    inventoryService.incrementar(cp.getProduto().getId(), cp.getQuantidade(), InventorySource.COMPRA,
+                            compra.getId(), "Atualização da compra #" + compra.getId()));
+        }
 
         Compra salvo = compraRepository.save(compra);
         return compraMapper.toResponse(salvo);
     }
 
+    @Transactional
     public CompraResponseDTO confirmarCompra(Integer idCompra) {
         Compra compra = getCompra(idCompra);
-        if (compra.getStatus() == StatusCompra.ORCAMENTO && compra.getCompraServicos().isEmpty()) {
+        StatusCompra statusAnterior = compra.getStatus();
+        if (statusAnterior == StatusCompra.ORCAMENTO && compra.getCompraServicos().isEmpty()) {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         } else {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_EXECUCAO);
         }
+        boolean devePublicarEvento = statusAnterior == StatusCompra.ORCAMENTO;
         Compra salvo = compraRepository.save(compra);
+        if (devePublicarEvento) {
+            publicarCompraCriada(salvo, salvo.getCompraProdutos());
+        }
         return compraMapper.toResponse(salvo);
     }
 
@@ -462,7 +473,7 @@ public class CompraService {
             return false;
         }
 
-        if (statusAnterior == StatusCompra.CONCRETIZADO) {
+        if (statusAnterior == StatusCompra.CONCRETIZADO || statusAnterior == StatusCompra.ORCAMENTO) {
             return false;
         }
 
@@ -489,7 +500,7 @@ public class CompraService {
     }
 
     private void publicarCompraCriada(Compra compra, List<CompraProduto> itens) {
-        if (itens == null || itens.isEmpty()) {
+        if (compra.getStatus() == StatusCompra.ORCAMENTO || itens == null || itens.isEmpty()) {
             return;
         }
 
