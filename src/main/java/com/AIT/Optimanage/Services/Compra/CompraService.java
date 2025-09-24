@@ -63,6 +63,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -209,9 +210,7 @@ public class CompraService {
         compra.setCondicaoPagamento(compraDTO.getCondicaoPagamento());
         compra.setObservacoes(compraDTO.getObservacoes());
 
-        compra.getCompraProdutos().forEach(cp ->
-                inventoryService.reduzir(cp.getProduto().getId(), cp.getQuantidade(), InventorySource.COMPRA,
-                        compra.getId(), "Ajuste de edição da compra #" + compra.getId()));
+        reverterEstoqueCompra(compra, "Ajuste de edição da compra #" + compra.getId());
 
         compraProdutoRepository.deleteAll(compra.getCompraProdutos());
         compraServicoRepository.deleteAll(compra.getCompraServicos());
@@ -304,7 +303,10 @@ public class CompraService {
         Plano plano = obterPlanoAtual();
         garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
-        if (compra.getStatus() == StatusCompra.CONCRETIZADO || compra.getStatus() == StatusCompra.PAGO) {
+        boolean deveReverterEstoque = compra.getStatus() == StatusCompra.CONCRETIZADO
+                || compra.getStatus() == StatusCompra.PAGO;
+        if (deveReverterEstoque) {
+            reverterEstoqueCompra(compra, "Estorno integral da compra #" + compra.getId());
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         }
         compra.setValorPendente(compra.getValorFinal());
@@ -403,9 +405,36 @@ public class CompraService {
     @CacheEvict(value = "compras", allEntries = true)
     public CompraResponseDTO cancelarCompra(Integer idCompra) {
         Compra compra = getCompra(idCompra);
-        atualizarStatus(compra, StatusCompra.CANCELADO);
+        StatusCompra statusAnterior = compra.getStatus();
+        STATUS_TRANSITION_POLICY.validate(statusAnterior, StatusCompra.CANCELADO, compra);
+
+        if (deveReverterEstoqueAoCancelar(compra, statusAnterior)) {
+            reverterEstoqueCompra(compra, "Cancelamento da compra #" + compra.getId());
+        }
+
+        compra.setStatus(StatusCompra.CANCELADO);
         Compra salvo = compraRepository.save(compra);
         return compraMapper.toResponse(salvo);
+    }
+
+    private void reverterEstoqueCompra(Compra compra, String descricao) {
+        if (compra == null) {
+            return;
+        }
+
+        List<CompraProduto> itens = compra.getCompraProdutos();
+        if (itens == null || itens.isEmpty()) {
+            return;
+        }
+
+        itens.stream()
+                .filter(item -> item != null && item.getProduto() != null)
+                .forEach(item -> inventoryService.reduzir(
+                        item.getProduto().getId(),
+                        item.getQuantidade(),
+                        InventorySource.COMPRA,
+                        compra.getId(),
+                        descricao));
     }
 
     private List<CompraProduto> criarListaProdutos(List<CompraProdutoDTO> produtosDTO, Compra compra) {
@@ -426,6 +455,37 @@ public class CompraService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private boolean deveReverterEstoqueAoCancelar(Compra compra, StatusCompra statusAnterior) {
+        if (compra == null || compra.getCompraProdutos() == null || compra.getCompraProdutos().isEmpty()) {
+            return false;
+        }
+
+        if (statusAnterior == StatusCompra.CONCRETIZADO) {
+            return false;
+        }
+
+        return !estoqueRevertidoPorEstorno(compra);
+    }
+
+    private boolean estoqueRevertidoPorEstorno(Compra compra) {
+        List<CompraPagamento> pagamentos = compra.getPagamentos();
+        if (pagamentos == null || pagamentos.isEmpty()) {
+            return false;
+        }
+
+        boolean possuiEstornado = pagamentos.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(pagamento -> pagamento.getStatusPagamento() == StatusPagamento.ESTORNADO);
+
+        if (!possuiEstornado) {
+            return false;
+        }
+
+        return pagamentos.stream()
+                .filter(Objects::nonNull)
+                .noneMatch(pagamento -> pagamento.getStatusPagamento() == StatusPagamento.PAGO);
     }
 
     private void publicarCompraCriada(Compra compra, List<CompraProduto> itens) {
