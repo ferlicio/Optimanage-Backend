@@ -17,6 +17,6 @@ public interface PagamentoCompraRepository extends JpaRepository<CompraPagamento
 
     List<CompraPagamento> findAllByCompraIdAndCompraOrganizationIdAndStatusPagamento(Integer idCompra, Integer organizationId, StatusPagamento statusPagamento);
 
-    List<CompraPagamento> findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(Integer organizationId, StatusPagamento statusPagamento, LocalDate dataVencimento);
+    List<CompraPagamento> findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(Integer organizationId, StatusPagamento statusPagamento, LocalDate dataVencimento);
 
 }

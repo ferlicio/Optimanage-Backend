@@ -20,5 +20,5 @@ public interface PagamentoVendaRepository extends JpaRepository<VendaPagamento, 
 
     Optional<VendaPagamento> findByIdAndVendaAndVendaOrganizationId(Integer idPagamento, Venda venda, Integer organizationId);
 
-    List<VendaPagamento> findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(Integer organizationId, StatusPagamento statusPagamento, LocalDate dataVencimento);
+    List<VendaPagamento> findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(Integer organizationId, StatusPagamento statusPagamento, LocalDate dataVencimento);
 }

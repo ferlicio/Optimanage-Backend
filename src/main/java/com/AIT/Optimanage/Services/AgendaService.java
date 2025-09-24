@@ -82,7 +82,7 @@ public class AgendaService {
         Integer userId = loggedUser.getId();
 
         List<CompraPagamento> compras = pagamentoCompraRepository
-                .findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(organizationId, StatusPagamento.PENDENTE, now);
+                .findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(organizationId, StatusPagamento.PENDENTE, inicio);
         compras.stream()
                 .filter(p -> withinRange(p.getDataVencimento(), inicio, fim))
                 .map(pagamento -> criarEvento(TipoEvento.PAGAMENTO, TipoEvento.COMPRA, pagamento.getDataVencimento(), null, null,
@@ -90,7 +90,7 @@ public class AgendaService {
                 .forEach(eventos::add);
 
         List<VendaPagamento> vendas = pagamentoVendaRepository
-                .findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(organizationId, StatusPagamento.PENDENTE, now);
+                .findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(organizationId, StatusPagamento.PENDENTE, inicio);
         vendas.stream()
                 .filter(p -> withinRange(p.getDataVencimento(), inicio, fim))
                 .map(pagamento -> criarEvento(TipoEvento.PAGAMENTO, TipoEvento.VENDA, pagamento.getDataVencimento(), null, null,

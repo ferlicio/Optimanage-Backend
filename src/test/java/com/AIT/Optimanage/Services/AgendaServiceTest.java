@@ -107,11 +107,11 @@ class AgendaServiceTest {
                 .build();
         contato.setId(33);
 
-        when(pagamentoCompraRepository.findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(
-                eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), any(LocalDate.class)))
+        when(pagamentoCompraRepository.findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(
+                eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), eq(inicio)))
                 .thenReturn(List.of(pagamentoCompra));
-        when(pagamentoVendaRepository.findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(
-                eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), any(LocalDate.class)))
+        when(pagamentoVendaRepository.findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(
+                eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), eq(inicio)))
                 .thenReturn(List.of(pagamentoVenda));
         when(compraRepository.findAgendadasNoPeriodo(usuario.getTenantId(), usuario.getId(), inicio, fim))
                 .thenReturn(List.of(compra));
@@ -185,11 +185,11 @@ class AgendaServiceTest {
                 .build();
         contatoFora.setId(5);
 
-        when(pagamentoCompraRepository.findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(
-                eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), any(LocalDate.class)))
+        when(pagamentoCompraRepository.findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(
+                eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), eq(inicio)))
                 .thenReturn(List.of(pagamentoDentro, pagamentoFora));
-        when(pagamentoVendaRepository.findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoAfter(
-                eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), any(LocalDate.class)))
+        when(pagamentoVendaRepository.findAllByVendaOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(
+                eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), eq(inicio)))
                 .thenReturn(List.of());
         when(compraRepository.findAgendadasNoPeriodo(usuario.getTenantId(), usuario.getId(), inicio, fim))
                 .thenReturn(List.of(compraDentro, compraFora));
