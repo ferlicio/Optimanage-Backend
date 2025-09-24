@@ -305,14 +305,13 @@ public class VendaService {
         PaymentProvider provider = request != null && request.getProvider() != null
                 ? request.getProvider()
                 : PaymentProvider.STRIPE;
-        PaymentRequestDTO req = request != null ? request : PaymentRequestDTO.builder()
-                .amount(venda.getValorPendente())
+        PaymentRequestDTO req = PaymentRequestDTO.builder()
+                .amount(Optional.ofNullable(venda.getValorPendente()).orElse(BigDecimal.ZERO))
                 .currency("brl")
                 .description("Venda " + idVenda)
                 .provider(provider)
                 .build();
         PaymentConfig config = paymentConfigService.getConfig(loggedUser.getOrganizationId(), provider);
-        req.setProvider(provider);
         return paymentService.createPayment(req, config);
     }
 
@@ -342,9 +341,13 @@ public class VendaService {
             } else if (pagamento.getStatusPagamento() == StatusPagamento.PAGO &&
                     pagamento.getDataPagamento() != null && pagamento.getDataPagamento().isAfter(LocalDate.now())) {
                 throw new IllegalArgumentException("A data de pagamento não pode ser no futuro.");
-            } else if (pagamento.getStatusPagamento() == StatusPagamento.PENDENTE &&
-                    pagamento.getDataVencimento().isBefore(LocalDate.now())) {
-                throw new IllegalArgumentException("Um pagamento pendente não pode ter vencimento no passado.");
+            } else if (pagamento.getStatusPagamento() == StatusPagamento.PENDENTE) {
+                if (pagamento.getDataVencimento() == null) {
+                    throw new IllegalArgumentException("Pagamentos pendentes devem informar uma data de vencimento.");
+                }
+                if (pagamento.getDataVencimento().isBefore(LocalDate.now())) {
+                    throw new IllegalArgumentException("Um pagamento pendente não pode ter vencimento no passado.");
+                }
             }
             pagamentoVendaService.lancarPagamento(venda, pagamento);
         }
@@ -367,6 +370,7 @@ public class VendaService {
                 pagamentoVendaService.estornarPagamento(loggedUser, pagamento);
             }
         });
+        devolverProdutosParaEstoque(venda, "Estorno integral da venda #" + venda.getId());
         venda.setValorPendente(Optional.ofNullable(venda.getValorFinal()).orElse(BigDecimal.ZERO));
         if (venda.getStatus() == StatusVenda.CONCRETIZADA) {
             venda.setStatus(StatusVenda.AGUARDANDO_PAG);

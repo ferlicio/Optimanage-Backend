@@ -298,9 +298,13 @@ public class CompraService {
             } else if (pagamento.getStatusPagamento() == StatusPagamento.PAGO &&
                     pagamento.getDataPagamento() != null && pagamento.getDataPagamento().isAfter(LocalDate.now())) {
                 throw new IllegalArgumentException("Um pagamento realizado não pode ser no futuro");
-            } else if (pagamento.getStatusPagamento() == StatusPagamento.PENDENTE &&
-                    pagamento.getDataVencimento().isBefore(LocalDate.now())) {
-                throw new IllegalArgumentException("Um pagamento pendente não pode ter vencimento no passado");
+            } else if (pagamento.getStatusPagamento() == StatusPagamento.PENDENTE) {
+                if (pagamento.getDataVencimento() == null) {
+                    throw new IllegalArgumentException("Pagamentos pendentes devem informar uma data de vencimento");
+                }
+                if (pagamento.getDataVencimento().isBefore(LocalDate.now())) {
+                    throw new IllegalArgumentException("Um pagamento pendente não pode ter vencimento no passado");
+                }
             }
             pagamentoCompraService.lancarPagamento(compra, pagamento);
         }
