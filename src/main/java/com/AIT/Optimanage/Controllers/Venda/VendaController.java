@@ -16,11 +16,13 @@ import com.AIT.Optimanage.Payments.PaymentRequestDTO;
 import com.AIT.Optimanage.Payments.PaymentResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,8 +44,10 @@ public class VendaController extends V1BaseController {
     public ResponseEntity<Page<VendaResponseDTO>> listarVendas(@AuthenticationPrincipal User loggedUser,
                                                     @RequestParam(value = "id", required = false) Integer id,
                                                     @RequestParam(value = "cliente_id", required = false) Integer clienteId,
-                                                    @RequestParam(value = "data_inicial", required = false) String data_inicial,
-                                                    @RequestParam(value = "data_final", required = false) String data_final,
+                                                    @RequestParam(value = "data_inicial", required = false)
+                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data_inicial,
+                                                    @RequestParam(value = "data_final", required = false)
+                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data_final,
                                                     @RequestParam(value = "pago", required = false) Boolean pago,
                                                     @RequestParam(value = "status", required = false) StatusVenda status,
                                                     @RequestParam(value = "forma_pagamento", required = false) FormaPagamento forma_pagamento,
