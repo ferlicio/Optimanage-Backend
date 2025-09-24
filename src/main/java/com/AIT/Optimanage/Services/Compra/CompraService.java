@@ -424,6 +424,7 @@ public class CompraService {
     }
 
     @CacheEvict(value = "compras", allEntries = true)
+    @Transactional
     public CompraResponseDTO cancelarCompra(Integer idCompra) {
         Compra compra = getCompra(idCompra);
         StatusCompra statusAnterior = compra.getStatus();
