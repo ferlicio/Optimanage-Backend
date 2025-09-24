@@ -321,7 +321,7 @@ public class CompraService {
             atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
         }
         compra.setValorPendente(compra.getValorFinal());
-        compra.getPagamentos().forEach(pagamento
+        Optional.ofNullable(compra.getPagamentos()).orElseGet(List::of).forEach(pagamento
                 -> { if (pagamento.getStatusPagamento() == StatusPagamento.PAGO)
                         { pagamentoCompraService.estornarPagamento(pagamento); }
                     });

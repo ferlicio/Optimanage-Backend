@@ -355,7 +355,7 @@ public class VendaService {
         if (venda.getStatus() == StatusVenda.CANCELADA) {
             throw new IllegalArgumentException("Não é possível estornar uma venda cancelada.");
         }
-        venda.getPagamentos().forEach(pagamento -> {
+        Optional.ofNullable(venda.getPagamentos()).orElseGet(List::of).forEach(pagamento -> {
             if (pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
                 pagamentoVendaService.estornarPagamento(loggedUser, pagamento);
             }
