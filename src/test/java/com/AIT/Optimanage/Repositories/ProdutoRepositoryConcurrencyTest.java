@@ -72,7 +72,7 @@ class ProdutoRepositoryConcurrencyTest {
                 try {
                     start.await();
                     transactionTemplate.execute(status -> {
-                        produtoRepository.incrementarEstoque(produto.getId(), 1);
+                        produtoRepository.incrementarEstoque(produto.getId(), 1, 1);
                         return null;
                     });
                 } catch (InterruptedException e) {
@@ -107,7 +107,7 @@ class ProdutoRepositoryConcurrencyTest {
                 try {
                     start.await();
                     Integer updated = transactionTemplate.execute(status ->
-                            produtoRepository.reduzirEstoque(produto.getId(), 1));
+                            produtoRepository.reduzirEstoque(produto.getId(), 1, 1));
                     if (updated == 1) {
                         success.incrementAndGet();
                     }

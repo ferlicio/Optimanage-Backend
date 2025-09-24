@@ -53,12 +53,15 @@ public class InventoryService {
         if (quantidade == null || quantidade <= 0) {
             throw new IllegalArgumentException("A quantidade deve ser maior que zero.");
         }
-        Produto produto = produtoRepository.findById(produtoId)
+        Integer organizationId = Optional.ofNullable(TenantContext.getTenantId())
+                .orElseThrow(() -> new IllegalStateException("Organização não definida no contexto."));
+
+        Produto produto = produtoRepository.findByIdAndOrganizationId(produtoId, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado: " + produtoId));
 
         int updatedRows = action == InventoryAction.INCREMENT
-                ? produtoRepository.incrementarEstoque(produtoId, quantidade)
-                : produtoRepository.reduzirEstoque(produtoId, quantidade);
+                ? produtoRepository.incrementarEstoque(produtoId, quantidade, organizationId)
+                : produtoRepository.reduzirEstoque(produtoId, quantidade, organizationId);
 
         if (updatedRows == 0) {
             String mensagem = action == InventoryAction.INCREMENT
