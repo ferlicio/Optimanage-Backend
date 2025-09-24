@@ -18,11 +18,6 @@ import java.util.Optional;
 public interface VendaRepository extends JpaRepository<Venda, Integer> {
 
     @Query("SELECT v FROM Venda v " +
-            "LEFT JOIN FETCH v.vendaProdutos vp " +
-            "LEFT JOIN FETCH vp.produto p " +
-            "LEFT JOIN FETCH v.vendaServicos vs " +
-            "LEFT JOIN FETCH vs.servico s " +
-            "LEFT JOIN v.pagamentos pag " +
             "WHERE " +
             "(:organizationId IS NULL OR v.organizationId = :organizationId) " +
             "AND (:id IS NULL OR v.sequencialUsuario = :id) " +
