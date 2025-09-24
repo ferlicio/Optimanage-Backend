@@ -553,8 +553,13 @@ public class CompraService {
     public void atualizarCompraPosPagamento(Compra compra) {
         List<CompraPagamento> pagamentos = pagamentoCompraService.listarPagamentosRealizadosCompra(compra.getId());
 
-        BigDecimal valorPago = pagamentos.stream().map(CompraPagamento::getValorPago).reduce(BigDecimal.ZERO, BigDecimal::add);
-        compra.setValorPendente(compra.getValorFinal().subtract(valorPago));
+        BigDecimal valorPago = pagamentos.stream().map(CompraPagamento::getValorPago)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorPendente = compra.getValorFinal().subtract(valorPago);
+        if (valorPendente.compareTo(BigDecimal.ZERO) < 0) {
+            valorPendente = BigDecimal.ZERO;
+        }
+        compra.setValorPendente(valorPendente);
 
         if (compra.getValorPendente().compareTo(BigDecimal.ZERO) == 0) {
             if (compra.getStatus() == StatusCompra.AGUARDANDO_PAG || compra.getStatus() == StatusCompra.PARCIALMENTE_PAGO) {
