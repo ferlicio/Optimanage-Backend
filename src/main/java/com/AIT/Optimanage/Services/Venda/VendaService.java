@@ -252,7 +252,11 @@ public class VendaService {
         BigDecimal valorFinalAtualizado = valorTotal.multiply(BigDecimal.valueOf(100).subtract(descontoGeralAtualizado))
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         venda.setValorFinal(valorFinalAtualizado);
-        venda.setValorPendente(valorFinalAtualizado.subtract(valorPago).setScale(2, RoundingMode.HALF_UP));
+        BigDecimal valorPendenteAtualizado = valorFinalAtualizado.subtract(valorPago).setScale(2, RoundingMode.HALF_UP);
+        if (valorPendenteAtualizado.compareTo(BigDecimal.ZERO) < 0) {
+            valorPendenteAtualizado = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        venda.setValorPendente(valorPendenteAtualizado);
         venda.setVendaProdutos(vendaProdutos);
         venda.setVendaServicos(vendaServicos);
         atualizarStatus(venda, vendaDTO.getStatus());

@@ -232,6 +232,61 @@ class CompraServiceTest {
     }
 
     @Test
+    void editarCompraComPagamentosSuperioresAoTotalZeraValorPendente() {
+        Produto produtoAntigo = Produto.builder()
+                .valorVenda(BigDecimal.valueOf(60))
+                .custo(BigDecimal.valueOf(40))
+                .build();
+        produtoAntigo.setId(41);
+
+        Compra compra = Compra.builder()
+                .sequencialUsuario(1)
+                .dataEfetuacao(LocalDate.now().minusDays(2))
+                .valorFinal(BigDecimal.valueOf(200))
+                .valorPendente(BigDecimal.valueOf(50))
+                .status(StatusCompra.AGUARDANDO_PAG)
+                .compraProdutos(Collections.singletonList(CompraProduto.builder()
+                        .produto(produtoAntigo)
+                        .quantidade(1)
+                        .valorUnitario(produtoAntigo.getCusto())
+                        .valorTotal(produtoAntigo.getCusto())
+                        .build()))
+                .compraServicos(Collections.emptyList())
+                .pagamentos(Collections.singletonList(CompraPagamento.builder()
+                        .valorPago(BigDecimal.valueOf(150))
+                        .statusPagamento(StatusPagamento.PAGO)
+                        .build()))
+                .build();
+        compra.setId(31);
+        compra.setTenantId(1);
+
+        Produto produtoAtualizado = Produto.builder()
+                .valorVenda(BigDecimal.valueOf(30))
+                .custo(BigDecimal.valueOf(30))
+                .build();
+        produtoAtualizado.setId(42);
+
+        CompraDTO compraDTO = CompraDTO.builder()
+                .fornecedorId(1)
+                .dataEfetuacao(LocalDate.now())
+                .condicaoPagamento("30 dias")
+                .status(StatusCompra.AGUARDANDO_PAG)
+                .produtos(Collections.singletonList(new CompraProdutoDTO(produtoAtualizado.getId(), 1,
+                        produtoAtualizado.getCusto())))
+                .servicos(Collections.emptyList())
+                .build();
+
+        when(compraRepository.findByIdAndOrganizationId(31, 1)).thenReturn(Optional.of(compra));
+        when(produtoService.buscarProdutoAtivo(produtoAtualizado.getId())).thenReturn(produtoAtualizado);
+        when(compraRepository.save(compra)).thenReturn(compra);
+        when(compraMapper.toResponse(compra)).thenReturn(new CompraResponseDTO());
+
+        compraService.editarCompra(31, compraDTO);
+
+        assertEquals(BigDecimal.ZERO, compra.getValorPendente());
+    }
+
+    @Test
     void editarCompraSemValorUnitarioUsaCustoDoProduto() {
         Produto produtoAntigo = Produto.builder()
                 .valorVenda(BigDecimal.valueOf(30))
