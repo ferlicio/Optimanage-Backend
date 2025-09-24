@@ -184,6 +184,7 @@ class CompraServiceTest {
         produtoAtualizado.setId(5);
 
         Servico servicoAtualizado = Servico.builder()
+                .custo(BigDecimal.valueOf(45))
                 .valorVenda(BigDecimal.valueOf(50))
                 .build();
         servicoAtualizado.setId(3);
@@ -212,12 +213,15 @@ class CompraServiceTest {
         CompraProduto compraProdutoAtualizado = compra.getCompraProdutos().get(0);
         assertEquals(custoNegociado, compraProdutoAtualizado.getValorUnitario());
         assertEquals(custoNegociado.multiply(BigDecimal.valueOf(2)), compraProdutoAtualizado.getValorTotal());
-        assertEquals(BigDecimal.valueOf(200), compra.getValorFinal());
-        assertEquals(BigDecimal.valueOf(120), compra.getValorPendente());
+        assertEquals(BigDecimal.valueOf(195), compra.getValorFinal());
+        assertEquals(BigDecimal.valueOf(115), compra.getValorPendente());
         assertEquals(compraDTO.getDataEfetuacao(), compra.getDataEfetuacao());
         assertEquals("Atualizado", compra.getObservacoes());
         assertEquals(1, compra.getCompraProdutos().size());
         assertEquals(1, compra.getCompraServicos().size());
+        assertEquals(servicoAtualizado.getCusto(), compra.getCompraServicos().get(0).getValorUnitario());
+        assertEquals(servicoAtualizado.getCusto().multiply(BigDecimal.valueOf(1)),
+                compra.getCompraServicos().get(0).getValorTotal());
         verify(compraProdutoRepository).saveAll(anyList());
         verify(compraServicoRepository).saveAll(anyList());
         verify(inventoryService).reduzir(produtoAntigo.getId(), 1, InventorySource.COMPRA, compra.getId(),
