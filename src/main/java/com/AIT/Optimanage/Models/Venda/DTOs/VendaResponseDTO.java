@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -38,4 +39,8 @@ public class VendaResponseDTO {
     private List<VendaProdutoResponseDTO> produtos;
     private List<VendaServicoResponseDTO> servicos;
     private List<VendaPagamentoResponseDTO> pagamentos;
+    private Integer createdBy;
+    private Integer updatedBy;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
