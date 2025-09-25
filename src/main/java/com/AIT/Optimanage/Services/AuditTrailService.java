@@ -41,10 +41,11 @@ public class AuditTrailService {
             tenantId = CurrentUser.getOrganizationId();
         }
 
-        if (tenantId != null) {
-            entry.setTenantId(tenantId);
+        if (tenantId == null) {
+            return;
         }
 
+        entry.setTenantId(tenantId);
         auditTrailRepository.save(entry);
     }
 }
