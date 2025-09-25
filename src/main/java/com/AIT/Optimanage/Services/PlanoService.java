@@ -22,7 +22,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -37,6 +39,7 @@ public class PlanoService {
     private final FornecedorRepository fornecedorRepository;
     private final ServicoRepository servicoRepository;
     private final PlanoMapper planoMapper;
+    private final AuditTrailService auditTrailService;
 
     public List<PlanoResponse> listarPlanos() {
         return planoRepository.findAll()
@@ -58,9 +61,49 @@ public class PlanoService {
     public PlanoResponse atualizarPlano(Integer idPlano, PlanoRequest request) {
         Plano existente = planoRepository.findById(idPlano)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
-        Plano plano = planoMapper.toEntity(request);
-        plano.setId(existente.getId());
-        Plano atualizado = planoRepository.save(plano);
+
+        List<String> quotaChanges = new ArrayList<>();
+        registrarAlteracaoQuota(quotaChanges, "maxUsuarios", existente.getMaxUsuarios(), request.getMaxUsuarios());
+        existente.setMaxUsuarios(request.getMaxUsuarios());
+        registrarAlteracaoQuota(quotaChanges, "maxProdutos", existente.getMaxProdutos(), request.getMaxProdutos());
+        existente.setMaxProdutos(request.getMaxProdutos());
+        registrarAlteracaoQuota(quotaChanges, "maxClientes", existente.getMaxClientes(), request.getMaxClientes());
+        existente.setMaxClientes(request.getMaxClientes());
+        registrarAlteracaoQuota(quotaChanges, "maxFornecedores", existente.getMaxFornecedores(), request.getMaxFornecedores());
+        existente.setMaxFornecedores(request.getMaxFornecedores());
+        registrarAlteracaoQuota(quotaChanges, "maxServicos", existente.getMaxServicos(), request.getMaxServicos());
+        existente.setMaxServicos(request.getMaxServicos());
+
+        registrarAlteracaoQuota(quotaChanges, "qtdAcessos", existente.getQtdAcessos(), request.getQtdAcessos());
+        existente.setQtdAcessos(request.getQtdAcessos());
+
+        registrarAlteracaoQuota(quotaChanges, "agendaHabilitada", existente.getAgendaHabilitada(), request.getAgendaHabilitada());
+        existente.setAgendaHabilitada(request.getAgendaHabilitada());
+        registrarAlteracaoQuota(quotaChanges, "recomendacoesHabilitadas", existente.getRecomendacoesHabilitadas(), request.getRecomendacoesHabilitadas());
+        existente.setRecomendacoesHabilitadas(request.getRecomendacoesHabilitadas());
+        registrarAlteracaoQuota(quotaChanges, "pagamentosHabilitados", existente.getPagamentosHabilitados(), request.getPagamentosHabilitados());
+        existente.setPagamentosHabilitados(request.getPagamentosHabilitados());
+        registrarAlteracaoQuota(quotaChanges, "suportePrioritario", existente.getSuportePrioritario(), request.getSuportePrioritario());
+        existente.setSuportePrioritario(request.getSuportePrioritario());
+        registrarAlteracaoQuota(quotaChanges, "monitoramentoEstoqueHabilitado", existente.getMonitoramentoEstoqueHabilitado(), request.getMonitoramentoEstoqueHabilitado());
+        existente.setMonitoramentoEstoqueHabilitado(request.getMonitoramentoEstoqueHabilitado());
+
+        if (!Objects.equals(existente.getNome(), request.getNome())) {
+            existente.setNome(request.getNome());
+        }
+        if (!Objects.equals(existente.getValor(), request.getValor())) {
+            existente.setValor(request.getValor());
+        }
+        if (!Objects.equals(existente.getDuracaoDias(), request.getDuracaoDias())) {
+            existente.setDuracaoDias(request.getDuracaoDias());
+        }
+
+        Plano atualizado = planoRepository.save(existente);
+
+        if (!quotaChanges.isEmpty()) {
+            auditTrailService.recordPlanQuotaChange(atualizado.getId(), String.join("; ", quotaChanges));
+        }
+
         return planoMapper.toResponse(atualizado);
     }
 
@@ -165,6 +208,12 @@ public class PlanoService {
             organizationId = TenantContext.getTenantId();
         }
         return organizationId;
+    }
+
+    private void registrarAlteracaoQuota(List<String> quotaChanges, String campo, Object valorAnterior, Object valorAtual) {
+        if (!Objects.equals(valorAnterior, valorAtual)) {
+            quotaChanges.add(String.format("%s: %s -> %s", campo, valorAnterior, valorAtual));
+        }
     }
 }
 

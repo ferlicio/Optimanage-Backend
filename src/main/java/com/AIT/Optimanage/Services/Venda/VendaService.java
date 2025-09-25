@@ -38,6 +38,7 @@ import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Services.AuditTrailService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
@@ -89,6 +90,7 @@ public class VendaService {
     private final PaymentService paymentService;
     private final PaymentConfigService paymentConfigService;
     private final VendaMapper vendaMapper;
+    private final AuditTrailService auditTrailService;
     private final VendaValidator vendaValidator;
     private final AgendaValidator agendaValidator;
     private final OrganizationRepository organizationRepository;
@@ -212,6 +214,7 @@ public class VendaService {
         }
 
         Venda venda = getVenda(loggedUser, vendaId);
+        BigDecimal descontoGeralAnterior = Optional.ofNullable(venda.getDescontoGeral()).orElse(BigDecimal.ZERO);
         BigDecimal descontoGeralAtualizado = Optional.ofNullable(vendaDTO.getDescontoGeral()).orElse(BigDecimal.ZERO);
 
         venda.setDataEfetuacao(vendaDTO.getDataEfetuacao());
@@ -271,6 +274,11 @@ public class VendaService {
         }
 
         Venda salvo = vendaRepository.save(venda);
+
+        if (descontoGeralAnterior.compareTo(descontoGeralAtualizado) != 0) {
+            auditTrailService.recordDiscountRuleChange(salvo.getId(),
+                    String.format("descontoGeral: %s -> %s", descontoGeralAnterior, descontoGeralAtualizado));
+        }
         return vendaMapper.toResponse(salvo);
     }
 
@@ -506,6 +514,8 @@ public class VendaService {
         venda.setValorPendente(BigDecimal.ZERO);
         venda.setStatus(StatusVenda.CANCELADA);
         Venda salvo = vendaRepository.save(venda);
+        auditTrailService.recordSaleCancellation(salvo.getId(),
+                String.format("Venda cancelada por usuário %d", Optional.ofNullable(loggedUser).map(User::getId).orElse(null)));
         return vendaMapper.toResponse(salvo);
     }
 

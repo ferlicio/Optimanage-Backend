@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -26,5 +28,9 @@ public class PlanoResponse {
     private Boolean pagamentosHabilitados;
     private Boolean suportePrioritario;
     private Boolean monitoramentoEstoqueHabilitado;
+    private Integer createdBy;
+    private Integer updatedBy;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
 
