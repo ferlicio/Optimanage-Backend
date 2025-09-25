@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Services;
 import com.AIT.Optimanage.Models.Audit.AuditTrail;
 import com.AIT.Optimanage.Repositories.Audit.AuditTrailRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Support.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -35,9 +36,13 @@ public class AuditTrailService {
                 .details(details)
                 .build();
 
-        Integer organizationId = CurrentUser.getOrganizationId();
-        if (organizationId != null) {
-            entry.setTenantId(organizationId);
+        Integer tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            tenantId = CurrentUser.getOrganizationId();
+        }
+
+        if (tenantId != null) {
+            entry.setTenantId(tenantId);
         }
 
         auditTrailRepository.save(entry);
