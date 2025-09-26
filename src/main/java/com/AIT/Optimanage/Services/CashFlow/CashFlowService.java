@@ -20,6 +20,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -62,7 +63,7 @@ public class CashFlowService {
     public CashFlowEntryResponse criarLancamento(CashFlowEntryRequest request) {
         Integer organizationId = getOrganizationId();
         CashFlowEntry entry = mapper.toEntity(request);
-        entry.setStatus(CashFlowStatus.ACTIVE);
+        entry.setStatus(resolveStatus(entry.getMovementDate()));
         entry.setCancelledAt(null);
         entry.setOrganizationId(organizationId);
         CashFlowEntry saved = repository.save(entry);
@@ -76,6 +77,8 @@ public class CashFlowService {
             throw new IllegalStateException("Não é possível editar um lançamento cancelado.");
         }
         mapper.updateEntityFromRequest(request, entry);
+        entry.setStatus(resolveStatus(entry.getMovementDate()));
+        entry.setCancelledAt(null);
         CashFlowEntry saved = repository.save(entry);
         return mapper.toResponse(saved);
     }
@@ -96,6 +99,13 @@ public class CashFlowService {
         Integer organizationId = getOrganizationId();
         return repository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Lançamento de fluxo de caixa não encontrado"));
+    }
+
+    private CashFlowStatus resolveStatus(LocalDate movementDate) {
+        if (movementDate != null && movementDate.isAfter(LocalDate.now())) {
+            return CashFlowStatus.SCHEDULED;
+        }
+        return CashFlowStatus.ACTIVE;
     }
 
     private Integer getOrganizationId() {
