@@ -32,4 +32,5 @@ public class ClienteResponse {
     private String informacoesAdicionais;
     private BigDecimal lifetimeValue;
     private BigDecimal churnScore;
+    private BigDecimal averageTicket;
 }
