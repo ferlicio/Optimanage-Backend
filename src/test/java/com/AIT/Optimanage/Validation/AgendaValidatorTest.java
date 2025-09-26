@@ -79,11 +79,13 @@ class AgendaValidatorTest {
         when(vendaRepository.findAgendadasNoPeriodo(eq(5), eq(8), eq(data), eq(data)))
                 .thenReturn(List.of(outraVenda));
 
-        User usuario = User.builder().id(8).tenantId(5).build();
+        User usuario = new User();
+        usuario.setId(8);
+        usuario.setTenantId(5);
 
         assertThatThrownBy(() -> agendaValidator.validarConflitosAgendamentoVenda(usuario, venda, data, hora, duracao))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("cliente");
+                .hasMessageContaining("usuário");
     }
 
     @Test
@@ -92,7 +94,8 @@ class AgendaValidatorTest {
         LocalTime hora = LocalTime.of(9, 0);
         Duration duracao = Duration.ofMinutes(60);
 
-        Servico servico = Servico.builder().id(33).build();
+        Servico servico = Servico.builder().build();
+        servico.setId(33);
         CompraServico compraServico = CompraServico.builder().servico(servico).build();
         Compra compra = Compra.builder().build();
         compra.setId(3);

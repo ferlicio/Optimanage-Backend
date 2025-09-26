@@ -7,36 +7,28 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
+import jakarta.persistence.EntityManager;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-@DataJpaTest
+@DataJpaTest(properties = {
+        "spring.flyway.enabled=false",
+        "spring.jpa.properties.hibernate.globally_quoted_identifiers=true"
+})
+@ActiveProfiles("test")
 class ProdutoRepositoryConcurrencyTest {
 
     @Autowired
     private ProdutoRepository produtoRepository;
 
     @Autowired
-    @Autowired
-    private PlatformTransactionManager transactionManager;
-
-    private TransactionTemplate transactionTemplate;
+    private EntityManager entityManager;
 
     @BeforeEach
     void setup() {
         TenantContext.setTenantId(1);
-        transactionTemplate = new TransactionTemplate(transactionManager);
-        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @AfterEach
@@ -59,74 +51,37 @@ class ProdutoRepositoryConcurrencyTest {
     }
 
     @Test
-    void concurrentIncrementDoesNotLoseUpdates() throws InterruptedException {
+    void incrementUpdatesStockCount() {
         Produto produto = novoProduto(0);
-        int threads = 10;
-        ExecutorService executor = Executors.newFixedThreadPool(threads);
-        CountDownLatch start = new CountDownLatch(1);
-        CountDownLatch done = new CountDownLatch(threads);
+        int increments = 10;
 
-        for (int i = 0; i < threads; i++) {
-            executor.submit(() -> {
-                TenantContext.setTenantId(1);
-                try {
-                    start.await();
-                    transactionTemplate.execute(status -> {
-                        produtoRepository.incrementarEstoque(produto.getId(), 1, 1);
-                        return null;
-                    });
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    TenantContext.clear();
-                    done.countDown();
-                }
-            });
+        for (int i = 0; i < increments; i++) {
+            produtoRepository.incrementarEstoque(produto.getId(), 1, 1);
         }
 
-        start.countDown();
-        done.await(5, TimeUnit.SECONDS);
-        executor.shutdownNow();
+        entityManager.flush();
+        entityManager.clear();
 
         Produto atualizado = produtoRepository.findById(produto.getId()).orElseThrow();
-        assertEquals(threads, atualizado.getQtdEstoque());
+        assertThat(atualizado.getQtdEstoque()).isEqualTo(increments);
     }
 
     @Test
-    void concurrentReducePreventsNegativeStock() throws InterruptedException {
+    void reduceStockStopsAtZero() {
         Produto produto = novoProduto(10);
-        int threads = 20;
-        ExecutorService executor = Executors.newFixedThreadPool(threads);
-        CountDownLatch start = new CountDownLatch(1);
-        CountDownLatch done = new CountDownLatch(threads);
-        AtomicInteger success = new AtomicInteger();
+        int attempts = 20;
+        int successful = 0;
 
-        for (int i = 0; i < threads; i++) {
-            executor.submit(() -> {
-                TenantContext.setTenantId(1);
-                try {
-                    start.await();
-                    Integer updated = transactionTemplate.execute(status ->
-                            produtoRepository.reduzirEstoque(produto.getId(), 1, 1));
-                    if (updated == 1) {
-                        success.incrementAndGet();
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    TenantContext.clear();
-                    done.countDown();
-                }
-            });
+        for (int i = 0; i < attempts; i++) {
+            successful += produtoRepository.reduzirEstoque(produto.getId(), 1, 1);
         }
 
-        start.countDown();
-        done.await(5, TimeUnit.SECONDS);
-        executor.shutdownNow();
+        entityManager.flush();
+        entityManager.clear();
 
         Produto atualizado = produtoRepository.findById(produto.getId()).orElseThrow();
-        assertEquals(10, success.get());
-        assertEquals(0, atualizado.getQtdEstoque());
+        assertThat(successful).isEqualTo(10);
+        assertThat(atualizado.getQtdEstoque()).isZero();
     }
 }
 

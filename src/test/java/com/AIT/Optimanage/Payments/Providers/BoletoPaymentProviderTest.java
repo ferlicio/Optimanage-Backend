@@ -10,10 +10,16 @@ import com.AIT.Optimanage.Payments.PaymentResponseDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,11 +34,22 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 })
 class BoletoPaymentProviderTest {
 
+    @TestConfiguration
+    static class RestTemplateConfig {
+        @Bean
+        RestTemplate restTemplate(RestTemplateBuilder builder) {
+            return builder.build();
+        }
+    }
+
     @Autowired
     private BoletoPaymentProvider provider;
 
     @Autowired
     private MockRestServiceServer server;
+
+    @MockBean
+    private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
     @Test
     void createPaymentCallsApi() {

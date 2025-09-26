@@ -12,6 +12,7 @@ import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Inventory.InventorySource;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
@@ -24,8 +25,10 @@ import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
+import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import com.AIT.Optimanage.Services.Compra.PagamentoCompraService;
+import com.AIT.Optimanage.Validation.AgendaValidator;
 import com.AIT.Optimanage.Validation.CompraValidator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,19 +36,26 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class CompraServiceTest {
 
     @Mock private CompraRepository compraRepository;
@@ -60,6 +70,8 @@ class CompraServiceTest {
     @Mock private CompraMapper compraMapper;
     @Mock private InventoryService inventoryService;
     @Mock private CompraValidator compraValidator;
+    @Mock private PlanoService planoService;
+    @Mock private AgendaValidator agendaValidator;
 
     @InjectMocks
     private CompraService compraService;
@@ -72,6 +84,20 @@ class CompraServiceTest {
         user.setId(1);
         user.setTenantId(1);
         CurrentUser.set(user);
+
+        Plano plano = new Plano();
+        plano.setAgendaHabilitada(true);
+        plano.setPagamentosHabilitados(true);
+        lenient().when(planoService.obterPlanoUsuario(user)).thenReturn(Optional.of(plano));
+
+        lenient().when(agendaValidator.validarDataAgendamento(anyString()))
+                .thenAnswer(invocation -> LocalDate.parse(invocation.getArgument(0)));
+        lenient().when(agendaValidator.validarHoraAgendada(anyString()))
+                .thenAnswer(invocation -> LocalTime.parse(invocation.getArgument(0)));
+        lenient().when(agendaValidator.validarDuracao(anyInt()))
+                .thenAnswer(invocation -> Duration.ofMinutes(((Integer) invocation.getArgument(0)).longValue()));
+        doNothing().when(agendaValidator)
+                .validarConflitosAgendamentoCompra(any(), any(), any(), any(), any());
     }
 
     @AfterEach
@@ -96,7 +122,7 @@ class CompraServiceTest {
         when(compraRepository.save(compra)).thenReturn(compra);
         when(compraMapper.toResponse(compra)).thenReturn(new CompraResponseDTO());
 
-        compraService.agendarCompra(10, "2024-05-01");
+        compraService.agendarCompra(10, "2024-05-01", "10:00", 60);
 
         assertEquals(StatusCompra.AGENDADA, compra.getStatus());
         assertEquals(LocalDate.parse("2024-05-01"), compra.getDataAgendada());

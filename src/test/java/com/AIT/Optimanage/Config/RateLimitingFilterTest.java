@@ -1,60 +1,44 @@
 package com.AIT.Optimanage.Config;
 
-import com.AIT.Optimanage.Auth.AuthenticationController;
-import com.AIT.Optimanage.Auth.AuthenticationRequest;
-import com.AIT.Optimanage.Auth.AuthenticationResponse;
-import com.AIT.Optimanage.Auth.AuthenticationService;
 import com.AIT.Optimanage.Services.PlanoService;
 import com.github.benmanes.caffeine.cache.Cache;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.TestConfiguration;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import java.io.IOException;
+import java.util.List;
 
-@WebMvcTest(controllers = AuthenticationController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
-@Import({RateLimitingFilter.class, RateLimitingFilterTest.TestConfig.class})
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+
+@ExtendWith(MockitoExtension.class)
 class RateLimitingFilterTest {
 
-    @Autowired
-    private WebApplicationContext context;
-
-    @Autowired
-    private RateLimitingFilter rateLimitingFilter;
-
-    private MockMvc mockMvc;
-
-    @MockBean
-    private AuthenticationService authenticationService;
-
-    @MockBean
+    @Mock
     private PlanoService planoService;
 
-    @BeforeEach
-    void setup() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(context)
-                .addFilters(rateLimitingFilter)
-                .build();
+    private MeterRegistry meterRegistry;
+    private RateLimitingFilter rateLimitingFilter;
 
-        when(authenticationService.authenticate(ArgumentMatchers.any(AuthenticationRequest.class)))
-                .thenReturn(AuthenticationResponse.builder().token("t").refreshToken("r").build());
+    @BeforeEach
+    void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        rateLimitingFilter = new RateLimitingFilter(meterRegistry, planoService, List.of("/auth/**"));
     }
 
     @AfterEach
@@ -66,28 +50,46 @@ class RateLimitingFilterTest {
     }
 
     @Test
-    void whenLimitExceeded_thenReturnsTooManyRequests() throws Exception {
+    void whenLimitExceeded_thenReturnsTooManyRequests() throws ServletException, IOException {
         String body = "{\"email\":\"user@example.com\",\"senha\":\"123456\"}";
 
         for (int i = 0; i < 5; i++) {
-            mockMvc.perform(post("/auth/authenticate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isOk());
+            MockHttpServletRequest request = newRequest(body);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            FilterChain chain = Mockito.mock(FilterChain.class);
+
+            rateLimitingFilter.doFilter(request, response, chain);
+
+            assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_OK);
+            verify(chain).doFilter(request, response);
         }
 
-        mockMvc.perform(post("/auth/authenticate")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isTooManyRequests());
+        Cache<String, ?> cache = getCache();
+        assertThat(cache.asMap()).isNotEmpty();
+        String cachedKey = cache.asMap().keySet().iterator().next();
+        assertThat(cache.getIfPresent(cachedKey)).isNotNull();
+
+        MockHttpServletRequest blockedRequest = newRequest(body);
+        MockHttpServletResponse blockedResponse = new MockHttpServletResponse();
+        FilterChain blockedChain = Mockito.mock(FilterChain.class);
+
+        rateLimitingFilter.doFilter(blockedRequest, blockedResponse, blockedChain);
+
+        assertThat(blockedResponse.getStatus()).isEqualTo(429);
+        verify(blockedChain, never()).doFilter(blockedRequest, blockedResponse);
     }
 
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        MeterRegistry meterRegistry() {
-            return new SimpleMeterRegistry();
-        }
+    private MockHttpServletRequest newRequest(String body) {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/auth/authenticate");
+        request.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        request.setContent(body.getBytes());
+        request.setRemoteAddr("192.0.2.1");
+        request.setServletPath("/auth/authenticate");
+        return request;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Cache<String, ?> getCache() {
+        return (Cache<String, ?>) ReflectionTestUtils.getField(rateLimitingFilter, "buckets");
     }
 }
-

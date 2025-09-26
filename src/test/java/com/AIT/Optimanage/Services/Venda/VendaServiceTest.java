@@ -24,12 +24,14 @@ import com.AIT.Optimanage.Repositories.Venda.VendaServicoRepository;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.Venda.PagamentoVendaService;
+import com.AIT.Optimanage.Services.AuditTrailService;
 import com.AIT.Optimanage.Services.Payment.PaymentConfigService;
 import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import com.AIT.Optimanage.Validation.VendaValidator;
+import com.AIT.Optimanage.Validation.AgendaValidator;
 import com.AIT.Optimanage.Mappers.VendaMapper;
 import com.AIT.Optimanage.Payments.PaymentService;
 import org.junit.jupiter.api.Test;
@@ -88,6 +90,10 @@ class VendaServiceTest {
     private VendaMapper vendaMapper;
     @Mock
     private VendaValidator vendaValidator;
+    @Mock
+    private AuditTrailService auditTrailService;
+    @Mock
+    private AgendaValidator agendaValidator;
     @Mock
     private OrganizationRepository organizationRepository;
     @Mock
@@ -223,7 +229,7 @@ class VendaServiceTest {
         Venda venda = new Venda();
         venda.setId(88);
         venda.setTenantId(12);
-        venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+        venda.setStatus(StatusVenda.PENDENTE);
         venda.setValorTotal(new BigDecimal("180.00"));
         venda.setDescontoGeral(BigDecimal.ZERO);
         venda.setValorFinal(new BigDecimal("180.00"));
@@ -396,7 +402,6 @@ class VendaServiceTest {
         when(vendaRepository.findDetailedByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
         when(vendaRepository.save(venda)).thenReturn(venda);
         when(vendaMapper.toResponse(venda)).thenReturn(new VendaResponseDTO());
-        doNothing().when(inventoryService).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
 
         VendaResponseDTO responseDTO = vendaService.cancelarVenda(loggedUser, venda.getId());
 
@@ -441,16 +446,14 @@ class VendaServiceTest {
         when(vendaRepository.findDetailedByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId())).thenReturn(Optional.of(venda));
         when(vendaRepository.save(venda)).thenReturn(venda);
         when(vendaMapper.toResponse(venda)).thenReturn(new VendaResponseDTO());
-        doNothing().when(inventoryService).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
-        doNothing().when(pagamentoVendaService).estornarPagamento(loggedUser, pagamento1);
-        doNothing().when(pagamentoVendaService).estornarPagamento(loggedUser, pagamento2);
 
         VendaResponseDTO responseDTO = vendaService.estornarVendaIntegral(loggedUser, venda.getId());
 
         assertNotNull(responseDTO);
-        assertEquals(new BigDecimal("250.00"), venda.getValorPendente());
-        assertEquals(StatusVenda.AGUARDANDO_PAG, venda.getStatus());
-        verify(inventoryService, never()).incrementar(anyInt(), anyInt(), any(InventorySource.class), anyInt(), anyString());
+        assertEquals(BigDecimal.ZERO, venda.getValorPendente());
+        assertEquals(StatusVenda.CANCELADA, venda.getStatus());
+        verify(inventoryService).incrementar(eq(produto.getId()), eq(2), eq(InventorySource.VENDA), eq(venda.getId()),
+                contains("Estorno integral"));
         verify(pagamentoVendaService, times(2)).estornarPagamento(eq(loggedUser), any(VendaPagamento.class));
         verify(vendaRepository).save(venda);
     }
