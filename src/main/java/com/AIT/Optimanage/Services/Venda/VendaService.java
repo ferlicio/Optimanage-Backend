@@ -200,7 +200,7 @@ public class VendaService {
 
         publicarVendaRegistrada(novaVenda, vendaProdutos, loggedUser);
 
-        atualizarLifetimeValueCliente(novaVenda);
+        atualizarMetricasCliente(novaVenda);
 
         contadorService.IncrementarContador(Tabela.VENDA);
         return vendaMapper.toResponse(novaVenda);
@@ -276,7 +276,7 @@ public class VendaService {
         }
 
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
 
         if (descontoGeralAnterior.compareTo(descontoGeralAtualizado) != 0) {
             auditTrailService.recordDiscountRuleChange(salvo.getId(),
@@ -295,7 +295,7 @@ public class VendaService {
             throw new IllegalArgumentException("Esta venda já foi confirmada.");
         }
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         publicarVendaRegistrada(salvo, salvo.getVendaProdutos(), loggedUser);
         return vendaMapper.toResponse(salvo);
     }
@@ -310,7 +310,7 @@ public class VendaService {
 
         atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -343,7 +343,7 @@ public class VendaService {
         pagamentoVendaService.lancarPagamento(venda, pagamentoDTO);
         atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -372,7 +372,7 @@ public class VendaService {
 
         atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -398,7 +398,7 @@ public class VendaService {
         }
         atualizarStatus(venda, StatusVenda.CANCELADA);
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -442,7 +442,7 @@ public class VendaService {
             }
         }
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -470,7 +470,7 @@ public class VendaService {
         venda.setDuracaoEstimada(duracao);
         venda.setStatus(StatusVenda.AGENDADA);
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -491,7 +491,7 @@ public class VendaService {
             throw new IllegalArgumentException("Não é possível finalizar um agendamento que não está agendado.");
         }
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -506,7 +506,7 @@ public class VendaService {
             venda.setStatus(StatusVenda.CONCRETIZADA);
         }
         Venda salvo = vendaRepository.save(venda);
-        atualizarLifetimeValueCliente(salvo);
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -528,6 +528,7 @@ public class VendaService {
         Venda salvo = vendaRepository.save(venda);
         auditTrailService.recordSaleCancellation(salvo.getId(),
                 String.format("Venda cancelada por usuário %d", Optional.ofNullable(loggedUser).map(User::getId).orElse(null)));
+        atualizarMetricasCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -659,9 +660,9 @@ public class VendaService {
                         venda.getId(), descricao));
     }
 
-    private void atualizarLifetimeValueCliente(Venda venda) {
+    private void atualizarMetricasCliente(Venda venda) {
         Optional.ofNullable(venda)
                 .map(Venda::getCliente)
-                .ifPresent(clienteService::atualizarLifetimeValue);
+                .ifPresent(clienteService::atualizarMetricasCliente);
     }
 }

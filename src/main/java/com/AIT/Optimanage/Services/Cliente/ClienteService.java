@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -100,6 +101,7 @@ public class ClienteService {
         cliente.setTenantId(organizationId);
         cliente.setDataCadastro(LocalDate.now());
         cliente.setLifetimeValue(BigDecimal.ZERO);
+        cliente.setChurnScore(BigDecimal.ZERO);
         validarCliente(cliente);
         Cliente salvo = clienteRepository.save(cliente);
         return clienteMapper.toResponse(salvo);
@@ -120,6 +122,7 @@ public class ClienteService {
         cliente.setDataCadastro(clienteSalvo.getDataCadastro());
         cliente.setTenantId(clienteSalvo.getOrganizationId());
         cliente.setLifetimeValue(clienteSalvo.getLifetimeValue());
+        cliente.setChurnScore(clienteSalvo.getChurnScore());
         validarCliente(cliente);
         Cliente atualizado = clienteRepository.save(cliente);
         return clienteMapper.toResponse(atualizado);
@@ -203,17 +206,38 @@ public class ClienteService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void atualizarLifetimeValue(Cliente cliente) {
+    public void atualizarMetricasCliente(Cliente cliente) {
         if (cliente == null || cliente.getId() == null || cliente.getOrganizationId() == null) {
             return;
         }
+
         BigDecimal lifetimeValue = Optional.ofNullable(
                 vendaRepository.sumValorFinalByClienteAndStatus(
                         cliente.getOrganizationId(),
                         cliente.getId(),
                         StatusVenda.CONCRETIZADA))
                 .orElse(BigDecimal.ZERO);
+
+        long vendasConcretizadas = vendaRepository.countByClienteAndStatus(
+                cliente.getOrganizationId(),
+                cliente.getId(),
+                StatusVenda.CONCRETIZADA);
+
+        long vendasCanceladas = vendaRepository.countByClienteAndStatus(
+                cliente.getOrganizationId(),
+                cliente.getId(),
+                StatusVenda.CANCELADA);
+
+        long totalRelevante = vendasConcretizadas + vendasCanceladas;
+
+        BigDecimal churnScore = BigDecimal.ZERO;
+        if (totalRelevante > 0) {
+            churnScore = BigDecimal.valueOf(vendasCanceladas)
+                    .divide(BigDecimal.valueOf(totalRelevante), 4, RoundingMode.HALF_UP);
+        }
+
         cliente.setLifetimeValue(lifetimeValue);
+        cliente.setChurnScore(churnScore);
         clienteRepository.save(cliente);
     }
 
