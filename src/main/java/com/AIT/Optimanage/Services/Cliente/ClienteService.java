@@ -102,6 +102,7 @@ public class ClienteService {
         cliente.setDataCadastro(LocalDate.now());
         cliente.setLifetimeValue(BigDecimal.ZERO);
         cliente.setChurnScore(BigDecimal.ZERO);
+        cliente.setAverageTicket(BigDecimal.ZERO);
         validarCliente(cliente);
         Cliente salvo = clienteRepository.save(cliente);
         return clienteMapper.toResponse(salvo);
@@ -123,6 +124,7 @@ public class ClienteService {
         cliente.setTenantId(clienteSalvo.getOrganizationId());
         cliente.setLifetimeValue(clienteSalvo.getLifetimeValue());
         cliente.setChurnScore(clienteSalvo.getChurnScore());
+        cliente.setAverageTicket(clienteSalvo.getAverageTicket());
         validarCliente(cliente);
         Cliente atualizado = clienteRepository.save(cliente);
         return clienteMapper.toResponse(atualizado);
@@ -238,6 +240,12 @@ public class ClienteService {
 
         cliente.setLifetimeValue(lifetimeValue);
         cliente.setChurnScore(churnScore);
+        BigDecimal averageTicket = BigDecimal.ZERO;
+        if (vendasConcretizadas > 0) {
+            averageTicket = lifetimeValue
+                    .divide(BigDecimal.valueOf(vendasConcretizadas), 2, RoundingMode.HALF_UP);
+        }
+        cliente.setAverageTicket(averageTicket);
         clienteRepository.save(cliente);
     }
 
