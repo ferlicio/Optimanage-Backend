@@ -572,7 +572,9 @@ public class ImportacaoExcelService {
                 return null;
             }
             try {
-                return new BigDecimal(valor.replace(" ", "").replace(',', '.')).setScale(0, RoundingMode.DOWN).intValueExact();
+                BigDecimal numero = new BigDecimal(valor.replace(" ", "").replace(',', '.'))
+                        .setScale(0, RoundingMode.UNNECESSARY);
+                return numero.intValueExact();
             } catch (ArithmeticException | NumberFormatException e) {
                 throw new IllegalArgumentException("Valor inteiro inválido na coluna '" + coluna + "': " + valor);
             }
