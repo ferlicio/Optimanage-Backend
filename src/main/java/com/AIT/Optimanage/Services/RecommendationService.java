@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Models.Inventory.InventoryAlert;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.User.User;
@@ -34,6 +35,7 @@ public class RecommendationService {
     private final ProdutoRepository produtoRepository;
     private final PlanoService planoService;
     private final CompatibilidadeService compatibilidadeService;
+    private final InventoryMonitoringService inventoryMonitoringService;
 
     private static final int MAX_SUGESTOES = 10;
     private static final int CANDIDATOS_MULTIPLICADOR = 3;
@@ -64,6 +66,7 @@ public class RecommendationService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        Set<Integer> produtosEmRisco = identificarProdutosEmRisco(organizationId);
         List<Object[]> historicoCliente = buscarHistoricoBase(clienteId, organizationId);
 
         Set<Integer> produtosCliente = historicoCliente.stream()
@@ -126,7 +129,7 @@ public class RecommendationService {
 
         if (pontuacaoDetalhada.isEmpty()) {
             if (!produtosCompativeis.isEmpty()) {
-                return carregarProdutosPorPrioridade(produtosCompativeis, filtrarEstoquePositivo, organizationId);
+                return carregarProdutosPorPrioridade(produtosCompativeis, filtrarEstoquePositivo, organizationId, produtosEmRisco);
             }
             return Collections.emptyList();
         }
@@ -167,6 +170,7 @@ public class RecommendationService {
                 .map(produtosPorId::get)
                 .filter(Objects::nonNull)
                 .filter(produto -> !filtrarEstoquePositivo || estoqueDisponivel(produto))
+                .filter(produto -> !produtosEmRisco.contains(produto.getId()))
                 .limit(MAX_SUGESTOES)
                 .map(this::toResponse)
                 .toList();
@@ -174,7 +178,8 @@ public class RecommendationService {
 
     private List<ProdutoResponse> carregarProdutosPorPrioridade(Set<Integer> idsProdutos,
                                                                 boolean filtrarEstoquePositivo,
-                                                                Integer organizationId) {
+                                                                Integer organizationId,
+                                                                Set<Integer> produtosEmRisco) {
         if (idsProdutos.isEmpty()) {
             return Collections.emptyList();
         }
@@ -184,6 +189,7 @@ public class RecommendationService {
 
         return produtos.stream()
                 .filter(produto -> !filtrarEstoquePositivo || estoqueDisponivel(produto))
+                .filter(produto -> !produtosEmRisco.contains(produto.getId()))
                 .sorted(Comparator.comparingDouble(this::calcularPrioridadeCompatibilidade).reversed())
                 .limit(MAX_SUGESTOES)
                 .map(this::toResponse)
@@ -192,6 +198,23 @@ public class RecommendationService {
 
     private double calcularPrioridadeCompatibilidade(Produto produto) {
         return calcularMargemPercentual(produto) + calcularMargemAbsoluta(produto);
+    }
+
+    private Set<Integer> identificarProdutosEmRisco(Integer organizationId) {
+        try {
+            List<InventoryAlert> alertas = inventoryMonitoringService.listarAlertasOrganizacao(organizationId);
+            if (alertas == null || alertas.isEmpty()) {
+                return Collections.emptySet();
+            }
+            return alertas.stream()
+                    .map(InventoryAlert::getProduto)
+                    .filter(Objects::nonNull)
+                    .map(Produto::getId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+        } catch (RuntimeException ignored) {
+            return Collections.emptySet();
+        }
     }
 
     private boolean estoqueDisponivel(Produto produto) {

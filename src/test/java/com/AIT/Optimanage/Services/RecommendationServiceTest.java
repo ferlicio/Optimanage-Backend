@@ -1,6 +1,8 @@
 package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Models.Inventory.InventoryAlert;
+import com.AIT.Optimanage.Models.Inventory.InventoryAlertSeverity;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.User.User;
@@ -36,6 +38,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,6 +56,8 @@ class RecommendationServiceTest {
     private PlanoService planoService;
     @Mock
     private CompatibilidadeService compatibilidadeService;
+    @Mock
+    private InventoryMonitoringService inventoryMonitoringService;
 
     @InjectMocks
     private RecommendationService recommendationService;
@@ -64,6 +69,7 @@ class RecommendationServiceTest {
         loggedUser = new User();
         loggedUser.setTenantId(1);
         CurrentUser.set(loggedUser);
+        lenient().when(inventoryMonitoringService.listarAlertasOrganizacao(1)).thenReturn(Collections.emptyList());
     }
 
     private void stubPlano(boolean habilitado) {
@@ -224,6 +230,35 @@ class RecommendationServiceTest {
 
         assertEquals(1, recomendados.size());
         assertTrue(recomendados.stream().anyMatch(produto -> produto.getId() == 500));
+    }
+
+    @Test
+    void recomendarProdutosEvitaItensComRupturaPrevista() {
+        stubPlano(true);
+        List<Object[]> historicoCliente = Collections.singletonList(new Object[]{100, 2L});
+        when(vendaRepository.findTopProdutosByCliente(42, 1)).thenReturn(historicoCliente);
+
+        Venda venda = criarVenda(LocalDate.of(2024, 4, 1),
+                criarVendaProduto(100, 1),
+                criarVendaProduto(600, 1),
+                criarVendaProduto(700, 1));
+        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
+
+        Produto saudavel = produtoComEstoque(600, 10, BigDecimal.valueOf(8), BigDecimal.valueOf(18));
+        Produto emRisco = produtoComEstoque(700, 10, BigDecimal.valueOf(7), BigDecimal.valueOf(17));
+        when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
+                .thenReturn(List.of(saudavel, emRisco));
+
+        InventoryAlert alerta = InventoryAlert.builder()
+                .produto(emRisco)
+                .severity(InventoryAlertSeverity.CRITICAL)
+                .build();
+        when(inventoryMonitoringService.listarAlertasOrganizacao(1)).thenReturn(List.of(alerta));
+
+        List<ProdutoResponse> recomendados = recommendationService.recomendarProdutos(42);
+
+        assertEquals(1, recomendados.size());
+        assertEquals(600, recomendados.get(0).getId());
     }
 
     private Venda criarVenda(LocalDate dataEfetuacao, VendaProduto... itens) {
