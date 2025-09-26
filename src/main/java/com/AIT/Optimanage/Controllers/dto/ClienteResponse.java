@@ -31,4 +31,5 @@ public class ClienteResponse {
     private String site;
     private String informacoesAdicionais;
     private BigDecimal lifetimeValue;
+    private BigDecimal churnScore;
 }

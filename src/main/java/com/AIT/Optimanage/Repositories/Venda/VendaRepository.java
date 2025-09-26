@@ -79,6 +79,14 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
                                                @Param("clienteId") Integer clienteId,
                                                @Param("status") StatusVenda status);
 
+    @Query("SELECT COUNT(v) FROM Venda v " +
+            "WHERE v.organizationId = :organizationId " +
+            "AND v.cliente.id = :clienteId " +
+            "AND v.status = :status")
+    long countByClienteAndStatus(@Param("organizationId") Integer organizationId,
+                                 @Param("clienteId") Integer clienteId,
+                                 @Param("status") StatusVenda status);
+
     @Query("""
             SELECT v FROM Venda v
             WHERE v.organizationId = :organizationId

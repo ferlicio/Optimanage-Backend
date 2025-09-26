@@ -46,6 +46,9 @@ public class Cliente extends AuditableEntity implements OwnableEntity {
     @Column(name = "lifetime_value", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal lifetimeValue = BigDecimal.ZERO;
+    @Column(name = "churn_score", nullable = false, precision = 5, scale = 4)
+    @Builder.Default
+    private BigDecimal churnScore = BigDecimal.ZERO;
     @Column(length = 64)
     private String nome;
     @Column(length = 55)
