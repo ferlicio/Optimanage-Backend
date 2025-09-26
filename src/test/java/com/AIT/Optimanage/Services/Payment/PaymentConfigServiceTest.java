@@ -2,10 +2,7 @@ package com.AIT.Optimanage.Services.Payment;
 
 import com.AIT.Optimanage.Models.Payment.PaymentConfig;
 import com.AIT.Optimanage.Models.Payment.PaymentProvider;
-import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Payment.PaymentConfigRepository;
-import com.AIT.Optimanage.Security.CurrentUser;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,7 +13,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,11 +26,6 @@ class PaymentConfigServiceTest {
     @BeforeEach
     void setUp() {
         service = new PaymentConfigService(repository);
-    }
-
-    @AfterEach
-    void tearDown() {
-        CurrentUser.clear();
     }
 
     @Test
@@ -63,22 +54,8 @@ class PaymentConfigServiceTest {
     }
 
     @Test
-    void shouldResolveOrganizationFromCurrentUser() {
-        User user = new User();
-        user.setOrganizationId(25);
-        CurrentUser.set(user);
-
-        PaymentConfig stored = PaymentConfig.builder()
-                .provider(PaymentProvider.PAYPAL)
-                .build();
-        stored.setOrganizationId(25);
-
-        when(repository.findByOrganizationIdAndProvider(25, PaymentProvider.PAYPAL))
-                .thenReturn(Optional.of(stored));
-
-        PaymentConfig result = service.getConfig(PaymentProvider.PAYPAL);
-
-        assertSame(stored, result);
-        verify(repository).findByOrganizationIdAndProvider(25, PaymentProvider.PAYPAL);
+    void shouldValidateOrganizationIdPresence() {
+        assertThrows(MissingPaymentConfigurationException.class,
+                () -> service.getConfig(null, PaymentProvider.PAYPAL));
     }
 }

@@ -17,13 +17,18 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
+@DataJpaTest(properties = {
+        "spring.flyway.enabled=false",
+        "spring.jpa.properties.hibernate.globally_quoted_identifiers=true"
+})
+@ActiveProfiles("test")
 class FornecedorRepositoryTest {
 
     @Autowired

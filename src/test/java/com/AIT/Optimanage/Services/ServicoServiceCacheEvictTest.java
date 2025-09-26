@@ -19,6 +19,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -26,12 +28,11 @@ import org.springframework.data.domain.Sort;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentMap;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes = {ServicoService.class, CacheConfig.class}, webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -48,6 +49,9 @@ class ServicoServiceCacheEvictTest {
 
     @MockBean
     private PlanoService planoService;
+
+    @Autowired
+    private CacheManager cacheManager;
 
     private User user;
     private Search defaultSearch;
@@ -72,7 +76,6 @@ class ServicoServiceCacheEvictTest {
                 .sort("nome")
                 .order(Sort.Direction.DESC)
                 .build();
-
         when(servicoRepository.findAllByOrganizationIdAndAtivoTrue(anyInt(), any(Pageable.class)))
                 .thenAnswer(invocation -> new PageImpl<>(List.of(new Servico())));
         when(servicoMapper.toResponse(any(Servico.class))).thenAnswer(invocation -> new ServicoResponse());
@@ -93,16 +96,21 @@ class ServicoServiceCacheEvictTest {
 
     @AfterEach
     void tearDown() {
+        Cache cache = tenantCache();
+        cache.clear();
         CurrentUser.clear();
         TenantContext.clear();
         Mockito.reset(servicoRepository, servicoMapper, planoService);
     }
 
     private void primeCache() {
-        servicoService.listarServicos(defaultSearch);
+        Cache cache = tenantCache();
+        cache.clear();
+
         servicoService.listarServicos(defaultSearch);
         servicoService.listarServicos(alternativeSearch);
-        servicoService.listarServicos(alternativeSearch);
+
+        assertThat(cacheEntries()).hasSize(1);
     }
 
     private ServicoRequest buildRequest() {
@@ -117,10 +125,33 @@ class ServicoServiceCacheEvictTest {
                 .build();
     }
 
+    private Cache tenantCache() {
+        Cache cache = cacheManager.getCache("servicos");
+        assertThat(cache).as("tenant scoped cache").isNotNull();
+        return cache;
+    }
+
+    private void assertCachesEvicted() {
+        assertThat(cacheEntries()).isEmpty();
+    }
+
+    private void assertCachesRepopulated() {
+        assertThat(cacheEntries()).hasSize(1);
+    }
+
+    private ConcurrentMap<Object, Object> cacheEntries() {
+        Cache cache = tenantCache();
+        Object nativeCache = cache.getNativeCache();
+        assertThat(nativeCache).isInstanceOf(com.github.benmanes.caffeine.cache.Cache.class);
+        @SuppressWarnings("unchecked")
+        com.github.benmanes.caffeine.cache.Cache<Object, Object> caffeineCache =
+                (com.github.benmanes.caffeine.cache.Cache<Object, Object>) nativeCache;
+        return caffeineCache.asMap();
+    }
+
     @Test
     void cadastrarServicoEvictsAllCachedFilters() {
         primeCache();
-        verify(servicoRepository, times(2)).findAllByOrganizationIdAndAtivoTrue(eq(1), any(Pageable.class));
 
         Plano plano = new Plano();
         plano.setMaxServicos(10);
@@ -129,16 +160,17 @@ class ServicoServiceCacheEvictTest {
 
         servicoService.cadastrarServico(buildRequest());
 
+        assertCachesEvicted();
+
         servicoService.listarServicos(defaultSearch);
         servicoService.listarServicos(alternativeSearch);
 
-        verify(servicoRepository, times(4)).findAllByOrganizationIdAndAtivoTrue(eq(1), any(Pageable.class));
+        assertCachesRepopulated();
     }
 
     @Test
     void editarServicoEvictsAllCachedFilters() {
         primeCache();
-        verify(servicoRepository, times(2)).findAllByOrganizationIdAndAtivoTrue(eq(1), any(Pageable.class));
 
         Servico existente = new Servico();
         existente.setId(10);
@@ -148,16 +180,17 @@ class ServicoServiceCacheEvictTest {
 
         servicoService.editarServico(10, buildRequest());
 
+        assertCachesEvicted();
+
         servicoService.listarServicos(defaultSearch);
         servicoService.listarServicos(alternativeSearch);
 
-        verify(servicoRepository, times(4)).findAllByOrganizationIdAndAtivoTrue(eq(1), any(Pageable.class));
+        assertCachesRepopulated();
     }
 
     @Test
     void excluirServicoEvictsAllCachedFilters() {
         primeCache();
-        verify(servicoRepository, times(2)).findAllByOrganizationIdAndAtivoTrue(eq(1), any(Pageable.class));
 
         Servico existente = new Servico();
         existente.setId(20);
@@ -167,10 +200,12 @@ class ServicoServiceCacheEvictTest {
 
         servicoService.excluirServico(20);
 
+        assertCachesEvicted();
+
         servicoService.listarServicos(defaultSearch);
         servicoService.listarServicos(alternativeSearch);
 
-        verify(servicoRepository, times(4)).findAllByOrganizationIdAndAtivoTrue(eq(1), any(Pageable.class));
+        assertCachesRepopulated();
     }
 }
 

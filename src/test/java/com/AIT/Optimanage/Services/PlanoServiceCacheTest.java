@@ -7,6 +7,12 @@ import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Repositories.ProdutoRepository;
+import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
+import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
+import com.AIT.Optimanage.Repositories.ServicoRepository;
+import com.AIT.Optimanage.Mappers.PlanoMapper;
+import com.AIT.Optimanage.Services.AuditTrailService;
 import com.AIT.Optimanage.Services.User.UsuarioService;
 import com.AIT.Optimanage.Support.TenantContext;
 import org.junit.jupiter.api.AfterEach;
@@ -43,6 +49,24 @@ class PlanoServiceCacheTest {
 
     @MockBean
     private BCryptPasswordEncoder passwordEncoder;
+
+    @MockBean
+    private ProdutoRepository produtoRepository;
+
+    @MockBean
+    private ClienteRepository clienteRepository;
+
+    @MockBean
+    private FornecedorRepository fornecedorRepository;
+
+    @MockBean
+    private ServicoRepository servicoRepository;
+
+    @MockBean
+    private PlanoMapper planoMapper;
+
+    @MockBean
+    private AuditTrailService auditTrailService;
 
     @AfterEach
     void tearDown() {
@@ -96,18 +120,25 @@ class PlanoServiceCacheTest {
         User user = new User();
         user.setId(1);
         user.setTenantId(1);
+        user.setOrganizationId(1);
         Plano antigo = new Plano();
         antigo.setId(10);
         Plano novo = new Plano();
         novo.setId(20);
         Organization info = new Organization();
+        info.setId(1);
         info.setPlanoAtivoId(antigo);
+        info.setOwnerUser(user);
+        info.setTenantId(1);
 
+        when(userRepository.findByIdAndOrganizationId(1, 1)).thenReturn(Optional.of(user));
         when(userRepository.findById(1)).thenReturn(Optional.of(user));
-        when(organizationRepository.findByOwnerUser(user)).thenReturn(Optional.of(info));
         when(organizationRepository.findById(1)).thenReturn(Optional.of(info));
         when(planoRepository.findById(10)).thenReturn(Optional.of(antigo));
         when(planoRepository.findById(20)).thenReturn(Optional.of(novo));
+        when(organizationRepository.save(info)).thenReturn(info);
+
+        TenantContext.setTenantId(1);
 
         Optional<Plano> first = planoService.obterPlanoUsuario(user);
         assertThat(first).contains(antigo);
@@ -118,8 +149,8 @@ class PlanoServiceCacheTest {
 
         Optional<Plano> second = planoService.obterPlanoUsuario(user);
         assertThat(second).contains(novo);
-        verify(organizationRepository, times(1)).findByOwnerUser(user);
-        verify(organizationRepository, times(2)).findById(1);
+        verify(organizationRepository, times(3)).findById(1);
+        verify(organizationRepository, times(1)).save(info);
         verify(planoRepository, times(1)).findById(10);
         verify(planoRepository, times(2)).findById(20);
     }
