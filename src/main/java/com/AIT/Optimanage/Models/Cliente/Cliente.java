@@ -10,6 +10,7 @@ import com.AIT.Optimanage.Models.OwnableEntity;
 import lombok.*;
 import com.AIT.Optimanage.Models.AuditableEntity;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -42,6 +43,9 @@ public class Cliente extends AuditableEntity implements OwnableEntity {
 
     @Column(nullable = false)
     private Boolean ativo = true;
+    @Column(name = "lifetime_value", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal lifetimeValue = BigDecimal.ZERO;
     @Column(length = 64)
     private String nome;
     @Column(length = 55)

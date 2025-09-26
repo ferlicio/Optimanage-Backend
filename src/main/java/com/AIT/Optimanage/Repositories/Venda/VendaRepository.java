@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -69,6 +70,14 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
             "JOIN FETCH vp.produto p " +
             "WHERE v.organizationId = :organizationId")
     List<Venda> findAllWithProdutosByOrganization(@Param("organizationId") Integer organizationId);
+
+    @Query("SELECT COALESCE(SUM(v.valorFinal), 0) FROM Venda v " +
+            "WHERE v.organizationId = :organizationId " +
+            "AND v.cliente.id = :clienteId " +
+            "AND v.status = :status")
+    BigDecimal sumValorFinalByClienteAndStatus(@Param("organizationId") Integer organizationId,
+                                               @Param("clienteId") Integer clienteId,
+                                               @Param("status") StatusVenda status);
 
     @Query("""
             SELECT v FROM Venda v

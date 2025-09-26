@@ -8,7 +8,9 @@ import com.AIT.Optimanage.Models.Cliente.Search.ClienteSearch;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
+import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
@@ -22,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -32,6 +35,7 @@ public class ClienteService {
     private final ClienteRepository clienteRepository;
     private final ClienteMapper clienteMapper;
     private final PlanoService planoService;
+    private final VendaRepository vendaRepository;
 
     @Cacheable(value = "clientes", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
     @Transactional(readOnly = true)
@@ -95,6 +99,7 @@ public class ClienteService {
         cliente.setId(null);
         cliente.setTenantId(organizationId);
         cliente.setDataCadastro(LocalDate.now());
+        cliente.setLifetimeValue(BigDecimal.ZERO);
         validarCliente(cliente);
         Cliente salvo = clienteRepository.save(cliente);
         return clienteMapper.toResponse(salvo);
@@ -114,6 +119,7 @@ public class ClienteService {
         cliente.setId(clienteSalvo.getId());
         cliente.setDataCadastro(clienteSalvo.getDataCadastro());
         cliente.setTenantId(clienteSalvo.getOrganizationId());
+        cliente.setLifetimeValue(clienteSalvo.getLifetimeValue());
         validarCliente(cliente);
         Cliente atualizado = clienteRepository.save(cliente);
         return clienteMapper.toResponse(atualizado);
@@ -194,6 +200,21 @@ public class ClienteService {
         if (limite != null && limite > 0 && clientesAtivos + novosClientes > limite) {
             throw new IllegalStateException("Limite de clientes do plano atingido");
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void atualizarLifetimeValue(Cliente cliente) {
+        if (cliente == null || cliente.getId() == null || cliente.getOrganizationId() == null) {
+            return;
+        }
+        BigDecimal lifetimeValue = Optional.ofNullable(
+                vendaRepository.sumValorFinalByClienteAndStatus(
+                        cliente.getOrganizationId(),
+                        cliente.getId(),
+                        StatusVenda.CONCRETIZADA))
+                .orElse(BigDecimal.ZERO);
+        cliente.setLifetimeValue(lifetimeValue);
+        clienteRepository.save(cliente);
     }
 
 }

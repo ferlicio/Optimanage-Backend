@@ -200,6 +200,8 @@ public class VendaService {
 
         publicarVendaRegistrada(novaVenda, vendaProdutos, loggedUser);
 
+        atualizarLifetimeValueCliente(novaVenda);
+
         contadorService.IncrementarContador(Tabela.VENDA);
         return vendaMapper.toResponse(novaVenda);
     }
@@ -274,6 +276,7 @@ public class VendaService {
         }
 
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
 
         if (descontoGeralAnterior.compareTo(descontoGeralAtualizado) != 0) {
             auditTrailService.recordDiscountRuleChange(salvo.getId(),
@@ -292,6 +295,7 @@ public class VendaService {
             throw new IllegalArgumentException("Esta venda já foi confirmada.");
         }
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         publicarVendaRegistrada(salvo, salvo.getVendaProdutos(), loggedUser);
         return vendaMapper.toResponse(salvo);
     }
@@ -306,6 +310,7 @@ public class VendaService {
 
         atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -338,6 +343,7 @@ public class VendaService {
         pagamentoVendaService.lancarPagamento(venda, pagamentoDTO);
         atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -366,6 +372,7 @@ public class VendaService {
 
         atualizarVendaPosPagamento(loggedUser, venda);
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -391,6 +398,7 @@ public class VendaService {
         }
         atualizarStatus(venda, StatusVenda.CANCELADA);
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -434,6 +442,7 @@ public class VendaService {
             }
         }
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -461,6 +470,7 @@ public class VendaService {
         venda.setDuracaoEstimada(duracao);
         venda.setStatus(StatusVenda.AGENDADA);
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -481,6 +491,7 @@ public class VendaService {
             throw new IllegalArgumentException("Não é possível finalizar um agendamento que não está agendado.");
         }
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -495,6 +506,7 @@ public class VendaService {
             venda.setStatus(StatusVenda.CONCRETIZADA);
         }
         Venda salvo = vendaRepository.save(venda);
+        atualizarLifetimeValueCliente(salvo);
         return vendaMapper.toResponse(salvo);
     }
 
@@ -645,5 +657,11 @@ public class VendaService {
         Optional.ofNullable(venda.getVendaProdutos()).orElseGet(List::of).forEach(vp ->
                 inventoryService.incrementar(vp.getProduto().getId(), vp.getQuantidade(), InventorySource.VENDA,
                         venda.getId(), descricao));
+    }
+
+    private void atualizarLifetimeValueCliente(Venda venda) {
+        Optional.ofNullable(venda)
+                .map(Venda::getCliente)
+                .ifPresent(clienteService::atualizarLifetimeValue);
     }
 }
