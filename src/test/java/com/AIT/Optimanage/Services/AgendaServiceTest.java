@@ -2,6 +2,9 @@ package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Models.Agenda.AgendaSearch;
 import com.AIT.Optimanage.Models.Agenda.EventoAgenda;
+import com.AIT.Optimanage.Models.CashFlow.CashFlowEntry;
+import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus;
+import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowType;
 import com.AIT.Optimanage.Models.Cliente.ClienteContato;
 import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Compra.CompraPagamento;
@@ -11,6 +14,7 @@ import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
+import com.AIT.Optimanage.Repositories.CashFlow.CashFlowEntryRepository;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteContatoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.PagamentoCompraRepository;
@@ -42,6 +46,7 @@ class AgendaServiceTest {
     @Mock private CompraRepository compraRepository;
     @Mock private VendaRepository vendaRepository;
     @Mock private ClienteContatoRepository clienteContatoRepository;
+    @Mock private CashFlowEntryRepository cashFlowEntryRepository;
     @Mock private PlanoService planoService;
 
     @InjectMocks private AgendaService agendaService;
@@ -101,6 +106,14 @@ class AgendaServiceTest {
                 .build();
         pagamentoVenda.setId(22);
 
+        CashFlowEntry fluxoCaixa = new CashFlowEntry();
+        fluxoCaixa.setId(44);
+        fluxoCaixa.setDescription("Pagamento de aluguel");
+        fluxoCaixa.setAmount(BigDecimal.valueOf(1200));
+        fluxoCaixa.setType(CashFlowType.EXPENSE);
+        fluxoCaixa.setStatus(CashFlowStatus.SCHEDULED);
+        fluxoCaixa.setMovementDate(inicio.plusDays(2));
+
         ClienteContato contato = ClienteContato.builder()
                 .nome("Maria Silva")
                 .aniversario("15/01")
@@ -119,13 +132,20 @@ class AgendaServiceTest {
                 .thenReturn(List.of(venda));
         when(clienteContatoRepository.findAllByClienteOrganizationIdAndCreatedBy(usuario.getTenantId(), usuario.getId()))
                 .thenReturn(List.of(contato));
+        when(cashFlowEntryRepository.findAllByOrganizationIdAndStatusAndMovementDateGreaterThanEqual(
+                eq(usuario.getTenantId()), eq(CashFlowStatus.SCHEDULED), eq(inicio)))
+                .thenReturn(List.of(fluxoCaixa));
 
         Page<EventoAgenda> pagina = agendaService.listarEventos(usuario, pesquisa);
 
-        assertThat(pagina.getTotalElements()).isEqualTo(5);
+        assertThat(pagina.getTotalElements()).isEqualTo(6);
         assertThat(pagina.getContent())
                 .extracting(EventoAgenda::getTipo)
                 .contains(TipoEvento.PAGAMENTO, TipoEvento.AGENDAMENTO, TipoEvento.ANIVERSARIO);
+        assertThat(pagina.getContent())
+                .filteredOn(evento -> evento.getTipo() == TipoEvento.PAGAMENTO
+                        && evento.getReferencia() == TipoEvento.FLUXO_CAIXA)
+                .isNotEmpty();
 
         assertThat(pagina.getContent())
                 .filteredOn(evento -> evento.getTipo() == TipoEvento.AGENDAMENTO && evento.getReferencia() == TipoEvento.COMPRA)
@@ -185,6 +205,18 @@ class AgendaServiceTest {
                 .build();
         contatoFora.setId(5);
 
+        CashFlowEntry fluxoDentro = new CashFlowEntry();
+        fluxoDentro.setId(9);
+        fluxoDentro.setType(CashFlowType.INCOME);
+        fluxoDentro.setStatus(CashFlowStatus.SCHEDULED);
+        fluxoDentro.setMovementDate(inicio.plusDays(3));
+
+        CashFlowEntry fluxoFora = new CashFlowEntry();
+        fluxoFora.setId(10);
+        fluxoFora.setType(CashFlowType.EXPENSE);
+        fluxoFora.setStatus(CashFlowStatus.SCHEDULED);
+        fluxoFora.setMovementDate(inicio.plusDays(10));
+
         when(pagamentoCompraRepository.findAllByCompraOrganizationIdAndStatusPagamentoAndDataVencimentoGreaterThanEqual(
                 eq(usuario.getTenantId()), eq(StatusPagamento.PENDENTE), eq(inicio)))
                 .thenReturn(List.of(pagamentoDentro, pagamentoFora));
@@ -197,10 +229,13 @@ class AgendaServiceTest {
                 .thenReturn(List.of());
         when(clienteContatoRepository.findAllByClienteOrganizationIdAndCreatedBy(usuario.getTenantId(), usuario.getId()))
                 .thenReturn(List.of(contatoFora));
+        when(cashFlowEntryRepository.findAllByOrganizationIdAndStatusAndMovementDateGreaterThanEqual(
+                eq(usuario.getTenantId()), eq(CashFlowStatus.SCHEDULED), eq(inicio)))
+                .thenReturn(List.of(fluxoDentro, fluxoFora));
 
         Page<EventoAgenda> pagina = agendaService.listarEventos(usuario, pesquisa);
 
-        assertThat(pagina.getTotalElements()).isEqualTo(2);
+        assertThat(pagina.getTotalElements()).isEqualTo(3);
         assertThat(pagina.getContent())
                 .allMatch(evento -> !evento.getData().isBefore(inicio) && !evento.getData().isAfter(fim));
         assertThat(pagina.getContent())

@@ -2,6 +2,9 @@ package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Models.Agenda.AgendaSearch;
 import com.AIT.Optimanage.Models.Agenda.EventoAgenda;
+import com.AIT.Optimanage.Models.CashFlow.CashFlowEntry;
+import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus;
+import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowType;
 import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Compra.CompraPagamento;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
@@ -10,6 +13,7 @@ import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
+import com.AIT.Optimanage.Repositories.CashFlow.CashFlowEntryRepository;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteContatoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.PagamentoCompraRepository;
@@ -47,6 +51,7 @@ import static java.util.Optional.ofNullable;
 public class AgendaService {
     private final PagamentoCompraRepository pagamentoCompraRepository;
     private final PagamentoVendaRepository pagamentoVendaRepository;
+    private final CashFlowEntryRepository cashFlowEntryRepository;
     private final CompraRepository compraRepository;
     private final VendaRepository vendaRepository;
     private final ClienteContatoRepository clienteContatoRepository;
@@ -95,6 +100,14 @@ public class AgendaService {
                 .filter(p -> withinRange(p.getDataVencimento(), inicio, fim))
                 .map(pagamento -> criarEvento(TipoEvento.PAGAMENTO, TipoEvento.VENDA, pagamento.getDataVencimento(), null, null,
                         pagamento.getId(), montarTituloPagamentoVenda(pagamento), montarDescricaoPagamentoVenda(pagamento)))
+                .forEach(eventos::add);
+
+        List<CashFlowEntry> agendamentosFluxoCaixa = cashFlowEntryRepository
+                .findAllByOrganizationIdAndStatusAndMovementDateGreaterThanEqual(organizationId, CashFlowStatus.SCHEDULED, inicio);
+        agendamentosFluxoCaixa.stream()
+                .filter(entry -> withinRange(entry.getMovementDate(), inicio, fim))
+                .map(entry -> criarEvento(TipoEvento.PAGAMENTO, TipoEvento.FLUXO_CAIXA, entry.getMovementDate(), null, null,
+                        entry.getId(), montarTituloFluxoCaixa(entry), montarDescricaoFluxoCaixa(entry)))
                 .forEach(eventos::add);
 
         compraRepository.findAgendadasNoPeriodo(organizationId, userId, inicio, fim).stream()
@@ -250,6 +263,30 @@ public class AgendaService {
 
     private String montarDescricaoPagamentoVenda(VendaPagamento pagamento) {
         return "Parcela de venda vence em " + pagamento.getDataVencimento();
+    }
+
+    private String montarTituloFluxoCaixa(CashFlowEntry entry) {
+        if (entry.getType() == CashFlowType.INCOME) {
+            return "Recebimento agendado";
+        }
+        return "Pagamento agendado";
+    }
+
+    private String montarDescricaoFluxoCaixa(CashFlowEntry entry) {
+        StringBuilder descricao = new StringBuilder();
+        if (entry.getDescription() != null && !entry.getDescription().isBlank()) {
+            descricao.append(entry.getDescription().trim());
+        }
+        if (entry.getAmount() != null) {
+            if (descricao.length() > 0) {
+                descricao.append(" - ");
+            }
+            descricao.append("Valor: R$ ").append(entry.getAmount());
+        }
+        if (descricao.length() == 0) {
+            descricao.append("Movimentação de fluxo de caixa agendada");
+        }
+        return descricao.toString();
     }
 
     private String montarTituloCompra(Compra compra) {
