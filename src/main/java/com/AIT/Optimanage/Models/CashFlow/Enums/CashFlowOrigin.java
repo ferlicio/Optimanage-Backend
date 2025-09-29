@@ -3,5 +3,7 @@ package com.AIT.Optimanage.Models.CashFlow.Enums;
 public enum CashFlowOrigin {
     MANUAL,
     SALE,
-    PURCHASE
+    PURCHASE,
+    SALE_INSTALLMENT,
+    PURCHASE_INSTALLMENT
 }

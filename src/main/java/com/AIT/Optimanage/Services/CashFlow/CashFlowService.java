@@ -9,14 +9,15 @@ import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus;
 import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowType;
 import com.AIT.Optimanage.Models.CashFlow.Search.CashFlowSearch;
 import com.AIT.Optimanage.Models.Compra.Compra;
-import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
-import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
+import com.AIT.Optimanage.Models.Compra.CompraPagamento;
+import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Venda.Venda;
+import com.AIT.Optimanage.Models.Venda.VendaPagamento;
 import com.AIT.Optimanage.Repositories.CashFlow.CashFlowEntryRepository;
 import com.AIT.Optimanage.Repositories.CashFlow.CashFlowFilters;
-import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
+import com.AIT.Optimanage.Repositories.Compra.PagamentoCompraRepository;
 import com.AIT.Optimanage.Repositories.FilterBuilder;
-import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
+import com.AIT.Optimanage.Repositories.Venda.PagamentoVendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Order;
-import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +34,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -44,8 +44,8 @@ import java.util.stream.Stream;
 public class CashFlowService {
 
     private final CashFlowEntryRepository repository;
-    private final VendaRepository vendaRepository;
-    private final CompraRepository compraRepository;
+    private final PagamentoVendaRepository pagamentoVendaRepository;
+    private final PagamentoCompraRepository pagamentoCompraRepository;
     private final CashFlowMapper mapper;
 
     @Transactional(readOnly = true)
@@ -78,12 +78,12 @@ public class CashFlowService {
                 .map(mapper::toResponse)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        var sales = listarVendas(organizationId, search, fetchSize, direction, sortBy);
-        var purchases = listarCompras(organizationId, search, fetchSize, direction, sortBy);
+        var saleInstallments = listarParcelasVendas(organizationId, search);
+        var purchaseInstallments = listarParcelasCompras(organizationId, search);
 
-        long totalElements = manualPage.getTotalElements() + sales.getTotalElements() + purchases.getTotalElements();
+        long totalElements = manualPage.getTotalElements() + saleInstallments.size() + purchaseInstallments.size();
 
-        var allEntries = Stream.of(manualEntries, sales.getEntries(), purchases.getEntries())
+        var allEntries = Stream.of(manualEntries, saleInstallments, purchaseInstallments)
                 .flatMap(ArrayList::stream)
                 .sorted(comparator)
                 .collect(Collectors.toList());
@@ -168,162 +168,6 @@ public class CashFlowService {
         return comparator;
     }
 
-    private SourcePage listarVendas(Integer organizationId, CashFlowSearch search, int fetchSize,
-                                    Sort.Direction direction, String sortBy) {
-        if (search.getType() != null && search.getType() != CashFlowType.INCOME) {
-            return SourcePage.empty();
-        }
-
-        Specification<Venda> spec = buildVendaSpecification(organizationId, search);
-        Pageable pageable = PageRequest.of(0, fetchSize, buildVendaSort(sortBy, direction));
-        Page<Venda> page = vendaRepository.findAll(spec, pageable);
-        ArrayList<CashFlowEntryResponse> entries = page.getContent().stream()
-                .map(this::toCashFlowSale)
-                .collect(Collectors.toCollection(ArrayList::new));
-        return new SourcePage(entries, page.getTotalElements());
-    }
-
-    private SourcePage listarCompras(Integer organizationId, CashFlowSearch search, int fetchSize,
-                                     Sort.Direction direction, String sortBy) {
-        if (search.getType() != null && search.getType() != CashFlowType.EXPENSE) {
-            return SourcePage.empty();
-        }
-
-        Specification<Compra> spec = buildCompraSpecification(organizationId, search);
-        Pageable pageable = PageRequest.of(0, fetchSize, buildCompraSort(sortBy, direction));
-        Page<Compra> page = compraRepository.findAll(spec, pageable);
-        ArrayList<CashFlowEntryResponse> entries = page.getContent().stream()
-                .map(this::toCashFlowPurchase)
-                .collect(Collectors.toCollection(ArrayList::new));
-        return new SourcePage(entries, page.getTotalElements());
-    }
-
-    private Specification<Venda> buildVendaSpecification(Integer organizationId, CashFlowSearch search) {
-        Specification<Venda> spec = Specification.where((root, query, cb) ->
-                cb.equal(root.get("organizationId"), organizationId));
-
-        if (search.getStartDate() != null) {
-            spec = spec.and(vendaOccursOnOrAfter(search.getStartDate()));
-        }
-        if (search.getEndDate() != null) {
-            spec = spec.and(vendaOccursOnOrBefore(search.getEndDate()));
-        }
-        if (search.getStatus() != null) {
-            spec = spec.and(vendaHasCashFlowStatus(search.getStatus()));
-        }
-        return spec;
-    }
-
-    private Specification<Compra> buildCompraSpecification(Integer organizationId, CashFlowSearch search) {
-        Specification<Compra> spec = Specification.where((root, query, cb) ->
-                cb.equal(root.get("organizationId"), organizationId));
-
-        if (search.getStartDate() != null) {
-            spec = spec.and(compraOccursOnOrAfter(search.getStartDate()));
-        }
-        if (search.getEndDate() != null) {
-            spec = spec.and(compraOccursOnOrBefore(search.getEndDate()));
-        }
-        if (search.getStatus() != null) {
-            spec = spec.and(compraHasCashFlowStatus(search.getStatus()));
-        }
-        return spec;
-    }
-
-    private Specification<Venda> vendaOccursOnOrAfter(LocalDate date) {
-        return (root, query, cb) -> {
-            var movementDate = cb.coalesce(root.<LocalDate>get("dataEfetuacao"), root.<LocalDate>get("dataAgendada"));
-            return cb.greaterThanOrEqualTo(movementDate, date);
-        };
-    }
-
-    private Specification<Venda> vendaOccursOnOrBefore(LocalDate date) {
-        return (root, query, cb) -> {
-            var movementDate = cb.coalesce(root.<LocalDate>get("dataEfetuacao"), root.<LocalDate>get("dataAgendada"));
-            return cb.lessThanOrEqualTo(movementDate, date);
-        };
-    }
-
-    private Specification<Venda> vendaHasCashFlowStatus(CashFlowStatus status) {
-        return (root, query, cb) -> {
-            var statusPath = root.get("status");
-            var movementDate = cb.coalesce(root.<LocalDate>get("dataEfetuacao"), root.<LocalDate>get("dataAgendada"));
-            LocalDate today = LocalDate.now();
-
-            return switch (status) {
-                case CANCELLED -> cb.equal(statusPath, StatusVenda.CANCELADA);
-                case SCHEDULED -> {
-                    var scheduledStatuses = statusPath.in(StatusVenda.ORCAMENTO, StatusVenda.PENDENTE, StatusVenda.AGENDADA);
-                    var notCancelled = cb.notEqual(statusPath, StatusVenda.CANCELADA);
-                    var movementAfterToday = cb.greaterThan(movementDate, today);
-                    yield cb.or(scheduledStatuses, cb.and(notCancelled, cb.not(scheduledStatuses), movementAfterToday));
-                }
-                case ACTIVE -> {
-                    var notCancelled = cb.notEqual(statusPath, StatusVenda.CANCELADA);
-                    var scheduledStatuses = statusPath.in(StatusVenda.ORCAMENTO, StatusVenda.PENDENTE, StatusVenda.AGENDADA);
-                    yield cb.and(notCancelled, cb.not(scheduledStatuses), cb.lessThanOrEqualTo(movementDate, today));
-                }
-            };
-        };
-    }
-
-    private Specification<Compra> compraOccursOnOrAfter(LocalDate date) {
-        return (root, query, cb) -> {
-            var movementDate = cb.coalesce(root.<LocalDate>get("dataEfetuacao"), root.<LocalDate>get("dataAgendada"));
-            return cb.greaterThanOrEqualTo(movementDate, date);
-        };
-    }
-
-    private Specification<Compra> compraOccursOnOrBefore(LocalDate date) {
-        return (root, query, cb) -> {
-            var movementDate = cb.coalesce(root.<LocalDate>get("dataEfetuacao"), root.<LocalDate>get("dataAgendada"));
-            return cb.lessThanOrEqualTo(movementDate, date);
-        };
-    }
-
-    private Specification<Compra> compraHasCashFlowStatus(CashFlowStatus status) {
-        return (root, query, cb) -> {
-            var statusPath = root.get("status");
-            var movementDate = cb.coalesce(root.<LocalDate>get("dataEfetuacao"), root.<LocalDate>get("dataAgendada"));
-            LocalDate today = LocalDate.now();
-
-            return switch (status) {
-                case CANCELLED -> cb.equal(statusPath, StatusCompra.CANCELADO);
-                case SCHEDULED -> {
-                    var scheduledStatuses = statusPath.in(StatusCompra.ORCAMENTO, StatusCompra.AGUARDANDO_EXECUCAO, StatusCompra.AGENDADA);
-                    var notCancelled = cb.notEqual(statusPath, StatusCompra.CANCELADO);
-                    var movementAfterToday = cb.greaterThan(movementDate, today);
-                    yield cb.or(scheduledStatuses, cb.and(notCancelled, cb.not(scheduledStatuses), movementAfterToday));
-                }
-                case ACTIVE -> {
-                    var notCancelled = cb.notEqual(statusPath, StatusCompra.CANCELADO);
-                    var scheduledStatuses = statusPath.in(StatusCompra.ORCAMENTO, StatusCompra.AGUARDANDO_EXECUCAO, StatusCompra.AGENDADA);
-                    yield cb.and(notCancelled, cb.not(scheduledStatuses), cb.lessThanOrEqualTo(movementDate, today));
-                }
-            };
-        };
-    }
-
-    private Sort buildVendaSort(String sortBy, Sort.Direction direction) {
-        String key = Optional.ofNullable(sortBy).orElse("movementDate");
-        return switch (key) {
-            case "amount" -> Sort.by(new Order(direction, "valorFinal"));
-            case "description" -> Sort.by(new Order(direction, "sequencialUsuario"));
-            case "createdAt" -> Sort.by(new Order(direction, "createdAt"));
-            default -> JpaSort.unsafe(direction, "COALESCE(dataEfetuacao, dataAgendada)");
-        };
-    }
-
-    private Sort buildCompraSort(String sortBy, Sort.Direction direction) {
-        String key = Optional.ofNullable(sortBy).orElse("movementDate");
-        return switch (key) {
-            case "amount" -> Sort.by(new Order(direction, "valorFinal"));
-            case "description" -> Sort.by(new Order(direction, "sequencialUsuario"));
-            case "createdAt" -> Sort.by(new Order(direction, "createdAt"));
-            default -> JpaSort.unsafe(direction, "COALESCE(dataEfetuacao, dataAgendada)");
-        };
-    }
-
     private String mapManualSortProperty(String sortBy) {
         return switch (Optional.ofNullable(sortBy).orElse("movementDate")) {
             case "amount" -> "amount";
@@ -333,86 +177,121 @@ public class CashFlowService {
         };
     }
 
-    private static class SourcePage {
-        private final ArrayList<CashFlowEntryResponse> entries;
-        private final long totalElements;
-
-        private SourcePage(ArrayList<CashFlowEntryResponse> entries, long totalElements) {
-            this.entries = entries;
-            this.totalElements = totalElements;
+    private ArrayList<CashFlowEntryResponse> listarParcelasVendas(Integer organizationId, CashFlowSearch search) {
+        if (search.getType() != null && search.getType() != CashFlowType.INCOME) {
+            return new ArrayList<>();
         }
 
-        static SourcePage empty() {
-            return new SourcePage(new ArrayList<>(), 0L);
-        }
+        var pagamentos = pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(
+                organizationId,
+                List.of(StatusPagamento.PAGO, StatusPagamento.PENDENTE),
+                search.getStartDate(),
+                search.getEndDate());
 
-        ArrayList<CashFlowEntryResponse> getEntries() {
-            return entries;
-        }
-
-        long getTotalElements() {
-            return totalElements;
-        }
+        return pagamentos.stream()
+                .map(this::toCashFlowSaleInstallment)
+                .filter(entry -> matchesStatusFilter(entry, search.getStatus()))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
-    private CashFlowEntryResponse toCashFlowSale(Venda venda) {
-        LocalDate movementDate = Optional.ofNullable(venda.getDataEfetuacao()).orElse(venda.getDataAgendada());
-        CashFlowStatus status = mapSaleStatus(venda.getStatus(), movementDate);
+    private ArrayList<CashFlowEntryResponse> listarParcelasCompras(Integer organizationId, CashFlowSearch search) {
+        if (search.getType() != null && search.getType() != CashFlowType.EXPENSE) {
+            return new ArrayList<>();
+        }
+
+        var pagamentos = pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(
+                organizationId,
+                List.of(StatusPagamento.PAGO, StatusPagamento.PENDENTE),
+                search.getStartDate(),
+                search.getEndDate());
+
+        return pagamentos.stream()
+                .map(this::toCashFlowPurchaseInstallment)
+                .filter(entry -> matchesStatusFilter(entry, search.getStatus()))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private CashFlowEntryResponse toCashFlowSaleInstallment(VendaPagamento pagamento) {
+        LocalDate movementDate = resolveInstallmentMovementDate(pagamento.getStatusPagamento(),
+                pagamento.getDataPagamento(), pagamento.getDataVencimento());
+        CashFlowStatus status = mapInstallmentStatus(pagamento.getStatusPagamento(), movementDate);
+        Venda venda = pagamento.getVenda();
         return CashFlowEntryResponse.builder()
-                .id(venda.getId())
-                .referenceId(venda.getId())
-                .origin(CashFlowOrigin.SALE)
-                .description(buildSaleDescription(venda))
-                .amount(venda.getValorFinal())
+                .id(pagamento.getId())
+                .referenceId(venda != null ? venda.getId() : null)
+                .origin(CashFlowOrigin.SALE_INSTALLMENT)
+                .description(buildSaleInstallmentDescription(pagamento))
+                .amount(pagamento.getValorPago())
                 .type(CashFlowType.INCOME)
                 .status(status)
                 .movementDate(movementDate)
-                .createdAt(venda.getCreatedAt())
-                .createdBy(venda.getCreatedBy())
-                .updatedAt(venda.getUpdatedAt())
-                .updatedBy(venda.getUpdatedBy())
+                .createdAt(pagamento.getCreatedAt())
+                .createdBy(pagamento.getCreatedBy())
+                .updatedAt(pagamento.getUpdatedAt())
+                .updatedBy(pagamento.getUpdatedBy())
                 .build();
     }
 
-    private CashFlowEntryResponse toCashFlowPurchase(Compra compra) {
-        LocalDate movementDate = Optional.ofNullable(compra.getDataEfetuacao()).orElse(compra.getDataAgendada());
-        CashFlowStatus status = mapPurchaseStatus(compra.getStatus(), movementDate);
+    private CashFlowEntryResponse toCashFlowPurchaseInstallment(CompraPagamento pagamento) {
+        LocalDate movementDate = resolveInstallmentMovementDate(pagamento.getStatusPagamento(),
+                pagamento.getDataPagamento(), pagamento.getDataVencimento());
+        CashFlowStatus status = mapInstallmentStatus(pagamento.getStatusPagamento(), movementDate);
         return CashFlowEntryResponse.builder()
-                .id(compra.getId())
-                .referenceId(compra.getId())
-                .origin(CashFlowOrigin.PURCHASE)
-                .description(buildPurchaseDescription(compra))
-                .amount(compra.getValorFinal())
+                .id(pagamento.getId())
+                .referenceId(pagamento.getCompra() != null ? pagamento.getCompra().getId() : null)
+                .origin(CashFlowOrigin.PURCHASE_INSTALLMENT)
+                .description(buildPurchaseInstallmentDescription(pagamento))
+                .amount(pagamento.getValorPago())
                 .type(CashFlowType.EXPENSE)
                 .status(status)
                 .movementDate(movementDate)
-                .createdAt(compra.getCreatedAt())
-                .createdBy(compra.getCreatedBy())
-                .updatedAt(compra.getUpdatedAt())
-                .updatedBy(compra.getUpdatedBy())
+                .createdAt(pagamento.getCreatedAt())
+                .createdBy(pagamento.getCreatedBy())
+                .updatedAt(pagamento.getUpdatedAt())
+                .updatedBy(pagamento.getUpdatedBy())
                 .build();
     }
 
-    private CashFlowStatus mapSaleStatus(StatusVenda statusVenda, LocalDate movementDate) {
-        if (statusVenda == null) {
+    private LocalDate resolveInstallmentMovementDate(StatusPagamento statusPagamento, LocalDate dataPagamento,
+                                                     LocalDate dataVencimento) {
+        if (statusPagamento == StatusPagamento.PAGO && dataPagamento != null) {
+            return dataPagamento;
+        }
+        return dataVencimento;
+    }
+
+    private CashFlowStatus mapInstallmentStatus(StatusPagamento statusPagamento, LocalDate movementDate) {
+        if (statusPagamento == null) {
             return resolveStatus(movementDate);
         }
-        return switch (statusVenda) {
-            case CANCELADA -> CashFlowStatus.CANCELLED;
-            case ORCAMENTO, PENDENTE, AGENDADA -> CashFlowStatus.SCHEDULED;
-            default -> resolveStatus(movementDate);
+        return switch (statusPagamento) {
+            case ESTORNADO -> CashFlowStatus.CANCELLED;
+            case PAGO -> CashFlowStatus.ACTIVE;
+            case PENDENTE -> resolveStatus(movementDate);
         };
     }
 
-    private CashFlowStatus mapPurchaseStatus(StatusCompra statusCompra, LocalDate movementDate) {
-        if (statusCompra == null) {
-            return resolveStatus(movementDate);
+    private boolean matchesStatusFilter(CashFlowEntryResponse entry, CashFlowStatus filter) {
+        if (filter == null) {
+            return entry.getStatus() != CashFlowStatus.CANCELLED;
         }
-        return switch (statusCompra) {
-            case CANCELADO -> CashFlowStatus.CANCELLED;
-            case ORCAMENTO, AGUARDANDO_EXECUCAO, AGENDADA -> CashFlowStatus.SCHEDULED;
-            default -> resolveStatus(movementDate);
-        };
+        return entry.getStatus() == filter;
+    }
+
+    private String buildSaleInstallmentDescription(VendaPagamento pagamento) {
+        String base = buildSaleDescription(pagamento.getVenda());
+        if (base == null || base.isBlank()) {
+            return "Parcela de venda";
+        }
+        return base + " - Parcela";
+    }
+
+    private String buildPurchaseInstallmentDescription(CompraPagamento pagamento) {
+        String base = buildPurchaseDescription(pagamento.getCompra());
+        if (base == null || base.isBlank()) {
+            return "Parcela de compra";
+        }
+        return base + " - Parcela";
     }
 
     private String buildSaleDescription(Venda venda) {
