@@ -91,6 +91,13 @@ public interface VendaRepository extends JpaRepository<Venda, Integer>, JpaSpeci
                                                @Param("clienteId") Integer clienteId,
                                                @Param("status") StatusVenda status);
 
+    @Query("SELECT SUM(v.valorFinal) FROM Venda v WHERE v.organizationId = :organizationId")
+    BigDecimal sumValorFinalByOrganization(@Param("organizationId") Integer organizationId);
+
+    @Query("SELECT SUM(v.valorFinal) FROM Venda v WHERE v.organizationId = :organizationId AND v.status = :status")
+    BigDecimal sumValorFinalByOrganizationAndStatus(@Param("organizationId") Integer organizationId,
+                                                    @Param("status") StatusVenda status);
+
     @Query("SELECT COUNT(v) FROM Venda v " +
             "WHERE v.organizationId = :organizationId " +
             "AND v.cliente.id = :clienteId " +
