@@ -13,5 +13,8 @@ public class ResumoDTO {
     private BigDecimal totalVendas;
     private BigDecimal totalCompras;
     private BigDecimal lucro;
+    private BigDecimal metaMensal;
+    private BigDecimal metaAnual;
+    private BigDecimal progressoMensal;
+    private BigDecimal progressoAnual;
 }
-
