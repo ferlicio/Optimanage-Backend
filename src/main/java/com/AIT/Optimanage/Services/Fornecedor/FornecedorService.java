@@ -22,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -93,6 +94,9 @@ public class FornecedorService {
         Fornecedor fornecedor = fornecedorMapper.toEntity(request);
         fornecedor.setTenantId(organizationId);
         fornecedor.setDataCadastro(LocalDate.now());
+        fornecedor.setLeadTimeMedioDias(BigDecimal.ZERO);
+        fornecedor.setTaxaEntregaNoPrazo(BigDecimal.ZERO);
+        fornecedor.setCustoMedioPedido(BigDecimal.ZERO);
         validarFornecedor(fornecedor);
         return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
     }
@@ -109,6 +113,9 @@ public class FornecedorService {
         fornecedor.setId(fornecedorSalvo.getId());
         fornecedor.setDataCadastro(fornecedorSalvo.getDataCadastro());
         fornecedor.setTenantId(fornecedorSalvo.getOrganizationId());
+        fornecedor.setLeadTimeMedioDias(fornecedorSalvo.getLeadTimeMedioDias());
+        fornecedor.setTaxaEntregaNoPrazo(fornecedorSalvo.getTaxaEntregaNoPrazo());
+        fornecedor.setCustoMedioPedido(fornecedorSalvo.getCustoMedioPedido());
         validarFornecedor(fornecedor);
         return fornecedorMapper.toResponse(fornecedorRepository.save(fornecedor));
     }

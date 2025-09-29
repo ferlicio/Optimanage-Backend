@@ -10,8 +10,8 @@ import com.AIT.Optimanage.Models.OwnableEntity;
 import lombok.*;
 import com.AIT.Optimanage.Models.AuditableEntity;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
 
 
@@ -68,5 +68,17 @@ public class Fornecedor extends AuditableEntity implements OwnableEntity {
 
     @OneToMany(mappedBy = "fornecedor", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<FornecedorEndereco> enderecos;
+
+    @Builder.Default
+    @Column(name = "lead_time_medio_dias", precision = 10, scale = 2, nullable = false)
+    private BigDecimal leadTimeMedioDias = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "taxa_entrega_no_prazo", precision = 5, scale = 2, nullable = false)
+    private BigDecimal taxaEntregaNoPrazo = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "custo_medio_pedido", precision = 10, scale = 2, nullable = false)
+    private BigDecimal custoMedioPedido = BigDecimal.ZERO;
 
 }

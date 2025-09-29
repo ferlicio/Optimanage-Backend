@@ -22,6 +22,7 @@ import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Services.InventoryService;
+import com.AIT.Optimanage.Services.Fornecedor.FornecedorMetricsService;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
@@ -69,6 +70,7 @@ class CompraServiceTest {
     @Mock private ProdutoRepository produtoRepository;
     @Mock private CompraMapper compraMapper;
     @Mock private InventoryService inventoryService;
+    @Mock private FornecedorMetricsService fornecedorMetricsService;
     @Mock private CompraValidator compraValidator;
     @Mock private PlanoService planoService;
     @Mock private AgendaValidator agendaValidator;

@@ -34,4 +34,14 @@ public interface CompraRepository extends JpaRepository<Compra, Integer>, JpaSpe
     @Query("SELECT SUM(c.valorFinal) FROM Compra c WHERE c.organizationId = :organizationId AND c.status = :status")
     BigDecimal sumValorFinalByOrganizationAndStatus(@Param("organizationId") Integer organizationId,
                                                     @Param("status") StatusCompra status);
+
+    @Query("""
+            SELECT c FROM Compra c
+            WHERE c.fornecedor.id = :fornecedorId
+              AND c.organizationId = :organizationId
+              AND c.status IN :statuses
+            """)
+    List<Compra> findByFornecedorIdAndOrganizationIdAndStatusIn(@Param("fornecedorId") Integer fornecedorId,
+                                                                @Param("organizationId") Integer organizationId,
+                                                                @Param("statuses") List<StatusCompra> statuses);
 }
