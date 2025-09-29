@@ -49,11 +49,28 @@ public interface PagamentoCompraRepository extends JpaRepository<CompraPagamento
                          ELSE pagamento.dataVencimento
                     END
                 ) <= :endDate)
+            ORDER BY
+                CASE WHEN :ascending = true THEN (
+                    CASE WHEN pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
+                              AND pagamento.dataPagamento IS NOT NULL
+                         THEN pagamento.dataPagamento
+                         ELSE pagamento.dataVencimento
+                    END
+                ) END ASC,
+                CASE WHEN :ascending = false THEN (
+                    CASE WHEN pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
+                              AND pagamento.dataPagamento IS NOT NULL
+                         THEN pagamento.dataPagamento
+                         ELSE pagamento.dataVencimento
+                    END
+                ) END DESC,
+                pagamento.id ASC
             """)
     Page<CompraPagamento> findInstallmentsByOrganizationAndStatusesAndDateRange(
             @Param("organizationId") Integer organizationId,
             @Param("statuses") Collection<StatusPagamento> statuses,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
+            @Param("ascending") boolean ascending,
             Pageable pageable);
 }

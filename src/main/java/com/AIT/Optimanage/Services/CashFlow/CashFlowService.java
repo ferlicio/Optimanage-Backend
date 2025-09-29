@@ -78,8 +78,8 @@ public class CashFlowService {
                 .map(mapper::toResponse)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        var saleInstallments = listarParcelasVendas(organizationId, search, fetchSize);
-        var purchaseInstallments = listarParcelasCompras(organizationId, search, fetchSize);
+        var saleInstallments = listarParcelasVendas(organizationId, search, fetchSize, direction);
+        var purchaseInstallments = listarParcelasCompras(organizationId, search, fetchSize, direction);
 
         long totalElements = manualPage.getTotalElements() + saleInstallments.totalElements()
                 + purchaseInstallments.totalElements();
@@ -179,7 +179,7 @@ public class CashFlowService {
     }
 
     private InstallmentResults listarParcelasVendas(Integer organizationId, CashFlowSearch search,
-            int fetchSize) {
+            int fetchSize, Sort.Direction direction) {
         if (search.getType() != null && search.getType() != CashFlowType.INCOME) {
             return InstallmentResults.empty();
         }
@@ -193,6 +193,7 @@ public class CashFlowService {
                 installmentStatuses,
                 search.getStartDate(),
                 search.getEndDate(),
+                direction != Sort.Direction.DESC,
                 pageable);
 
         var entries = pagamentos.getContent().stream()
@@ -204,7 +205,7 @@ public class CashFlowService {
     }
 
     private InstallmentResults listarParcelasCompras(Integer organizationId, CashFlowSearch search,
-            int fetchSize) {
+            int fetchSize, Sort.Direction direction) {
         if (search.getType() != null && search.getType() != CashFlowType.EXPENSE) {
             return InstallmentResults.empty();
         }
@@ -218,6 +219,7 @@ public class CashFlowService {
                 installmentStatuses,
                 search.getStartDate(),
                 search.getEndDate(),
+                direction != Sort.Direction.DESC,
                 pageable);
 
         var entries = pagamentos.getContent().stream()
