@@ -78,8 +78,10 @@ public class CashFlowService {
                 .map(mapper::toResponse)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        var saleInstallments = listarParcelasVendas(organizationId, search, fetchSize, direction, sortBy);
-        var purchaseInstallments = listarParcelasCompras(organizationId, search, fetchSize, direction, sortBy);
+        LocalDate today = LocalDate.now();
+
+        var saleInstallments = listarParcelasVendas(organizationId, search, fetchSize, direction, sortBy, today);
+        var purchaseInstallments = listarParcelasCompras(organizationId, search, fetchSize, direction, sortBy, today);
 
         long totalElements = manualPage.getTotalElements() + saleInstallments.totalElements()
                 + purchaseInstallments.totalElements();
@@ -179,7 +181,7 @@ public class CashFlowService {
     }
 
     private InstallmentResults listarParcelasVendas(Integer organizationId, CashFlowSearch search,
-            int fetchSize, Sort.Direction direction, String sortBy) {
+            int fetchSize, Sort.Direction direction, String sortBy, LocalDate today) {
         if (search.getType() != null && search.getType() != CashFlowType.INCOME) {
             return InstallmentResults.empty();
         }
@@ -196,6 +198,8 @@ public class CashFlowService {
                 search.getEndDate(),
                 direction != Sort.Direction.DESC,
                 sortKey,
+                search.getStatus(),
+                today,
                 pageable);
 
         var entries = pagamentos.getContent().stream()
@@ -207,7 +211,7 @@ public class CashFlowService {
     }
 
     private InstallmentResults listarParcelasCompras(Integer organizationId, CashFlowSearch search,
-            int fetchSize, Sort.Direction direction, String sortBy) {
+            int fetchSize, Sort.Direction direction, String sortBy, LocalDate today) {
         if (search.getType() != null && search.getType() != CashFlowType.EXPENSE) {
             return InstallmentResults.empty();
         }
@@ -224,6 +228,8 @@ public class CashFlowService {
                 search.getEndDate(),
                 direction != Sort.Direction.DESC,
                 sortKey,
+                search.getStatus(),
+                today,
                 pageable);
 
         var entries = pagamentos.getContent().stream()

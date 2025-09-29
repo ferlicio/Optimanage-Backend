@@ -1,5 +1,6 @@
 package com.AIT.Optimanage.Repositories.Venda;
 
+import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
@@ -50,10 +51,53 @@ public interface PagamentoVendaRepository extends JpaRepository<VendaPagamento, 
                          ELSE pagamento.dataVencimento
                     END
                 ) <= :endDate)
+              AND (
+                    :statusFilter IS NULL
+                    OR (
+                        :statusFilter = com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus.CANCELLED
+                        AND pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.ESTORNADO
+                    )
+                    OR (
+                        :statusFilter = com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus.SCHEDULED
+                        AND pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PENDENTE
+                        AND (
+                            CASE WHEN pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
+                                      AND pagamento.dataPagamento IS NOT NULL
+                                 THEN pagamento.dataPagamento
+                                 ELSE pagamento.dataVencimento
+                            END
+                        ) > :today
+                    )
+                    OR (
+                        :statusFilter = com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus.ACTIVE
+                        AND (
+                            pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
+                            OR (
+                                pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PENDENTE
+                                AND (
+                                    (
+                                        CASE WHEN pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
+                                                  AND pagamento.dataPagamento IS NOT NULL
+                                             THEN pagamento.dataPagamento
+                                             ELSE pagamento.dataVencimento
+                                        END
+                                    ) <= :today
+                                    OR (
+                                        CASE WHEN pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
+                                                  AND pagamento.dataPagamento IS NOT NULL
+                                             THEN pagamento.dataPagamento
+                                             ELSE pagamento.dataVencimento
+                                        END
+                                    ) IS NULL
+                                )
+                            )
+                        )
+                    )
+                )
             ORDER BY
                 CASE WHEN :sortKey = 'MOVEMENT_DATE' AND :ascending = true THEN (
                     CASE WHEN pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
-                              AND pagamento.dataPagamento IS NOT NULL
+                          AND pagamento.dataPagamento IS NOT NULL
                          THEN pagamento.dataPagamento
                          ELSE pagamento.dataVencimento
                     END
@@ -98,5 +142,7 @@ public interface PagamentoVendaRepository extends JpaRepository<VendaPagamento, 
             @Param("endDate") LocalDate endDate,
             @Param("ascending") boolean ascending,
             @Param("sortKey") String sortKey,
+            @Param("statusFilter") CashFlowStatus statusFilter,
+            @Param("today") LocalDate today,
             Pageable pageable);
 }
