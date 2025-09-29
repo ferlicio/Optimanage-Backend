@@ -36,6 +36,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -172,5 +174,42 @@ class CashFlowServiceTest {
         CashFlowEntryResponse unico = resultado.getContent().get(0);
         assertThat(unico.getOrigin()).isEqualTo(CashFlowOrigin.SALE_INSTALLMENT);
         assertThat(unico.getStatus()).isEqualTo(CashFlowStatus.SCHEDULED);
+    }
+
+    @Test
+    void filtrarPorCanceladosConsultaApenasParcelasEstornadas() {
+        when(cashFlowEntryRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        Venda venda = Venda.builder().sequencialUsuario(99).build();
+        venda.setId(321);
+
+        VendaPagamento parcelaCancelada = VendaPagamento.builder()
+                .venda(venda)
+                .valorPago(BigDecimal.valueOf(100))
+                .statusPagamento(StatusPagamento.ESTORNADO)
+                .dataVencimento(LocalDate.now().minusDays(1))
+                .build();
+        parcelaCancelada.setId(123);
+
+        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(parcelaCancelada)));
+        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        CashFlowSearch search = CashFlowSearch.builder()
+                .status(CashFlowStatus.CANCELLED)
+                .page(0)
+                .pageSize(10)
+                .build();
+
+        Page<CashFlowEntryResponse> resultado = cashFlowService.listarLancamentos(search);
+
+        assertThat(resultado.getContent()).hasSize(1);
+        CashFlowEntryResponse unico = resultado.getContent().get(0);
+        assertThat(unico.getStatus()).isEqualTo(CashFlowStatus.CANCELLED);
+
+        verify(pagamentoVendaRepository).findInstallmentsByOrganizationAndStatusesAndDateRange(any(),
+                eq(List.of(StatusPagamento.ESTORNADO)), any(), any(), any(Pageable.class));
     }
 }

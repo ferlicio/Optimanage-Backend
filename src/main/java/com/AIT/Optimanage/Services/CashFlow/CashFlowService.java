@@ -224,11 +224,13 @@ public class CashFlowService {
     }
 
     private List<StatusPagamento> buildInstallmentStatuses(CashFlowStatus filter) {
-        var statuses = new ArrayList<>(List.of(StatusPagamento.PAGO, StatusPagamento.PENDENTE));
         if (filter == CashFlowStatus.CANCELLED) {
-            statuses.add(StatusPagamento.ESTORNADO);
+            return List.of(StatusPagamento.ESTORNADO);
         }
-        return statuses;
+        if (filter == CashFlowStatus.SCHEDULED) {
+            return List.of(StatusPagamento.PENDENTE);
+        }
+        return List.of(StatusPagamento.PAGO, StatusPagamento.PENDENTE);
     }
 
     private CashFlowEntryResponse toCashFlowSaleInstallment(VendaPagamento pagamento) {
