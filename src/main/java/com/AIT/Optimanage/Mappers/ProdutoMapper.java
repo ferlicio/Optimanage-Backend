@@ -13,6 +13,7 @@ import org.mapstruct.ReportingPolicy;
 public interface ProdutoMapper {
 
     @Mapping(target = "fornecedor", source = "fornecedorId", qualifiedByName = "idToFornecedor")
+    @Mapping(target = "rotatividade", ignore = true)
     Produto toEntity(ProdutoRequest request);
 
     @Mapping(target = "fornecedorId", source = "fornecedor.id")

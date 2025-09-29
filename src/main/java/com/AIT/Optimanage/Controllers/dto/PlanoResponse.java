@@ -28,6 +28,7 @@ public class PlanoResponse {
     private Boolean pagamentosHabilitados;
     private Boolean suportePrioritario;
     private Boolean monitoramentoEstoqueHabilitado;
+    private Boolean metricasProdutoHabilitadas;
     private Integer createdBy;
     private Integer updatedBy;
     private LocalDateTime createdAt;

@@ -87,6 +87,8 @@ public class PlanoService {
         existente.setSuportePrioritario(request.getSuportePrioritario());
         registrarAlteracaoQuota(quotaChanges, "monitoramentoEstoqueHabilitado", existente.getMonitoramentoEstoqueHabilitado(), request.getMonitoramentoEstoqueHabilitado());
         existente.setMonitoramentoEstoqueHabilitado(request.getMonitoramentoEstoqueHabilitado());
+        registrarAlteracaoQuota(quotaChanges, "metricasProdutoHabilitadas", existente.getMetricasProdutoHabilitadas(), request.getMetricasProdutoHabilitadas());
+        existente.setMetricasProdutoHabilitadas(request.getMetricasProdutoHabilitadas());
 
         if (!Objects.equals(existente.getNome(), request.getNome())) {
             existente.setNome(request.getNome());
@@ -167,6 +169,7 @@ public class PlanoService {
                 .pagamentosHabilitados(plano.getPagamentosHabilitados())
                 .suportePrioritario(plano.getSuportePrioritario())
                 .monitoramentoEstoqueHabilitado(plano.getMonitoramentoEstoqueHabilitado())
+                .metricasProdutoHabilitadas(plano.getMetricasProdutoHabilitadas())
                 .usuariosUtilizados(Math.toIntExact(usuariosAtivos))
                 .usuariosRestantes(calcularRestante(plano.getMaxUsuarios(), usuariosAtivos))
                 .produtosUtilizados(Math.toIntExact(produtosAtivos))
@@ -188,6 +191,17 @@ public class PlanoService {
                 .map(Organization::getPlanoAtivoId)
                 .flatMap(planoRepository::findById)
                 .map(Plano::getMonitoramentoEstoqueHabilitado)
+                .orElse(false);
+    }
+
+    public boolean isMetricasProdutoHabilitadas(Integer organizationId) {
+        if (organizationId == null) {
+            return false;
+        }
+        return organizationRepository.findById(organizationId)
+                .map(Organization::getPlanoAtivoId)
+                .flatMap(planoRepository::findById)
+                .map(Plano::getMetricasProdutoHabilitadas)
                 .orElse(false);
     }
 

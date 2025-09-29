@@ -55,6 +55,10 @@ public class Produto extends AuditableEntity implements OwnableEntity {
     @Column(nullable = false)
     private Boolean ativo = true;
 
+    @Builder.Default
+    @Column(nullable = false, precision = 10, scale = 4)
+    private BigDecimal rotatividade = BigDecimal.ZERO;
+
     @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Compatibilidade> compatibilidades;
 
