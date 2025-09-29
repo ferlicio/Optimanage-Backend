@@ -1,7 +1,7 @@
 package com.AIT.Optimanage.Controllers.Venda;
 
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
-import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Controllers.dto.RecommendationSuggestionResponse;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
@@ -200,11 +200,12 @@ public class VendaController extends V1BaseController {
     @Operation(summary = "Recomendar produtos",
             description = "Sugere itens com base no histórico de vendas, priorizando recorrência, margem e compatibilidade")
     @ApiResponse(responseCode = "200", description = "Sucesso")
-    public ResponseEntity<List<ProdutoResponse>> recomendarProdutos(@AuthenticationPrincipal User loggedUser,
-                                                                    @RequestParam(value = "clienteId", required = false) Integer clienteId,
-                                                                    @RequestParam(value = "contexto", required = false) String contexto,
-                                                                    @RequestParam(value = "estoquePositivo", required = false) Boolean estoquePositivo) {
-        return ok(recommendationService.recomendarProdutos(clienteId, contexto, estoquePositivo));
+    public ResponseEntity<List<RecommendationSuggestionResponse>> recomendarProdutos(@AuthenticationPrincipal User loggedUser,
+                                                                                     @RequestParam(value = "clienteId", required = false) Integer clienteId,
+                                                                                     @RequestParam(value = "contexto", required = false) String contexto,
+                                                                                     @RequestParam(value = "estoquePositivo", required = false) Boolean estoquePositivo,
+                                                                                     @RequestParam(value = "apenasBundles", required = false) Boolean apenasBundles) {
+        return ok(recommendationService.recomendarProdutos(clienteId, contexto, estoquePositivo, apenasBundles));
     }
 }
 

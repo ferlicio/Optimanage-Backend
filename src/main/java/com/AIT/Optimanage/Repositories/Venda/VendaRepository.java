@@ -74,12 +74,14 @@ public interface VendaRepository extends JpaRepository<Venda, Integer>, JpaSpeci
     List<Venda> findAllWithProdutosByOrganization(@Param("organizationId") Integer organizationId);
 
     @Query("SELECT DISTINCT v FROM Venda v " +
-            "JOIN FETCH v.vendaProdutos vp " +
-            "JOIN FETCH vp.produto p " +
+            "LEFT JOIN FETCH v.vendaProdutos vp " +
+            "LEFT JOIN FETCH vp.produto p " +
+            "LEFT JOIN FETCH v.vendaServicos vs " +
+            "LEFT JOIN FETCH vs.servico s " +
             "WHERE v.organizationId = :organizationId " +
             "AND (:cutoff IS NULL OR v.dataEfetuacao >= :cutoff)")
-    List<Venda> findRecentWithProdutosByOrganization(@Param("organizationId") Integer organizationId,
-                                                      @Param("cutoff") LocalDate cutoff);
+    List<Venda> findRecentWithItensByOrganization(@Param("organizationId") Integer organizationId,
+                                                  @Param("cutoff") LocalDate cutoff);
 
     @Query("SELECT vp.produto.id AS produtoId, SUM(vp.quantidade) AS totalQuantidade " +
             "FROM Venda v JOIN v.vendaProdutos vp " +
