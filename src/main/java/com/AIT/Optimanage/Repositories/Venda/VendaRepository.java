@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Repositories.Venda;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Models.Venda.Venda;
+import com.AIT.Optimanage.Repositories.Venda.projection.ProdutoQuantidadeProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -70,6 +71,16 @@ public interface VendaRepository extends JpaRepository<Venda, Integer> {
             "JOIN FETCH vp.produto p " +
             "WHERE v.organizationId = :organizationId")
     List<Venda> findAllWithProdutosByOrganization(@Param("organizationId") Integer organizationId);
+
+    @Query("SELECT vp.produto.id AS produtoId, SUM(vp.quantidade) AS totalQuantidade " +
+            "FROM Venda v JOIN v.vendaProdutos vp " +
+            "WHERE v.organizationId = :organizationId " +
+            "AND v.status = com.AIT.Optimanage.Models.Venda.Related.StatusVenda.CONCRETIZADA " +
+            "AND v.dataEfetuacao BETWEEN :inicio AND :fim " +
+            "GROUP BY vp.produto.id")
+    List<ProdutoQuantidadeProjection> sumQuantidadeVendidaPorProduto(@Param("organizationId") Integer organizationId,
+                                                                     @Param("inicio") LocalDate inicio,
+                                                                     @Param("fim") LocalDate fim);
 
     @Query("SELECT COALESCE(SUM(v.valorFinal), 0) FROM Venda v " +
             "WHERE v.organizationId = :organizationId " +

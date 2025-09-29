@@ -28,4 +28,5 @@ public class ProdutoResponse {
     private Boolean ativo;
     private Integer estoqueMinimo;
     private Integer prazoReposicaoDias;
+    private BigDecimal rotatividade;
 }

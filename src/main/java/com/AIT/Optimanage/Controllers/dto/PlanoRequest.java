@@ -61,5 +61,8 @@ public class PlanoRequest {
 
     @NotNull
     private Boolean monitoramentoEstoqueHabilitado;
+
+    @NotNull
+    private Boolean metricasProdutoHabilitadas;
 }
 

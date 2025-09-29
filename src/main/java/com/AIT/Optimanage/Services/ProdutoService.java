@@ -20,6 +20,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.util.Optional;
 
 @Service
@@ -84,6 +86,7 @@ public class ProdutoService {
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(produtoSalvo.getId());
         produto.setTenantId(produtoSalvo.getOrganizationId());
+        produto.setRotatividade(produtoSalvo.getRotatividade());
         aplicarValoresPadrao(produto);
         Produto atualizado = produtoRepository.save(produto);
         return produtoMapper.toResponse(atualizado);
@@ -158,6 +161,9 @@ public class ProdutoService {
         }
         if (produto.getPrazoReposicaoDias() == null) {
             produto.setPrazoReposicaoDias(0);
+        }
+        if (produto.getRotatividade() == null) {
+            produto.setRotatividade(BigDecimal.ZERO);
         }
     }
 }
