@@ -182,9 +182,11 @@ public class CashFlowService {
             return new ArrayList<>();
         }
 
+        var installmentStatuses = buildInstallmentStatuses(search.getStatus());
+
         var pagamentos = pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(
                 organizationId,
-                List.of(StatusPagamento.PAGO, StatusPagamento.PENDENTE),
+                installmentStatuses,
                 search.getStartDate(),
                 search.getEndDate());
 
@@ -199,9 +201,11 @@ public class CashFlowService {
             return new ArrayList<>();
         }
 
+        var installmentStatuses = buildInstallmentStatuses(search.getStatus());
+
         var pagamentos = pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(
                 organizationId,
-                List.of(StatusPagamento.PAGO, StatusPagamento.PENDENTE),
+                installmentStatuses,
                 search.getStartDate(),
                 search.getEndDate());
 
@@ -209,6 +213,14 @@ public class CashFlowService {
                 .map(this::toCashFlowPurchaseInstallment)
                 .filter(entry -> matchesStatusFilter(entry, search.getStatus()))
                 .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private List<StatusPagamento> buildInstallmentStatuses(CashFlowStatus filter) {
+        var statuses = new ArrayList<>(List.of(StatusPagamento.PAGO, StatusPagamento.PENDENTE));
+        if (filter == CashFlowStatus.CANCELLED) {
+            statuses.add(StatusPagamento.ESTORNADO);
+        }
+        return statuses;
     }
 
     private CashFlowEntryResponse toCashFlowSaleInstallment(VendaPagamento pagamento) {
