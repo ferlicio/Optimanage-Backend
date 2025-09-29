@@ -2,6 +2,8 @@ package com.AIT.Optimanage.Repositories.Compra;
 
 import com.AIT.Optimanage.Models.Compra.CompraPagamento;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -48,9 +50,10 @@ public interface PagamentoCompraRepository extends JpaRepository<CompraPagamento
                     END
                 ) <= :endDate)
             """)
-    List<CompraPagamento> findInstallmentsByOrganizationAndStatusesAndDateRange(
+    Page<CompraPagamento> findInstallmentsByOrganizationAndStatusesAndDateRange(
             @Param("organizationId") Integer organizationId,
             @Param("statuses") Collection<StatusPagamento> statuses,
             @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate);
+            @Param("endDate") LocalDate endDate,
+            Pageable pageable);
 }

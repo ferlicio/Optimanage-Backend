@@ -3,6 +3,8 @@ package com.AIT.Optimanage.Repositories.Venda;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -49,9 +51,10 @@ public interface PagamentoVendaRepository extends JpaRepository<VendaPagamento, 
                     END
                 ) <= :endDate)
             """)
-    List<VendaPagamento> findInstallmentsByOrganizationAndStatusesAndDateRange(
+    Page<VendaPagamento> findInstallmentsByOrganizationAndStatusesAndDateRange(
             @Param("organizationId") Integer organizationId,
             @Param("statuses") Collection<StatusPagamento> statuses,
             @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate);
+            @Param("endDate") LocalDate endDate,
+            Pageable pageable);
 }

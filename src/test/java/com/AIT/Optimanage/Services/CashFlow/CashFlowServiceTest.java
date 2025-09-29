@@ -99,8 +99,8 @@ class CashFlowServiceTest {
                 .build();
         parcelaVendaCancelada.setId(201);
 
-        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any()))
-                .thenReturn(List.of(parcelaVendaFutura, parcelaVendaCancelada));
+        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(parcelaVendaFutura, parcelaVendaCancelada)));
 
         Compra compra = Compra.builder().sequencialUsuario(33).build();
         compra.setId(88);
@@ -114,8 +114,8 @@ class CashFlowServiceTest {
                 .build();
         parcelaCompraPaga.setId(300);
 
-        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any()))
-                .thenReturn(List.of(parcelaCompraPaga));
+        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(parcelaCompraPaga)));
 
         CashFlowSearch search = CashFlowSearch.builder().page(0).pageSize(10).build();
 
@@ -154,11 +154,11 @@ class CashFlowServiceTest {
                 .build();
         parcelaAgendada.setId(700);
 
-        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any()))
-                .thenReturn(List.of(parcelaAgendada));
+        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(parcelaAgendada)));
 
-        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any()))
-                .thenReturn(List.of());
+        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(Page.empty());
 
         CashFlowSearch search = CashFlowSearch.builder()
                 .status(CashFlowStatus.SCHEDULED)

@@ -78,8 +78,8 @@ public class CashFlowService {
                 .map(mapper::toResponse)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        var saleInstallments = listarParcelasVendas(organizationId, search);
-        var purchaseInstallments = listarParcelasCompras(organizationId, search);
+        var saleInstallments = listarParcelasVendas(organizationId, search, fetchSize);
+        var purchaseInstallments = listarParcelasCompras(organizationId, search, fetchSize);
 
         long totalElements = manualPage.getTotalElements() + saleInstallments.size() + purchaseInstallments.size();
 
@@ -177,18 +177,22 @@ public class CashFlowService {
         };
     }
 
-    private ArrayList<CashFlowEntryResponse> listarParcelasVendas(Integer organizationId, CashFlowSearch search) {
+    private ArrayList<CashFlowEntryResponse> listarParcelasVendas(Integer organizationId, CashFlowSearch search,
+            int fetchSize) {
         if (search.getType() != null && search.getType() != CashFlowType.INCOME) {
             return new ArrayList<>();
         }
 
         var installmentStatuses = buildInstallmentStatuses(search.getStatus());
 
+        Pageable pageable = PageRequest.of(0, Math.max(fetchSize, 1));
+
         var pagamentos = pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(
                 organizationId,
                 installmentStatuses,
                 search.getStartDate(),
-                search.getEndDate());
+                search.getEndDate(),
+                pageable).getContent();
 
         return pagamentos.stream()
                 .map(this::toCashFlowSaleInstallment)
@@ -196,18 +200,22 @@ public class CashFlowService {
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
-    private ArrayList<CashFlowEntryResponse> listarParcelasCompras(Integer organizationId, CashFlowSearch search) {
+    private ArrayList<CashFlowEntryResponse> listarParcelasCompras(Integer organizationId, CashFlowSearch search,
+            int fetchSize) {
         if (search.getType() != null && search.getType() != CashFlowType.EXPENSE) {
             return new ArrayList<>();
         }
 
         var installmentStatuses = buildInstallmentStatuses(search.getStatus());
 
+        Pageable pageable = PageRequest.of(0, Math.max(fetchSize, 1));
+
         var pagamentos = pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(
                 organizationId,
                 installmentStatuses,
                 search.getStartDate(),
-                search.getEndDate());
+                search.getEndDate(),
+                pageable).getContent();
 
         return pagamentos.stream()
                 .map(this::toCashFlowPurchaseInstallment)
