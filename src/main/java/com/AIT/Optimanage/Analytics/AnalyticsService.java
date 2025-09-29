@@ -5,10 +5,12 @@ import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
 import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Inventory.InventoryAlert;
+import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Services.InventoryMonitoringService;
 import com.AIT.Optimanage.Services.PlanoService;
@@ -19,6 +21,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,6 +35,7 @@ public class AnalyticsService {
     private final CompraRepository compraRepository;
     private final InventoryMonitoringService inventoryMonitoringService;
     private final PlanoService planoService;
+    private final OrganizationRepository organizationRepository;
 
     public ResumoDTO obterResumo() {
         User user = CurrentUser.get();
@@ -41,6 +46,8 @@ public class AnalyticsService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Organização não encontrada"));
         BigDecimal totalVendas = BigDecimal.ZERO;
         BigDecimal vendasResult = vendaRepository.sumValorFinalByOrganization(organizationId);
         if (vendasResult != null) {
@@ -53,8 +60,27 @@ public class AnalyticsService {
             totalCompras = comprasResult;
         }
 
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioMes = hoje.withDayOfMonth(1);
+        LocalDate fimMes = hoje.withDayOfMonth(hoje.lengthOfMonth());
+        LocalDate inicioAno = hoje.withDayOfYear(1);
+        LocalDate fimAno = hoje.withDayOfYear(hoje.lengthOfYear());
+
+        BigDecimal vendasMensais = vendaRepository.sumValorFinalByOrganizationBetweenDates(organizationId, inicioMes, fimMes);
+        BigDecimal vendasAnuais = vendaRepository.sumValorFinalByOrganizationBetweenDates(organizationId, inicioAno, fimAno);
+
+        BigDecimal metaMensal = organization.getMetaMensal() != null
+                ? BigDecimal.valueOf(organization.getMetaMensal())
+                : null;
+        BigDecimal metaAnual = organization.getMetaAnual() != null
+                ? BigDecimal.valueOf(organization.getMetaAnual())
+                : null;
+
+        BigDecimal progressoMensal = calcularProgresso(vendasMensais, metaMensal);
+        BigDecimal progressoAnual = calcularProgresso(vendasAnuais, metaAnual);
+
         BigDecimal lucro = totalVendas.subtract(totalCompras);
-        return new ResumoDTO(totalVendas, totalCompras, lucro);
+        return new ResumoDTO(totalVendas, totalCompras, lucro, metaMensal, metaAnual, progressoMensal, progressoAnual);
     }
 
     public PrevisaoDTO preverDemanda() {
@@ -122,6 +148,15 @@ public class AnalyticsService {
                 .quantidadeSugerida(alert.getQuantidadeSugerida())
                 .mensagem(alert.getMensagem())
                 .build();
+    }
+
+    private BigDecimal calcularProgresso(BigDecimal total, BigDecimal meta) {
+        if (meta == null || BigDecimal.ZERO.compareTo(meta) == 0) {
+            return null;
+        }
+        BigDecimal valorTotal = total != null ? total : BigDecimal.ZERO;
+        return valorTotal.multiply(BigDecimal.valueOf(100))
+                .divide(meta, 2, RoundingMode.HALF_UP);
     }
 }
 
