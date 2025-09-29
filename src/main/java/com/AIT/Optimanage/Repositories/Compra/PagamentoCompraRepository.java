@@ -50,20 +50,44 @@ public interface PagamentoCompraRepository extends JpaRepository<CompraPagamento
                     END
                 ) <= :endDate)
             ORDER BY
-                CASE WHEN :ascending = true THEN (
+                CASE WHEN :sortKey = 'MOVEMENT_DATE' AND :ascending = true THEN (
                     CASE WHEN pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
                               AND pagamento.dataPagamento IS NOT NULL
                          THEN pagamento.dataPagamento
                          ELSE pagamento.dataVencimento
                     END
                 ) END ASC,
-                CASE WHEN :ascending = false THEN (
+                CASE WHEN :sortKey = 'MOVEMENT_DATE' AND :ascending = false THEN (
                     CASE WHEN pagamento.statusPagamento = com.AIT.Optimanage.Models.Enums.StatusPagamento.PAGO
                               AND pagamento.dataPagamento IS NOT NULL
                          THEN pagamento.dataPagamento
                          ELSE pagamento.dataVencimento
                     END
                 ) END DESC,
+                CASE WHEN :sortKey = 'AMOUNT' AND :ascending = true THEN pagamento.valorPago END ASC,
+                CASE WHEN :sortKey = 'AMOUNT' AND :ascending = false THEN pagamento.valorPago END DESC,
+                CASE WHEN :sortKey = 'DESCRIPTION' AND :ascending = true THEN (
+                    CONCAT(
+                        'Compra ',
+                        COALESCE(CONCAT('#', CAST(compra.sequencialUsuario AS string)), 'Compra'),
+                        CASE WHEN fornecedor.nome IS NOT NULL AND fornecedor.nome <> ''
+                             THEN CONCAT(' - ', fornecedor.nome)
+                             ELSE ''
+                        END
+                    )
+                ) END ASC,
+                CASE WHEN :sortKey = 'DESCRIPTION' AND :ascending = false THEN (
+                    CONCAT(
+                        'Compra ',
+                        COALESCE(CONCAT('#', CAST(compra.sequencialUsuario AS string)), 'Compra'),
+                        CASE WHEN fornecedor.nome IS NOT NULL AND fornecedor.nome <> ''
+                             THEN CONCAT(' - ', fornecedor.nome)
+                             ELSE ''
+                        END
+                    )
+                ) END DESC,
+                CASE WHEN :sortKey = 'CREATED_AT' AND :ascending = true THEN pagamento.createdAt END ASC,
+                CASE WHEN :sortKey = 'CREATED_AT' AND :ascending = false THEN pagamento.createdAt END DESC,
                 pagamento.id ASC
             """)
     Page<CompraPagamento> findInstallmentsByOrganizationAndStatusesAndDateRange(
@@ -72,5 +96,6 @@ public interface PagamentoCompraRepository extends JpaRepository<CompraPagamento
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("ascending") boolean ascending,
+            @Param("sortKey") String sortKey,
             Pageable pageable);
 }

@@ -37,6 +37,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -102,7 +103,7 @@ class CashFlowServiceTest {
                 .build();
         parcelaVendaCancelada.setId(201);
 
-        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), any(Pageable.class)))
+        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), anyString(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(parcelaVendaFutura, parcelaVendaCancelada)));
 
         Compra compra = Compra.builder().sequencialUsuario(33).build();
@@ -117,7 +118,7 @@ class CashFlowServiceTest {
                 .build();
         parcelaCompraPaga.setId(300);
 
-        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), any(Pageable.class)))
+        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), anyString(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(parcelaCompraPaga)));
 
         CashFlowSearch search = CashFlowSearch.builder().page(0).pageSize(10).build();
@@ -157,10 +158,10 @@ class CashFlowServiceTest {
                 .build();
         parcelaAgendada.setId(700);
 
-        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), any(Pageable.class)))
+        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), anyString(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(parcelaAgendada)));
 
-        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), any(Pageable.class)))
+        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), anyString(), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
         CashFlowSearch search = CashFlowSearch.builder()
@@ -193,9 +194,9 @@ class CashFlowServiceTest {
                 .build();
         parcelaCancelada.setId(123);
 
-        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), any(Pageable.class)))
+        when(pagamentoVendaRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), anyString(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(parcelaCancelada)));
-        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), any(Pageable.class)))
+        when(pagamentoCompraRepository.findInstallmentsByOrganizationAndStatusesAndDateRange(any(), any(), any(), any(), anyBoolean(), anyString(), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
         CashFlowSearch search = CashFlowSearch.builder()
@@ -211,6 +212,6 @@ class CashFlowServiceTest {
         assertThat(unico.getStatus()).isEqualTo(CashFlowStatus.CANCELLED);
 
         verify(pagamentoVendaRepository).findInstallmentsByOrganizationAndStatusesAndDateRange(any(),
-                eq(List.of(StatusPagamento.ESTORNADO)), any(), any(), eq(true), any(Pageable.class));
+                eq(List.of(StatusPagamento.ESTORNADO)), any(), any(), eq(true), eq("MOVEMENT_DATE"), any(Pageable.class));
     }
 }

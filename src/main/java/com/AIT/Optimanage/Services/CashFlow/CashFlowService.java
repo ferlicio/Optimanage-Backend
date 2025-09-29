@@ -78,8 +78,8 @@ public class CashFlowService {
                 .map(mapper::toResponse)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        var saleInstallments = listarParcelasVendas(organizationId, search, fetchSize, direction);
-        var purchaseInstallments = listarParcelasCompras(organizationId, search, fetchSize, direction);
+        var saleInstallments = listarParcelasVendas(organizationId, search, fetchSize, direction, sortBy);
+        var purchaseInstallments = listarParcelasCompras(organizationId, search, fetchSize, direction, sortBy);
 
         long totalElements = manualPage.getTotalElements() + saleInstallments.totalElements()
                 + purchaseInstallments.totalElements();
@@ -179,12 +179,13 @@ public class CashFlowService {
     }
 
     private InstallmentResults listarParcelasVendas(Integer organizationId, CashFlowSearch search,
-            int fetchSize, Sort.Direction direction) {
+            int fetchSize, Sort.Direction direction, String sortBy) {
         if (search.getType() != null && search.getType() != CashFlowType.INCOME) {
             return InstallmentResults.empty();
         }
 
         var installmentStatuses = buildInstallmentStatuses(search.getStatus());
+        String sortKey = mapInstallmentSortKey(sortBy);
 
         Pageable pageable = PageRequest.of(0, Math.max(fetchSize, 1));
 
@@ -194,6 +195,7 @@ public class CashFlowService {
                 search.getStartDate(),
                 search.getEndDate(),
                 direction != Sort.Direction.DESC,
+                sortKey,
                 pageable);
 
         var entries = pagamentos.getContent().stream()
@@ -205,12 +207,13 @@ public class CashFlowService {
     }
 
     private InstallmentResults listarParcelasCompras(Integer organizationId, CashFlowSearch search,
-            int fetchSize, Sort.Direction direction) {
+            int fetchSize, Sort.Direction direction, String sortBy) {
         if (search.getType() != null && search.getType() != CashFlowType.EXPENSE) {
             return InstallmentResults.empty();
         }
 
         var installmentStatuses = buildInstallmentStatuses(search.getStatus());
+        String sortKey = mapInstallmentSortKey(sortBy);
 
         Pageable pageable = PageRequest.of(0, Math.max(fetchSize, 1));
 
@@ -220,6 +223,7 @@ public class CashFlowService {
                 search.getStartDate(),
                 search.getEndDate(),
                 direction != Sort.Direction.DESC,
+                sortKey,
                 pageable);
 
         var entries = pagamentos.getContent().stream()
@@ -234,6 +238,22 @@ public class CashFlowService {
         static InstallmentResults empty() {
             return new InstallmentResults(new ArrayList<>(), 0L);
         }
+    }
+
+    private String mapInstallmentSortKey(String sortBy) {
+        return switch (Optional.ofNullable(sortBy).orElse("movementDate")) {
+            case "amount" -> InstallmentSortKey.AMOUNT.name();
+            case "description" -> InstallmentSortKey.DESCRIPTION.name();
+            case "createdAt" -> InstallmentSortKey.CREATED_AT.name();
+            default -> InstallmentSortKey.MOVEMENT_DATE.name();
+        };
+    }
+
+    private enum InstallmentSortKey {
+        MOVEMENT_DATE,
+        AMOUNT,
+        DESCRIPTION,
+        CREATED_AT
     }
 
     private List<StatusPagamento> buildInstallmentStatuses(CashFlowStatus filter) {
