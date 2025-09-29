@@ -23,6 +23,8 @@ public interface CashFlowMapper {
     @Mapping(target = "updatedBy", ignore = true)
     CashFlowEntry toEntity(CashFlowEntryRequest request);
 
+    @Mapping(target = "origin", constant = "MANUAL")
+    @Mapping(target = "referenceId", source = "id")
     CashFlowEntryResponse toResponse(CashFlowEntry entry);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
