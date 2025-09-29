@@ -1,12 +1,15 @@
 package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Config.RecommendationProperties;
+import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Inventory.InventoryAlert;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaProduto;
+import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
@@ -36,6 +39,8 @@ public class RecommendationService {
     private final PlanoService planoService;
     private final CompatibilidadeService compatibilidadeService;
     private final InventoryMonitoringService inventoryMonitoringService;
+    private final ClienteRepository clienteRepository;
+    private final RecommendationProperties recommendationProperties;
 
     private static final int MAX_SUGESTOES = 10;
     private static final int CANDIDATOS_MULTIPLICADOR = 3;
@@ -67,14 +72,16 @@ public class RecommendationService {
             throw new EntityNotFoundException("Organização não encontrada");
         }
         Set<Integer> produtosEmRisco = identificarProdutosEmRisco(organizationId);
-        List<Object[]> historicoCliente = buscarHistoricoBase(clienteId, organizationId);
+        Cliente cliente = buscarCliente(clienteId, organizationId);
+        List<Object[]> historicoCliente = buscarHistoricoBase(clienteId, organizationId, cliente != null);
 
         Set<Integer> produtosCliente = historicoCliente.stream()
                 .map(r -> (Integer) r[0])
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        List<Venda> vendas = vendaRepository.findAllWithProdutosByOrganization(organizationId);
+        LocalDate cutoff = calcularDataCorte();
+        List<Venda> vendas = vendaRepository.findRecentWithProdutosByOrganization(organizationId, cutoff);
 
         Set<Integer> produtosCompativeis = buscarProdutosCompativeis(loggedUser, contexto);
         boolean filtrarEstoquePositivo = apenasEstoquePositivo == null || apenasEstoquePositivo;
@@ -122,6 +129,8 @@ public class RecommendationService {
                     score += COMPATIBILIDADE_BONUS;
                 }
 
+                score = ajustarScoreCliente(score, produto, cliente);
+
                 ProdutoPontuacao dados = pontuacaoDetalhada.computeIfAbsent(produtoId, k -> new ProdutoPontuacao());
                 dados.adicionar(score, quantidade, produto);
             }
@@ -134,8 +143,10 @@ public class RecommendationService {
             return Collections.emptyList();
         }
 
+        double rotatividadeWeight = Math.max(0.0, recommendationProperties.getRotatividadeWeight());
         Map<Integer, Double> pontuacaoFinal = pontuacaoDetalhada.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().calcularPontuacaoFinal()));
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        entry -> entry.getValue().calcularPontuacaoFinal(rotatividadeWeight)));
 
         List<Integer> ordenadosPorPontuacao = pontuacaoFinal.entrySet().stream()
                 .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
@@ -221,11 +232,52 @@ public class RecommendationService {
         return Optional.ofNullable(produto.getQtdEstoque()).orElse(0) > 0;
     }
 
-    private List<Object[]> buscarHistoricoBase(Integer clienteId, Integer organizationId) {
-        if (clienteId != null) {
+    private Cliente buscarCliente(Integer clienteId, Integer organizationId) {
+        if (clienteId == null) {
+            return null;
+        }
+        return clienteRepository.findByIdAndOrganizationId(clienteId, organizationId)
+                .filter(cliente -> Boolean.TRUE.equals(cliente.getAtivo()))
+                .orElse(null);
+    }
+
+    private List<Object[]> buscarHistoricoBase(Integer clienteId, Integer organizationId, boolean clienteEncontrado) {
+        if (clienteId != null && clienteEncontrado) {
             return vendaRepository.findTopProdutosByCliente(clienteId, organizationId);
         }
         return vendaRepository.findTopProdutosByOrganization(organizationId);
+    }
+
+    private LocalDate calcularDataCorte() {
+        int janela = Math.max(0, recommendationProperties.getHistoryWindowDays());
+        if (janela <= 0) {
+            return null;
+        }
+        return LocalDate.now().minusDays(janela);
+    }
+
+    private double ajustarScoreCliente(double score, Produto produto, Cliente cliente) {
+        if (cliente == null) {
+            return score;
+        }
+
+        BigDecimal churnScore = cliente.getChurnScore();
+        if (churnScore != null && churnScore.compareTo(BigDecimal.ZERO) > 0) {
+            double pesoChurn = Math.max(0.0, recommendationProperties.getChurnWeight());
+            double churnValor = churnScore.doubleValue();
+            score *= (1.0 + Math.min(churnValor, 1.0) * pesoChurn);
+        }
+
+        BigDecimal averageTicket = cliente.getAverageTicket();
+        BigDecimal valorVenda = produto.getValorVenda();
+        if (averageTicket != null && valorVenda != null &&
+                averageTicket.compareTo(BigDecimal.ZERO) > 0 && valorVenda.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal proporcao = averageTicket.divide(valorVenda, 4, RoundingMode.HALF_UP);
+            double fatorTicket = Math.max(0.25, Math.min(1.0, proporcao.doubleValue()));
+            score *= fatorTicket;
+        }
+
+        return score;
     }
 
     private Set<Integer> buscarProdutosCompativeis(User loggedUser, String contexto) {
@@ -312,12 +364,14 @@ public class RecommendationService {
         private int recorrencia;
         private double melhorMargemPercentual;
         private double melhorMargemAbsoluta;
+        private double melhorRotatividade;
 
         private ProdutoPontuacao() {
             this.scoreAcumulado = 0.0;
             this.recorrencia = 0;
             this.melhorMargemPercentual = 0.0;
             this.melhorMargemAbsoluta = 0.0;
+            this.melhorRotatividade = 0.0;
         }
 
         private void adicionar(double score, double quantidade, Produto produto) {
@@ -325,12 +379,17 @@ public class RecommendationService {
             this.recorrencia += Math.max(1, (int) Math.round(quantidade));
             this.melhorMargemPercentual = Math.max(this.melhorMargemPercentual, RecommendationService.calcularMargemPercentual(produto));
             this.melhorMargemAbsoluta = Math.max(this.melhorMargemAbsoluta, RecommendationService.calcularMargemAbsoluta(produto));
+            BigDecimal rotatividade = produto.getRotatividade();
+            if (rotatividade != null) {
+                this.melhorRotatividade = Math.max(this.melhorRotatividade, rotatividade.doubleValue());
+            }
         }
 
-        private double calcularPontuacaoFinal() {
+        private double calcularPontuacaoFinal(double rotatividadeWeight) {
             double fatorRecorrencia = 1.0 + Math.log1p(recorrencia);
             double fatorMargem = 1.0 + melhorMargemPercentual + normalizarMargemAbsoluta(melhorMargemAbsoluta);
-            return scoreAcumulado * fatorRecorrencia * fatorMargem;
+            double fatorRotatividade = calcularFatorRotatividade(rotatividadeWeight);
+            return scoreAcumulado * fatorRecorrencia * fatorMargem * fatorRotatividade;
         }
 
         private double normalizarMargemAbsoluta(double margemAbsoluta) {
@@ -338,6 +397,23 @@ public class RecommendationService {
                 return 0.0;
             }
             return Math.min(0.5, margemAbsoluta / 100.0);
+        }
+
+        private double calcularFatorRotatividade(double rotatividadeWeight) {
+            if (rotatividadeWeight <= 0 || melhorRotatividade <= 0) {
+                return 1.0;
+            }
+
+            if (melhorRotatividade < 0.5) {
+                double deficit = 0.5 - melhorRotatividade;
+                return 1.0 + rotatividadeWeight * Math.min(1.5, 1.0 + deficit);
+            }
+
+            if (melhorRotatividade > 1.5) {
+                return 1.0 + rotatividadeWeight * Math.min(1.0, melhorRotatividade - 1.0);
+            }
+
+            return 1.0 + rotatividadeWeight;
         }
     }
 }
