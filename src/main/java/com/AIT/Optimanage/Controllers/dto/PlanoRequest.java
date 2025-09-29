@@ -64,5 +64,8 @@ public class PlanoRequest {
 
     @NotNull
     private Boolean metricasProdutoHabilitadas;
+
+    @NotNull
+    private Boolean integracaoMarketplaceHabilitada;
 }
 
