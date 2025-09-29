@@ -89,6 +89,8 @@ public class PlanoService {
         existente.setMonitoramentoEstoqueHabilitado(request.getMonitoramentoEstoqueHabilitado());
         registrarAlteracaoQuota(quotaChanges, "metricasProdutoHabilitadas", existente.getMetricasProdutoHabilitadas(), request.getMetricasProdutoHabilitadas());
         existente.setMetricasProdutoHabilitadas(request.getMetricasProdutoHabilitadas());
+        registrarAlteracaoQuota(quotaChanges, "integracaoMarketplaceHabilitada", existente.getIntegracaoMarketplaceHabilitada(), request.getIntegracaoMarketplaceHabilitada());
+        existente.setIntegracaoMarketplaceHabilitada(request.getIntegracaoMarketplaceHabilitada());
 
         if (!Objects.equals(existente.getNome(), request.getNome())) {
             existente.setNome(request.getNome());
