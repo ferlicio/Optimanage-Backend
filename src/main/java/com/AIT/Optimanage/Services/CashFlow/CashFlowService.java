@@ -81,9 +81,10 @@ public class CashFlowService {
         var saleInstallments = listarParcelasVendas(organizationId, search, fetchSize);
         var purchaseInstallments = listarParcelasCompras(organizationId, search, fetchSize);
 
-        long totalElements = manualPage.getTotalElements() + saleInstallments.size() + purchaseInstallments.size();
+        long totalElements = manualPage.getTotalElements() + saleInstallments.totalElements()
+                + purchaseInstallments.totalElements();
 
-        var allEntries = Stream.of(manualEntries, saleInstallments, purchaseInstallments)
+        var allEntries = Stream.of(manualEntries, saleInstallments.entries(), purchaseInstallments.entries())
                 .flatMap(ArrayList::stream)
                 .sorted(comparator)
                 .collect(Collectors.toList());
@@ -177,10 +178,10 @@ public class CashFlowService {
         };
     }
 
-    private ArrayList<CashFlowEntryResponse> listarParcelasVendas(Integer organizationId, CashFlowSearch search,
+    private InstallmentResults listarParcelasVendas(Integer organizationId, CashFlowSearch search,
             int fetchSize) {
         if (search.getType() != null && search.getType() != CashFlowType.INCOME) {
-            return new ArrayList<>();
+            return InstallmentResults.empty();
         }
 
         var installmentStatuses = buildInstallmentStatuses(search.getStatus());
@@ -192,18 +193,20 @@ public class CashFlowService {
                 installmentStatuses,
                 search.getStartDate(),
                 search.getEndDate(),
-                pageable).getContent();
+                pageable);
 
-        return pagamentos.stream()
+        var entries = pagamentos.getContent().stream()
                 .map(this::toCashFlowSaleInstallment)
                 .filter(entry -> matchesStatusFilter(entry, search.getStatus()))
                 .collect(Collectors.toCollection(ArrayList::new));
+
+        return new InstallmentResults(entries, pagamentos.getTotalElements());
     }
 
-    private ArrayList<CashFlowEntryResponse> listarParcelasCompras(Integer organizationId, CashFlowSearch search,
+    private InstallmentResults listarParcelasCompras(Integer organizationId, CashFlowSearch search,
             int fetchSize) {
         if (search.getType() != null && search.getType() != CashFlowType.EXPENSE) {
-            return new ArrayList<>();
+            return InstallmentResults.empty();
         }
 
         var installmentStatuses = buildInstallmentStatuses(search.getStatus());
@@ -215,12 +218,20 @@ public class CashFlowService {
                 installmentStatuses,
                 search.getStartDate(),
                 search.getEndDate(),
-                pageable).getContent();
+                pageable);
 
-        return pagamentos.stream()
+        var entries = pagamentos.getContent().stream()
                 .map(this::toCashFlowPurchaseInstallment)
                 .filter(entry -> matchesStatusFilter(entry, search.getStatus()))
                 .collect(Collectors.toCollection(ArrayList::new));
+
+        return new InstallmentResults(entries, pagamentos.getTotalElements());
+    }
+
+    private record InstallmentResults(ArrayList<CashFlowEntryResponse> entries, long totalElements) {
+        static InstallmentResults empty() {
+            return new InstallmentResults(new ArrayList<>(), 0L);
+        }
     }
 
     private List<StatusPagamento> buildInstallmentStatuses(CashFlowStatus filter) {
