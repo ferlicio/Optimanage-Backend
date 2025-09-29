@@ -1,6 +1,8 @@
 package com.AIT.Optimanage.Services;
 
+import com.AIT.Optimanage.Config.RecommendationProperties;
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Inventory.InventoryAlert;
 import com.AIT.Optimanage.Models.Inventory.InventoryAlertSeverity;
 import com.AIT.Optimanage.Models.Plano;
@@ -9,6 +11,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaProduto;
 import com.AIT.Optimanage.Models.Venda.Compatibilidade.Compatibilidade;
+import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
@@ -58,6 +61,10 @@ class RecommendationServiceTest {
     private CompatibilidadeService compatibilidadeService;
     @Mock
     private InventoryMonitoringService inventoryMonitoringService;
+    @Mock
+    private ClienteRepository clienteRepository;
+    @Mock
+    private RecommendationProperties recommendationProperties;
 
     @InjectMocks
     private RecommendationService recommendationService;
@@ -70,6 +77,9 @@ class RecommendationServiceTest {
         loggedUser.setTenantId(1);
         CurrentUser.set(loggedUser);
         lenient().when(inventoryMonitoringService.listarAlertasOrganizacao(1)).thenReturn(Collections.emptyList());
+        lenient().when(recommendationProperties.getHistoryWindowDays()).thenReturn(365);
+        lenient().when(recommendationProperties.getChurnWeight()).thenReturn(0.5);
+        lenient().when(recommendationProperties.getRotatividadeWeight()).thenReturn(0.3);
     }
 
     private void stubPlano(boolean habilitado) {
@@ -89,6 +99,9 @@ class RecommendationServiceTest {
         List<Object[]> historicoCliente = Collections.singletonList(new Object[]{100, 5L});
         when(vendaRepository.findTopProdutosByCliente(123, 1)).thenReturn(historicoCliente);
 
+        Cliente cliente = clienteAtivo(BigDecimal.ZERO, BigDecimal.valueOf(500));
+        when(clienteRepository.findByIdAndOrganizationId(123, 1)).thenReturn(Optional.of(cliente));
+
         Venda vendaRecente = criarVenda(LocalDate.of(2024, 1, 10),
                 criarVendaProduto(100, 1),
                 criarVendaProduto(200, 2));
@@ -96,7 +109,8 @@ class RecommendationServiceTest {
                 criarVendaProduto(100, 1),
                 criarVendaProduto(300, 1));
 
-        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(vendaRecente, vendaAntiga));
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(vendaRecente, vendaAntiga));
 
         Produto disponivel = produtoComEstoque(200, 5, BigDecimal.valueOf(15), BigDecimal.valueOf(30));
         Produto semEstoque = produtoComEstoque(300, 0, BigDecimal.valueOf(15), BigDecimal.valueOf(30));
@@ -121,12 +135,16 @@ class RecommendationServiceTest {
         List<Object[]> historicoCliente = Collections.singletonList(new Object[]{100, 3L});
         when(vendaRepository.findTopProdutosByCliente(321, 1)).thenReturn(historicoCliente);
 
+        Cliente cliente = clienteAtivo(BigDecimal.ZERO, BigDecimal.valueOf(500));
+        when(clienteRepository.findByIdAndOrganizationId(321, 1)).thenReturn(Optional.of(cliente));
+
         Venda venda = criarVenda(LocalDate.of(2024, 1, 10),
                 criarVendaProduto(100, 1),
                 criarVendaProduto(200, 1),
                 criarVendaProduto(300, 1));
 
-        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(venda));
 
         Produto produtoA = produtoComEstoque(200, 10, BigDecimal.valueOf(10), BigDecimal.valueOf(20));
         Produto produtoB = produtoComEstoque(300, 10, BigDecimal.valueOf(5), BigDecimal.valueOf(25));
@@ -153,6 +171,9 @@ class RecommendationServiceTest {
         List<Object[]> historicoCliente = Collections.singletonList(new Object[]{100, 1L});
         when(vendaRepository.findTopProdutosByCliente(999, 1)).thenReturn(historicoCliente);
 
+        Cliente cliente = clienteAtivo(BigDecimal.ZERO, BigDecimal.valueOf(500));
+        when(clienteRepository.findByIdAndOrganizationId(999, 1)).thenReturn(Optional.of(cliente));
+
         List<VendaProduto> itens = new ArrayList<>();
         itens.add(criarVendaProduto(100, 1));
         for (int i = 0; i < 12; i++) {
@@ -160,7 +181,8 @@ class RecommendationServiceTest {
         }
         Venda venda = criarVenda(LocalDate.of(2024, 1, 1), itens.toArray(new VendaProduto[0]));
 
-        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(venda));
 
         List<Produto> produtos = new ArrayList<>();
         for (int i = 0; i < 12; i++) {
@@ -182,12 +204,16 @@ class RecommendationServiceTest {
         List<Object[]> historicoCliente = Collections.singletonList(new Object[]{100, 4L});
         when(vendaRepository.findTopProdutosByCliente(555, 1)).thenReturn(historicoCliente);
 
+        Cliente cliente = clienteAtivo(BigDecimal.ZERO, BigDecimal.valueOf(500));
+        when(clienteRepository.findByIdAndOrganizationId(555, 1)).thenReturn(Optional.of(cliente));
+
         Venda venda = criarVenda(LocalDate.of(2024, 2, 1),
                 criarVendaProduto(100, 1),
                 criarVendaProduto(200, 3),
                 criarVendaProduto(300, 1));
 
-        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(venda));
 
         Produto margemAlta = produtoComEstoque(200, 5, BigDecimal.valueOf(10), BigDecimal.valueOf(40));
         Produto recorrente = produtoComEstoque(300, 5, BigDecimal.valueOf(15), BigDecimal.valueOf(25));
@@ -218,7 +244,8 @@ class RecommendationServiceTest {
                 criarVendaProduto(400, 2),
                 criarVendaProduto(500, 1));
 
-        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(venda));
 
         Produto candidatoA = produtoComEstoque(400, 2, BigDecimal.valueOf(10), BigDecimal.valueOf(30));
         Produto candidatoB = produtoComEstoque(500, 2, BigDecimal.valueOf(5), BigDecimal.valueOf(35));
@@ -238,11 +265,15 @@ class RecommendationServiceTest {
         List<Object[]> historicoCliente = Collections.singletonList(new Object[]{100, 2L});
         when(vendaRepository.findTopProdutosByCliente(42, 1)).thenReturn(historicoCliente);
 
+        Cliente cliente = clienteAtivo(BigDecimal.ZERO, BigDecimal.valueOf(500));
+        when(clienteRepository.findByIdAndOrganizationId(42, 1)).thenReturn(Optional.of(cliente));
+
         Venda venda = criarVenda(LocalDate.of(2024, 4, 1),
                 criarVendaProduto(100, 1),
                 criarVendaProduto(600, 1),
                 criarVendaProduto(700, 1));
-        when(vendaRepository.findAllWithProdutosByOrganization(1)).thenReturn(List.of(venda));
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(venda));
 
         Produto saudavel = produtoComEstoque(600, 10, BigDecimal.valueOf(8), BigDecimal.valueOf(18));
         Produto emRisco = produtoComEstoque(700, 10, BigDecimal.valueOf(7), BigDecimal.valueOf(17));
@@ -259,6 +290,101 @@ class RecommendationServiceTest {
 
         assertEquals(1, recomendados.size());
         assertEquals(600, recomendados.get(0).getId());
+    }
+
+    @Test
+    void recomendarProdutosAplicaPesoChurnEAverageTicket() {
+        stubPlano(true);
+        List<Object[]> historicoCliente = Collections.singletonList(new Object[]{100, 2L});
+        when(vendaRepository.findTopProdutosByCliente(777, 1)).thenReturn(historicoCliente);
+
+        Cliente cliente = clienteAtivo(BigDecimal.valueOf(0.8), BigDecimal.valueOf(60));
+        when(clienteRepository.findByIdAndOrganizationId(777, 1)).thenReturn(Optional.of(cliente));
+
+        Venda venda = criarVenda(LocalDate.of(2024, 5, 5),
+                criarVendaProduto(100, 1),
+                criarVendaProduto(910, 1),
+                criarVendaProduto(920, 1));
+
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(venda));
+
+        Produto caro = produtoComEstoque(910, 5, BigDecimal.valueOf(40), BigDecimal.valueOf(120));
+        Produto acessivel = produtoComEstoque(920, 5, BigDecimal.valueOf(10), BigDecimal.valueOf(40));
+
+        when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
+                .thenReturn(List.of(caro, acessivel));
+
+        List<ProdutoResponse> recomendados = recommendationService.recomendarProdutos(777);
+
+        assertEquals(2, recomendados.size());
+        assertEquals(920, recomendados.get(0).getId());
+    }
+
+    @Test
+    void recomendarProdutosParaClienteNaoEncontradoUsaHistoricoOrganizacao() {
+        stubPlano(true);
+        when(clienteRepository.findByIdAndOrganizationId(888, 1)).thenReturn(Optional.empty());
+
+        List<Object[]> historicoOrganizacao = Collections.singletonList(new Object[]{400, 6L});
+        when(vendaRepository.findTopProdutosByOrganization(1)).thenReturn(historicoOrganizacao);
+
+        Venda venda = criarVenda(LocalDate.of(2024, 6, 1),
+                criarVendaProduto(400, 2),
+                criarVendaProduto(500, 1));
+
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(venda));
+
+        Produto candidatoA = produtoComEstoque(400, 2, BigDecimal.valueOf(10), BigDecimal.valueOf(30));
+        Produto candidatoB = produtoComEstoque(500, 2, BigDecimal.valueOf(5), BigDecimal.valueOf(35));
+
+        when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
+                .thenReturn(List.of(candidatoA, candidatoB));
+
+        List<ProdutoResponse> recomendados = recommendationService.recomendarProdutos(888);
+
+        assertEquals(1, recomendados.size());
+        verify(vendaRepository, never()).findTopProdutosByCliente(eq(888), eq(1));
+        verify(vendaRepository).findTopProdutosByOrganization(1);
+    }
+
+    @Test
+    void recomendarProdutosPriorizaEstoqueLentoQuandoNecessario() {
+        stubPlano(true);
+        List<Object[]> historicoCliente = Collections.singletonList(new Object[]{100, 1L});
+        when(vendaRepository.findTopProdutosByCliente(314, 1)).thenReturn(historicoCliente);
+
+        Cliente cliente = clienteAtivo(BigDecimal.ZERO, BigDecimal.valueOf(500));
+        when(clienteRepository.findByIdAndOrganizationId(314, 1)).thenReturn(Optional.of(cliente));
+
+        Venda venda = criarVenda(LocalDate.of(2024, 7, 1),
+                criarVendaProduto(100, 1),
+                criarVendaProduto(9100, 1),
+                criarVendaProduto(9200, 1));
+
+        venda.getVendaProdutos().stream()
+                .filter(vp -> vp.getProduto().getId() == 9100)
+                .forEach(vp -> vp.getProduto().setRotatividade(BigDecimal.valueOf(0.2)));
+        venda.getVendaProdutos().stream()
+                .filter(vp -> vp.getProduto().getId() == 9200)
+                .forEach(vp -> vp.getProduto().setRotatividade(BigDecimal.valueOf(1.4)));
+
+        when(vendaRepository.findRecentWithProdutosByOrganization(eq(1), any(LocalDate.class)))
+                .thenReturn(List.of(venda));
+
+        Produto lento = produtoComEstoque(9100, 5, BigDecimal.valueOf(20), BigDecimal.valueOf(60));
+        lento.setRotatividade(BigDecimal.valueOf(0.2));
+        Produto rapido = produtoComEstoque(9200, 5, BigDecimal.valueOf(20), BigDecimal.valueOf(60));
+        rapido.setRotatividade(BigDecimal.valueOf(1.4));
+
+        when(produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(anyCollection(), eq(1)))
+                .thenReturn(List.of(lento, rapido));
+
+        List<ProdutoResponse> recomendados = recommendationService.recomendarProdutos(314);
+
+        assertEquals(2, recomendados.size());
+        assertEquals(9100, recomendados.get(0).getId());
     }
 
     private Venda criarVenda(LocalDate dataEfetuacao, VendaProduto... itens) {
@@ -296,6 +422,17 @@ class RecommendationServiceTest {
         produto.setId(id);
         produto.setOrganizationId(1);
         return produto;
+    }
+
+    private Cliente clienteAtivo(BigDecimal churn, BigDecimal averageTicket) {
+        Cliente cliente = Cliente.builder()
+                .ativo(true)
+                .churnScore(churn != null ? churn : BigDecimal.ZERO)
+                .averageTicket(averageTicket != null ? averageTicket : BigDecimal.ZERO)
+                .build();
+        cliente.setId(1);
+        cliente.setOrganizationId(1);
+        return cliente;
     }
 }
 
