@@ -1,5 +1,6 @@
 package com.AIT.Optimanage.Models.CashFlow.DTOs;
 
+import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowOrigin;
 import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus;
 import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowType;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,8 @@ public class CashFlowEntryResponse {
     private BigDecimal amount;
     private CashFlowType type;
     private CashFlowStatus status;
+    private CashFlowOrigin origin;
+    private Integer referenceId;
     private LocalDate movementDate;
     private LocalDateTime cancelledAt;
     private Integer createdBy;
