@@ -31,6 +31,7 @@ import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
 import com.AIT.Optimanage.Repositories.FilterBuilder;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.Fornecedor.FornecedorMetricsService;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.PlanoService;
@@ -88,6 +89,7 @@ public class CompraService {
     private final OrganizationRepository organizationRepository;
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
+    private final FornecedorMetricsService fornecedorMetricsService;
 
     @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
     @Transactional(readOnly = true)
@@ -254,6 +256,7 @@ public class CompraService {
         }
 
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
     }
 
@@ -268,6 +271,7 @@ public class CompraService {
         }
         boolean devePublicarEvento = statusAnterior == StatusCompra.ORCAMENTO;
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         if (devePublicarEvento) {
             publicarCompraCriada(salvo, salvo.getCompraProdutos());
         }
@@ -284,6 +288,7 @@ public class CompraService {
 
         atualizarCompraPosPagamento(compra);
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
     }
 
@@ -313,6 +318,7 @@ public class CompraService {
 
         atualizarCompraPosPagamento(compra);
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
     }
 
@@ -336,6 +342,7 @@ public class CompraService {
                     });
         compra.setStatus(StatusCompra.AGUARDANDO_PAG);
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
     }
 
@@ -362,6 +369,7 @@ public class CompraService {
             atualizarStatus(compra, StatusCompra.PARCIALMENTE_PAGO);
         }
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
     }
 
@@ -396,6 +404,7 @@ public class CompraService {
         atualizarStatus(compra, StatusCompra.AGENDADA);
 
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
     }
 
@@ -413,6 +422,7 @@ public class CompraService {
             throw new IllegalArgumentException("Não é possível finalizar um agendamento que não está agendado.");
         }
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
     }
 
@@ -420,6 +430,7 @@ public class CompraService {
         Compra compra = getCompra(idCompra);
         atualizarStatus(compra, StatusCompra.CONCRETIZADO);
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
     }
 
@@ -448,7 +459,18 @@ public class CompraService {
 
         compra.setStatus(StatusCompra.CANCELADO);
         Compra salvo = compraRepository.save(compra);
+        atualizarMetricasFornecedor(salvo);
         return compraMapper.toResponse(salvo);
+    }
+
+    private void atualizarMetricasFornecedor(Compra compra) {
+        if (compra == null || compra.getFornecedor() == null) {
+            return;
+        }
+        fornecedorMetricsService.atualizarMetricasFornecedor(
+                compra.getFornecedor().getId(),
+                compra.getOrganizationId()
+        );
     }
 
     private void reverterEstoqueCompra(Compra compra, String descricao) {

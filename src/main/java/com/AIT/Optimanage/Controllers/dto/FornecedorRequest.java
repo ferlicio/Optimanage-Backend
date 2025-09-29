@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -50,4 +52,10 @@ public class FornecedorRequest {
 
     @Size(max = 256)
     private String informacoesAdicionais;
+
+    private BigDecimal leadTimeMedioDias;
+
+    private BigDecimal taxaEntregaNoPrazo;
+
+    private BigDecimal custoMedioPedido;
 }
