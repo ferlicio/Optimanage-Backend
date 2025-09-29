@@ -41,15 +41,17 @@ public class AnalyticsService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
-        BigDecimal totalVendas = vendaRepository.findAll().stream()
-                .filter(v -> organizationId.equals(v.getOrganizationId()))
-                .map(Venda::getValorFinal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalVendas = BigDecimal.ZERO;
+        BigDecimal vendasResult = vendaRepository.sumValorFinalByOrganization(organizationId);
+        if (vendasResult != null) {
+            totalVendas = vendasResult;
+        }
 
-        BigDecimal totalCompras = compraRepository.findAll().stream()
-                .filter(c -> organizationId.equals(c.getOrganizationId()))
-                .map(Compra::getValorFinal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalCompras = BigDecimal.ZERO;
+        BigDecimal comprasResult = compraRepository.sumValorFinalByOrganization(organizationId);
+        if (comprasResult != null) {
+            totalCompras = comprasResult;
+        }
 
         BigDecimal lucro = totalVendas.subtract(totalCompras);
         return new ResumoDTO(totalVendas, totalCompras, lucro);
