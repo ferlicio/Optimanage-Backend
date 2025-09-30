@@ -76,8 +76,6 @@ public interface VendaRepository extends JpaRepository<Venda, Integer>, JpaSpeci
     @Query("SELECT DISTINCT v FROM Venda v " +
             "LEFT JOIN FETCH v.vendaProdutos vp " +
             "LEFT JOIN FETCH vp.produto p " +
-            "LEFT JOIN FETCH v.vendaServicos vs " +
-            "LEFT JOIN FETCH vs.servico s " +
             "WHERE v.organizationId = :organizationId " +
             "AND (:cutoff IS NULL OR v.dataEfetuacao >= :cutoff)")
     List<Venda> findRecentWithItensByOrganization(@Param("organizationId") Integer organizationId,
