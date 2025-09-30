@@ -1,16 +1,21 @@
 package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Controllers.dto.ProdutoResponse;
+import com.AIT.Optimanage.Controllers.dto.RecommendationSuggestionResponse;
+import com.AIT.Optimanage.Controllers.dto.ServicoResponse;
 import com.AIT.Optimanage.Config.RecommendationProperties;
 import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Inventory.InventoryAlert;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
+import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaProduto;
+import com.AIT.Optimanage.Models.Venda.VendaServico;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
+import com.AIT.Optimanage.Repositories.ServicoRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Services.PlanoService;
@@ -36,6 +41,7 @@ public class RecommendationService {
 
     private final VendaRepository vendaRepository;
     private final ProdutoRepository produtoRepository;
+    private final ServicoRepository servicoRepository;
     private final PlanoService planoService;
     private final CompatibilidadeService compatibilidadeService;
     private final InventoryMonitoringService inventoryMonitoringService;
@@ -47,17 +53,27 @@ public class RecommendationService {
     private static final double COMPATIBILIDADE_BONUS = 1.5;
 
     @Transactional(readOnly = true)
-    public List<ProdutoResponse> recomendarProdutos(Integer clienteId) {
-        return recomendarProdutos(clienteId, null, true);
+    public List<RecommendationSuggestionResponse> recomendarProdutos(Integer clienteId) {
+        return recomendarProdutos(clienteId, null, true, null);
     }
 
     @Transactional(readOnly = true)
-    public List<ProdutoResponse> recomendarProdutos(Integer clienteId, String contexto) {
-        return recomendarProdutos(clienteId, contexto, true);
+    public List<RecommendationSuggestionResponse> recomendarProdutos(Integer clienteId, String contexto) {
+        return recomendarProdutos(clienteId, contexto, true, null);
     }
 
     @Transactional(readOnly = true)
-    public List<ProdutoResponse> recomendarProdutos(Integer clienteId, String contexto, Boolean apenasEstoquePositivo) {
+    public List<RecommendationSuggestionResponse> recomendarProdutos(Integer clienteId,
+                                                                   String contexto,
+                                                                   Boolean apenasEstoquePositivo) {
+        return recomendarProdutos(clienteId, contexto, apenasEstoquePositivo, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecommendationSuggestionResponse> recomendarProdutos(Integer clienteId,
+                                                                   String contexto,
+                                                                   Boolean apenasEstoquePositivo,
+                                                                   Boolean apenasBundles) {
         User loggedUser = CurrentUser.get();
         if (loggedUser == null) {
             throw new EntityNotFoundException("Usuário não autenticado");
@@ -81,41 +97,60 @@ public class RecommendationService {
                 .collect(Collectors.toSet());
 
         LocalDate cutoff = calcularDataCorte();
-        List<Venda> vendas = vendaRepository.findRecentWithProdutosByOrganization(organizationId, cutoff);
+        List<Venda> vendas = vendaRepository.findRecentWithItensByOrganization(organizationId, cutoff);
 
         Set<Integer> produtosCompativeis = buscarProdutosCompativeis(loggedUser, contexto);
         boolean filtrarEstoquePositivo = apenasEstoquePositivo == null || apenasEstoquePositivo;
+        boolean apenasBundlesFlag = Boolean.TRUE.equals(apenasBundles);
 
-        Map<Integer, ProdutoPontuacao> pontuacaoDetalhada = new HashMap<>();
+        Map<Integer, ProdutoPontuacao> pontuacaoProdutos = new HashMap<>();
+        Map<BundleKey, BundlePontuacao> pontuacaoBundles = new HashMap<>();
         LocalDate referencia = calcularDataReferencia(vendas);
 
         for (Venda venda : vendas) {
-            if (venda.getVendaProdutos() == null || venda.getVendaProdutos().isEmpty()) {
+            List<VendaProduto> itensProduto = Optional.ofNullable(venda.getVendaProdutos())
+                    .orElse(Collections.emptyList());
+            List<VendaServico> itensServico = Optional.ofNullable(venda.getVendaServicos())
+                    .orElse(Collections.emptyList());
+
+            if (itensProduto.isEmpty() && itensServico.isEmpty()) {
                 continue;
             }
-            Set<Integer> produtosVenda = venda.getVendaProdutos().stream()
+
+            List<VendaProduto> produtosElegiveis = itensProduto.stream()
+                    .filter(Objects::nonNull)
+                    .filter(vp -> vp.getProduto() != null && vp.getProduto().getId() != null)
+                    .toList();
+
+            if (produtosElegiveis.isEmpty()) {
+                continue;
+            }
+
+            Set<Integer> produtosVenda = produtosElegiveis.stream()
                     .map(VendaProduto::getProduto)
-                    .filter(Objects::nonNull)
                     .map(Produto::getId)
-                    .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
             if (!produtosCliente.isEmpty() && Collections.disjoint(produtosVenda, produtosCliente)) {
                 continue;
             }
 
-            double fatorRecencia = calcularFatorRecencia(venda, referencia);
-            long itensClienteNaVenda = produtosCliente.isEmpty() ? 0 : venda.getVendaProdutos().stream()
-                    .map(VendaProduto::getProduto)
+            List<VendaServico> servicosElegiveis = itensServico.stream()
                     .filter(Objects::nonNull)
+                    .filter(vs -> servicoDisponivel(vs.getServico()))
+                    .toList();
+
+            double fatorRecencia = calcularFatorRecencia(venda, referencia);
+            long itensClienteNaVenda = produtosCliente.isEmpty() ? 0 : produtosElegiveis.stream()
+                    .map(VendaProduto::getProduto)
                     .map(Produto::getId)
                     .filter(produtosCliente::contains)
                     .count();
 
-            for (VendaProduto vendaProduto : venda.getVendaProdutos()) {
+            Map<Integer, Double> scoresProdutosVenda = new HashMap<>();
+            Map<Integer, Double> scoresServicosVenda = new HashMap<>();
+
+            for (VendaProduto vendaProduto : produtosElegiveis) {
                 Produto produto = vendaProduto.getProduto();
-                if (produto == null || produto.getId() == null) {
-                    continue;
-                }
                 Integer produtoId = produto.getId();
                 if (!produtosCliente.isEmpty() && produtosCliente.contains(produtoId)) {
                     continue;
@@ -130,60 +165,186 @@ public class RecommendationService {
                 }
 
                 score = ajustarScoreCliente(score, produto, cliente);
+                scoresProdutosVenda.put(produtoId, score);
 
-                ProdutoPontuacao dados = pontuacaoDetalhada.computeIfAbsent(produtoId, k -> new ProdutoPontuacao());
+                ProdutoPontuacao dados = pontuacaoProdutos.computeIfAbsent(produtoId, k -> new ProdutoPontuacao());
                 dados.adicionar(score, quantidade, produto);
+            }
+
+            for (VendaServico vendaServico : servicosElegiveis) {
+                Servico servico = vendaServico.getServico();
+                Integer servicoId = servico.getId();
+                double quantidade = Optional.ofNullable(vendaServico.getQuantidade()).orElse(0);
+                double base = 1.0 + quantidade + itensClienteNaVenda;
+                double score = base * fatorRecencia;
+                score = ajustarScoreServico(score, servico);
+                scoresServicosVenda.put(servicoId, score);
+            }
+
+            if (scoresProdutosVenda.isEmpty() || scoresServicosVenda.isEmpty()) {
+                continue;
+            }
+
+            for (VendaProduto vendaProduto : produtosElegiveis) {
+                Produto produto = vendaProduto.getProduto();
+                Integer produtoId = produto.getId();
+                Double scoreProduto = scoresProdutosVenda.get(produtoId);
+                if (scoreProduto == null) {
+                    continue;
+                }
+                for (VendaServico vendaServico : servicosElegiveis) {
+                    Servico servico = vendaServico.getServico();
+                    Integer servicoId = servico.getId();
+                    Double scoreServico = scoresServicosVenda.get(servicoId);
+                    if (scoreServico == null) {
+                        continue;
+                    }
+
+                    double scoreCombo = scoreProduto + scoreServico;
+                    if (produtosCompativeis.contains(produtoId)) {
+                        scoreCombo += COMPATIBILIDADE_BONUS;
+                    }
+
+                    BundleKey key = new BundleKey(produtoId, servicoId);
+                    BundlePontuacao dadosBundle = pontuacaoBundles.computeIfAbsent(key, k -> new BundlePontuacao());
+                    dadosBundle.adicionar(produto, servico, scoreCombo);
+                }
             }
         }
 
-        if (pontuacaoDetalhada.isEmpty()) {
+        if (pontuacaoProdutos.isEmpty() && pontuacaoBundles.isEmpty()) {
+            if (apenasBundlesFlag) {
+                return Collections.emptyList();
+            }
             if (!produtosCompativeis.isEmpty()) {
-                return carregarProdutosPorPrioridade(produtosCompativeis, filtrarEstoquePositivo, organizationId, produtosEmRisco);
+                return carregarProdutosPorPrioridade(produtosCompativeis, filtrarEstoquePositivo, organizationId, produtosEmRisco)
+                        .stream()
+                        .map(produto -> RecommendationSuggestionResponse.builder()
+                                .bundle(false)
+                                .score(1.0)
+                                .produtos(List.of(produto))
+                                .servicos(Collections.emptyList())
+                                .build())
+                        .toList();
             }
             return Collections.emptyList();
         }
 
         double rotatividadeWeight = Math.max(0.0, recommendationProperties.getRotatividadeWeight());
-        Map<Integer, Double> pontuacaoFinal = pontuacaoDetalhada.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey,
-                        entry -> entry.getValue().calcularPontuacaoFinal(rotatividadeWeight)));
+        double produtoMargemWeight = Math.max(0.0, recommendationProperties.getProdutoMargemWeight());
+        double servicoMargemWeight = Math.max(0.0, recommendationProperties.getServicoMargemWeight());
+        double bundleWeight = Math.max(1.0, recommendationProperties.getBundleWeight());
 
-        List<Integer> ordenadosPorPontuacao = pontuacaoFinal.entrySet().stream()
+        Map<Integer, Double> pontuacaoFinalProdutos = pontuacaoProdutos.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        entry -> entry.getValue().calcularPontuacaoFinal(rotatividadeWeight) * produtoMargemWeight));
+
+        List<Integer> produtosOrdenados = pontuacaoFinalProdutos.entrySet().stream()
                 .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
                 .map(Map.Entry::getKey)
                 .toList();
 
-        if (ordenadosPorPontuacao.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        int limiteBusca = Math.min(ordenadosPorPontuacao.size(), MAX_SUGESTOES * CANDIDATOS_MULTIPLICADOR);
-        List<Integer> idsParaBusca = ordenadosPorPontuacao.stream()
-                .limit(limiteBusca)
+        List<Map.Entry<BundleKey, Double>> bundlesOrdenados = pontuacaoBundles.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        entry -> entry.getValue().calcularPontuacaoFinal(bundleWeight, produtoMargemWeight, servicoMargemWeight)))
+                .entrySet().stream()
+                .sorted(Map.Entry.<BundleKey, Double>comparingByValue().reversed())
                 .toList();
 
-        if (idsParaBusca.isEmpty()) {
-            return Collections.emptyList();
+        int limiteProdutosBusca = Math.min(produtosOrdenados.size(), MAX_SUGESTOES * CANDIDATOS_MULTIPLICADOR);
+        int limiteBundlesBusca = Math.min(bundlesOrdenados.size(), MAX_SUGESTOES * CANDIDATOS_MULTIPLICADOR);
+
+        Set<Integer> idsProdutosParaBusca = new LinkedHashSet<>(produtosOrdenados.stream()
+                .limit(limiteProdutosBusca)
+                .toList());
+        Set<Integer> idsServicosParaBusca = new LinkedHashSet<>();
+
+        for (int i = 0; i < limiteBundlesBusca; i++) {
+            BundleKey key = bundlesOrdenados.get(i).getKey();
+            idsProdutosParaBusca.add(key.produtoId());
+            idsServicosParaBusca.add(key.servicoId());
         }
 
-        List<Produto> produtos = produtoRepository
-                .findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(idsParaBusca, organizationId);
-
-        if (produtos.isEmpty()) {
-            return Collections.emptyList();
-        }
+        List<Produto> produtos = idsProdutosParaBusca.isEmpty()
+                ? Collections.emptyList()
+                : produtoRepository.findAllByIdInAndOrganizationIdAndAtivoTrueAndDisponivelVendaTrue(new ArrayList<>(idsProdutosParaBusca), organizationId);
 
         Map<Integer, Produto> produtosPorId = produtos.stream()
                 .filter(produto -> produto.getId() != null)
                 .collect(Collectors.toMap(Produto::getId, Function.identity(), (a, b) -> a));
 
-        return ordenadosPorPontuacao.stream()
-                .map(produtosPorId::get)
-                .filter(Objects::nonNull)
-                .filter(produto -> !filtrarEstoquePositivo || estoqueDisponivel(produto))
-                .filter(produto -> !produtosEmRisco.contains(produto.getId()))
+        List<Servico> servicos = idsServicosParaBusca.isEmpty()
+                ? Collections.emptyList()
+                : servicoRepository.findAllById(idsServicosParaBusca);
+
+        Map<Integer, Servico> servicosPorId = servicos.stream()
+                .filter(servico -> servico.getId() != null)
+                .filter(servico -> Objects.equals(servico.getOrganizationId(), organizationId))
+                .collect(Collectors.toMap(Servico::getId, Function.identity(), (a, b) -> a));
+
+        List<RecommendationSuggestionResponse> sugestoesProdutos = new ArrayList<>();
+        if (!apenasBundlesFlag) {
+            for (int i = 0; i < limiteProdutosBusca && i < produtosOrdenados.size(); i++) {
+                Integer produtoId = produtosOrdenados.get(i);
+                Produto produto = produtosPorId.get(produtoId);
+                if (produto == null) {
+                    continue;
+                }
+                if (filtrarEstoquePositivo && !estoqueDisponivel(produto)) {
+                    continue;
+                }
+                if (produtosEmRisco.contains(produtoId)) {
+                    continue;
+                }
+                double score = pontuacaoFinalProdutos.getOrDefault(produtoId, 0.0);
+                sugestoesProdutos.add(RecommendationSuggestionResponse.builder()
+                        .bundle(false)
+                        .score(score)
+                        .produtos(List.of(toResponse(produto)))
+                        .servicos(Collections.emptyList())
+                        .build());
+            }
+        }
+
+        List<RecommendationSuggestionResponse> sugestoesBundles = new ArrayList<>();
+        for (int i = 0; i < limiteBundlesBusca; i++) {
+            Map.Entry<BundleKey, Double> entry = bundlesOrdenados.get(i);
+            BundleKey key = entry.getKey();
+            Produto produto = produtosPorId.get(key.produtoId());
+            Servico servico = servicosPorId.get(key.servicoId());
+            if (produto == null || servico == null) {
+                continue;
+            }
+            if (filtrarEstoquePositivo && !estoqueDisponivel(produto)) {
+                continue;
+            }
+            if (!servicoDisponivel(servico)) {
+                continue;
+            }
+            if (produtosEmRisco.contains(produto.getId())) {
+                continue;
+            }
+            double score = entry.getValue();
+            sugestoesBundles.add(RecommendationSuggestionResponse.builder()
+                    .bundle(true)
+                    .score(score)
+                    .produtos(List.of(toResponse(produto)))
+                    .servicos(List.of(toResponse(servico)))
+                    .build());
+        }
+
+        List<RecommendationSuggestionResponse> candidatas = new ArrayList<>(sugestoesBundles);
+        if (!apenasBundlesFlag) {
+            candidatas.addAll(sugestoesProdutos);
+        }
+
+        if (candidatas.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return candidatas.stream()
+                .sorted(Comparator.comparingDouble(RecommendationSuggestionResponse::getScore).reversed())
                 .limit(MAX_SUGESTOES)
-                .map(this::toResponse)
                 .toList();
     }
 
@@ -280,6 +441,24 @@ public class RecommendationService {
         return score;
     }
 
+    private double ajustarScoreServico(double score, Servico servico) {
+        if (servico == null) {
+            return score;
+        }
+
+        BigDecimal valorVenda = servico.getValorVenda();
+        BigDecimal custo = servico.getCusto();
+        if (valorVenda != null && custo != null && valorVenda.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal margem = valorVenda.subtract(custo);
+            if (margem.compareTo(BigDecimal.ZERO) > 0) {
+                double percentual = margem.divide(valorVenda, 4, RoundingMode.HALF_UP).doubleValue();
+                score *= (1.0 + Math.min(percentual, 1.0));
+            }
+        }
+
+        return score;
+    }
+
     private Set<Integer> buscarProdutosCompativeis(User loggedUser, String contexto) {
         if (contexto == null || contexto.isBlank()) {
             return Collections.emptySet();
@@ -336,6 +515,33 @@ public class RecommendationService {
                 .build();
     }
 
+    private ServicoResponse toResponse(Servico servico) {
+        return ServicoResponse.builder()
+                .id(servico.getId())
+                .organizationId(servico.getOrganizationId())
+                .fornecedorId(servico.getFornecedorId())
+                .sequencialUsuario(servico.getSequencialUsuario())
+                .nome(servico.getNome())
+                .descricao(servico.getDescricao())
+                .custo(servico.getCusto())
+                .disponivelVenda(servico.getDisponivelVenda())
+                .valorVenda(servico.getValorVenda())
+                .tempoExecucao(servico.getTempoExecucao())
+                .terceirizado(servico.getTerceirizado())
+                .ativo(servico.getAtivo())
+                .build();
+    }
+
+    private boolean servicoDisponivel(Servico servico) {
+        if (servico == null) {
+            return false;
+        }
+        if (!Objects.equals(servico.getOrganizationId(), CurrentUser.getOrganizationId())) {
+            return false;
+        }
+        return Boolean.TRUE.equals(servico.getAtivo()) && Boolean.TRUE.equals(servico.getDisponivelVenda());
+    }
+
     private static double calcularMargemPercentual(Produto produto) {
         BigDecimal valorVenda = produto.getValorVenda();
         BigDecimal custo = produto.getCusto();
@@ -357,6 +563,36 @@ public class RecommendationService {
         }
         BigDecimal margem = valorVenda.subtract(custo);
         return margem.max(BigDecimal.ZERO).doubleValue();
+    }
+
+    private static double calcularMargemPercentual(Servico servico) {
+        BigDecimal valorVenda = servico.getValorVenda();
+        BigDecimal custo = servico.getCusto();
+        if (valorVenda == null || custo == null || valorVenda.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0.0;
+        }
+        BigDecimal margem = valorVenda.subtract(custo);
+        if (margem.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0.0;
+        }
+        return margem.divide(valorVenda, 4, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private static double calcularMargemAbsoluta(Servico servico) {
+        BigDecimal valorVenda = servico.getValorVenda();
+        BigDecimal custo = servico.getCusto();
+        if (valorVenda == null || custo == null) {
+            return 0.0;
+        }
+        BigDecimal margem = valorVenda.subtract(custo);
+        return margem.max(BigDecimal.ZERO).doubleValue();
+    }
+
+    private static double normalizarMargemAbsoluta(double margemAbsoluta) {
+        if (margemAbsoluta <= 0) {
+            return 0.0;
+        }
+        return Math.min(0.5, margemAbsoluta / 100.0);
     }
 
     private static class ProdutoPontuacao {
@@ -387,16 +623,9 @@ public class RecommendationService {
 
         private double calcularPontuacaoFinal(double rotatividadeWeight) {
             double fatorRecorrencia = 1.0 + Math.log1p(recorrencia);
-            double fatorMargem = 1.0 + melhorMargemPercentual + normalizarMargemAbsoluta(melhorMargemAbsoluta);
+            double fatorMargem = 1.0 + melhorMargemPercentual + RecommendationService.normalizarMargemAbsoluta(melhorMargemAbsoluta);
             double fatorRotatividade = calcularFatorRotatividade(rotatividadeWeight);
             return scoreAcumulado * fatorRecorrencia * fatorMargem * fatorRotatividade;
-        }
-
-        private double normalizarMargemAbsoluta(double margemAbsoluta) {
-            if (margemAbsoluta <= 0) {
-                return 0.0;
-            }
-            return Math.min(0.5, margemAbsoluta / 100.0);
         }
 
         private double calcularFatorRotatividade(double rotatividadeWeight) {
@@ -414,6 +643,72 @@ public class RecommendationService {
             }
 
             return 1.0 + rotatividadeWeight;
+        }
+    }
+
+    private static final class BundleKey {
+        private final Integer produtoId;
+        private final Integer servicoId;
+
+        private BundleKey(Integer produtoId, Integer servicoId) {
+            this.produtoId = produtoId;
+            this.servicoId = servicoId;
+        }
+
+        private Integer produtoId() {
+            return produtoId;
+        }
+
+        private Integer servicoId() {
+            return servicoId;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            BundleKey bundleKey = (BundleKey) o;
+            return Objects.equals(produtoId, bundleKey.produtoId) && Objects.equals(servicoId, bundleKey.servicoId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(produtoId, servicoId);
+        }
+    }
+
+    private static class BundlePontuacao {
+        private double scoreAcumulado;
+        private int recorrencia;
+        private double melhorMargemProdutoPercentual;
+        private double melhorMargemProdutoAbsoluta;
+        private double melhorMargemServicoPercentual;
+        private double melhorMargemServicoAbsoluta;
+
+        private void adicionar(Produto produto, Servico servico, double scoreCombo) {
+            this.scoreAcumulado += scoreCombo;
+            this.recorrencia++;
+            this.melhorMargemProdutoPercentual = Math.max(this.melhorMargemProdutoPercentual,
+                    RecommendationService.calcularMargemPercentual(produto));
+            this.melhorMargemProdutoAbsoluta = Math.max(this.melhorMargemProdutoAbsoluta,
+                    RecommendationService.calcularMargemAbsoluta(produto));
+            this.melhorMargemServicoPercentual = Math.max(this.melhorMargemServicoPercentual,
+                    RecommendationService.calcularMargemPercentual(servico));
+            this.melhorMargemServicoAbsoluta = Math.max(this.melhorMargemServicoAbsoluta,
+                    RecommendationService.calcularMargemAbsoluta(servico));
+        }
+
+        private double calcularPontuacaoFinal(double bundleWeight, double produtoMargemWeight, double servicoMargemWeight) {
+            if (recorrencia <= 0) {
+                return 0.0;
+            }
+            double fatorRecorrencia = 1.0 + Math.log1p(recorrencia);
+            double fatorProdutoMargem = 1.0 + produtoMargemWeight * (melhorMargemProdutoPercentual
+                    + RecommendationService.normalizarMargemAbsoluta(melhorMargemProdutoAbsoluta));
+            double fatorServicoMargem = 1.0 + servicoMargemWeight * (melhorMargemServicoPercentual
+                    + RecommendationService.normalizarMargemAbsoluta(melhorMargemServicoAbsoluta));
+            double fatorBundle = Math.max(1.0, bundleWeight);
+            return scoreAcumulado * fatorRecorrencia * fatorProdutoMargem * fatorServicoMargem * fatorBundle;
         }
     }
 }
