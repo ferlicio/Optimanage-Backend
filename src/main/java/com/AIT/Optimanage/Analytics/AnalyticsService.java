@@ -208,8 +208,7 @@ public class AnalyticsService {
         long organizacoesAtivas60Dias = vendaRepository.countDistinctOrganizationsByPeriodo(corte60Dias, hoje);
 
         long organizacoesInativas60Dias = organizationRepository
-                .findOrganizationsWithoutSalesSince(corte60Dias, PlatformConstants.PLATFORM_ORGANIZATION_ID)
-                .size();
+                .countOrganizationsWithoutSalesSince(corte60Dias, PlatformConstants.PLATFORM_ORGANIZATION_ID);
 
         Map<Integer, LocalDate> primeirasVendas = vendaRepository.findPrimeiraVendaPorOrganizacao(null, hoje)
                 .stream()

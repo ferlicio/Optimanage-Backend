@@ -8,7 +8,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Repository
 public interface OrganizationRepository extends JpaRepository<Organization, Integer> {
@@ -18,7 +17,7 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
     void updateOrganizationTenant(@Param("organizationId") Integer organizationId);
 
     @Query("""
-            SELECT o
+            SELECT COUNT(o)
             FROM Organization o
             WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
               AND NOT EXISTS (
@@ -28,7 +27,7 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
                       AND v.dataEfetuacao >= :cutoff
               )
             """)
-    List<Organization> findOrganizationsWithoutSalesSince(@Param("cutoff") LocalDate cutoff,
-                                                          @Param("excludedOrganizationId") Integer excludedOrganizationId);
+    long countOrganizationsWithoutSalesSince(@Param("cutoff") LocalDate cutoff,
+                                             @Param("excludedOrganizationId") Integer excludedOrganizationId);
 }
 
