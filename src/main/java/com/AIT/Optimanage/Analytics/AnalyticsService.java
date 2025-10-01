@@ -16,7 +16,6 @@ import com.AIT.Optimanage.Services.InventoryMonitoringService;
 import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -94,23 +93,67 @@ public class AnalyticsService {
         }
         List<Venda> vendas = vendaRepository.findAll().stream()
                 .filter(v -> organizationId.equals(v.getOrganizationId()))
+                .filter(v -> v.getDataEfetuacao() != null && v.getValorFinal() != null)
                 .sorted(Comparator.comparing(Venda::getDataEfetuacao))
                 .toList();
 
-        if (vendas.size() < 2) {
+        if (vendas.isEmpty()) {
             return new PrevisaoDTO(BigDecimal.ZERO);
         }
 
-        // Forecast using a simple linear regression from Apache Commons Math.
-        // This placeholder approach can be replaced by an AI-based model in the future.
-        SimpleRegression regression = new SimpleRegression();
-        int i = 0;
-        for (Venda venda : vendas) {
-            regression.addData(i++, venda.getValorFinal().doubleValue());
+        // Aggregate sales totals per day to avoid bias when multiple sales happen on the same date.
+        var dailyTotals = vendas.stream()
+                .collect(Collectors.toMap(
+                        Venda::getDataEfetuacao,
+                        Venda::getValorFinal,
+                        BigDecimal::add,
+                        java.util.TreeMap::new
+                ));
+
+        if (dailyTotals.size() < 2) {
+            return new PrevisaoDTO(BigDecimal.ZERO);
         }
 
-        double forecast = regression.predict(i);
-        return new PrevisaoDTO(BigDecimal.valueOf(forecast));
+        // Forecast using a weighted linear regression.
+        // This placeholder approach can be replaced by an AI-based model in the future.
+        var dailyEntries = dailyTotals.entrySet().stream()
+                .sorted(java.util.Map.Entry.comparingByKey())
+                .toList();
+
+        long baseDay = dailyEntries.get(0).getKey().toEpochDay();
+        int lastIndex = dailyEntries.size() - 1;
+        double sumWeights = 0d;
+        double sumWeightedX = 0d;
+        double sumWeightedY = 0d;
+        double sumWeightedXX = 0d;
+        double sumWeightedXY = 0d;
+        for (int index = 0; index < dailyEntries.size(); index++) {
+            var entry = dailyEntries.get(index);
+            double x = entry.getKey().toEpochDay() - baseDay;
+            double y = entry.getValue().doubleValue();
+            double weight = lastIndex == 0 ? 1.0 : 1.0 + (double) index / lastIndex;
+            sumWeights += weight;
+            sumWeightedX += weight * x;
+            sumWeightedY += weight * y;
+            sumWeightedXX += weight * x * x;
+            sumWeightedXY += weight * x * y;
+        }
+
+        double nextDay = dailyEntries.get(lastIndex).getKey().toEpochDay() - baseDay + 1;
+        double denominator = (sumWeights * sumWeightedXX) - (sumWeightedX * sumWeightedX);
+        if (Math.abs(denominator) < 1e-9) {
+            return new PrevisaoDTO(BigDecimal.ZERO);
+        }
+
+        double slope = ((sumWeights * sumWeightedXY) - (sumWeightedX * sumWeightedY)) / denominator;
+        double intercept = (sumWeightedY - slope * sumWeightedX) / sumWeights;
+        double forecast = intercept + (slope * nextDay);
+        if (Double.isNaN(forecast) || Double.isInfinite(forecast)) {
+            return new PrevisaoDTO(BigDecimal.ZERO);
+        }
+
+        double nonNegativeForecast = Math.max(forecast, 0d);
+        return new PrevisaoDTO(BigDecimal.valueOf(nonNegativeForecast));
     }
 
     public List<InventoryAlertDTO> listarAlertasEstoque() {

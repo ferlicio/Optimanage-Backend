@@ -1,7 +1,9 @@
 package com.AIT.Optimanage.Analytics;
 
+import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
 import com.AIT.Optimanage.Models.Organization.Organization;
+import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
@@ -18,11 +20,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -137,6 +143,69 @@ class AnalyticsServiceTest {
         verify(compraRepository).sumValorFinalByOrganization(secondOrganization);
     }
 
+    @Test
+    void shouldAggregateDailySalesBeforeForecasting() {
+        int organizationId = 30;
+        CurrentUser.set(buildUser(organizationId));
+
+        List<Venda> duplicatedSales = List.of(
+                venda(organizationId, LocalDate.of(2024, 1, 1), new BigDecimal("100")),
+                venda(organizationId, LocalDate.of(2024, 1, 1), new BigDecimal("50")),
+                venda(organizationId, LocalDate.of(2024, 1, 11), new BigDecimal("200")),
+                venda(organizationId, LocalDate.of(2024, 2, 10), new BigDecimal("300"))
+        );
+
+        List<Venda> aggregatedSales = List.of(
+                venda(organizationId, LocalDate.of(2024, 1, 1), new BigDecimal("150")),
+                venda(organizationId, LocalDate.of(2024, 1, 11), new BigDecimal("200")),
+                venda(organizationId, LocalDate.of(2024, 2, 10), new BigDecimal("300"))
+        );
+
+        when(vendaRepository.findAll()).thenReturn(duplicatedSales, aggregatedSales);
+
+        PrevisaoDTO forecastWithDuplicates = analyticsService.preverDemanda();
+        PrevisaoDTO forecastAggregated = analyticsService.preverDemanda();
+
+        assertNotNull(forecastWithDuplicates);
+        assertNotNull(forecastAggregated);
+        assertBigDecimalEquals(
+                forecastAggregated.getValorPrevisto(),
+                forecastWithDuplicates.getValorPrevisto()
+        );
+    }
+
+    @Test
+    void shouldReactToIrregularIntervalsInForecast() {
+        int organizationId = 40;
+        CurrentUser.set(buildUser(organizationId));
+
+        List<Venda> irregularSpacing = List.of(
+                venda(organizationId, LocalDate.of(2024, 1, 1), new BigDecimal("150")),
+                venda(organizationId, LocalDate.of(2024, 1, 11), new BigDecimal("200")),
+                venda(organizationId, LocalDate.of(2024, 2, 10), new BigDecimal("300"))
+        );
+
+        List<Venda> uniformSpacing = List.of(
+                venda(organizationId, LocalDate.of(2024, 1, 1), new BigDecimal("150")),
+                venda(organizationId, LocalDate.of(2024, 1, 2), new BigDecimal("200")),
+                venda(organizationId, LocalDate.of(2024, 1, 3), new BigDecimal("300"))
+        );
+
+        when(vendaRepository.findAll()).thenReturn(irregularSpacing, uniformSpacing);
+
+        PrevisaoDTO irregularForecast = analyticsService.preverDemanda();
+        PrevisaoDTO uniformForecast = analyticsService.preverDemanda();
+
+        assertNotNull(irregularForecast);
+        assertNotNull(uniformForecast);
+        assertNotEquals(0, irregularForecast.getValorPrevisto().compareTo(uniformForecast.getValorPrevisto()));
+        assertTrue(irregularForecast.getValorPrevisto().compareTo(uniformForecast.getValorPrevisto()) < 0,
+                () -> "Expected irregular interval forecast to be lower due to slower growth, but was "
+                        + irregularForecast.getValorPrevisto().setScale(3, RoundingMode.HALF_UP)
+                        + " vs "
+                        + uniformForecast.getValorPrevisto().setScale(3, RoundingMode.HALF_UP));
+    }
+
     private User buildUser(int organizationId) {
         User user = User.builder()
                 .nome("Test")
@@ -160,5 +229,13 @@ class AnalyticsServiceTest {
 
     private void assertBigDecimalEquals(BigDecimal expected, BigDecimal actual) {
         assertEquals(0, expected.compareTo(actual), () -> "Expected " + expected + " but was " + actual);
+    }
+
+    private Venda venda(int organizationId, LocalDate data, BigDecimal valorFinal) {
+        Venda venda = new Venda();
+        venda.setOrganizationId(organizationId);
+        venda.setDataEfetuacao(data);
+        venda.setValorFinal(valorFinal);
+        return venda;
     }
 }
