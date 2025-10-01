@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Analytics;
 
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformEngajamentoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformFeatureAdoptionDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
@@ -40,6 +41,11 @@ public class AnalyticsController extends V1BaseController {
     public ResponseEntity<PlatformResumoDTO> resumoPlataforma() {
         analyticsService.requirePlatformOrganization();
         return ok(analyticsService.obterResumoPlataforma());
+    }
+
+    @GetMapping("/plataforma/engajamento")
+    public ResponseEntity<PlatformEngajamentoDTO> engajamentoPlataforma() {
+        return ok(analyticsService.obterEngajamentoPlataforma());
     }
 
     @GetMapping("/plataforma/adocao-recursos")

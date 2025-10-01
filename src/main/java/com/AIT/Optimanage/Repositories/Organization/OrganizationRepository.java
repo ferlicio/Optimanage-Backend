@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -17,7 +18,20 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
     void updateOrganizationTenant(@Param("organizationId") Integer organizationId);
 
     @Query("""
-            SELECT p.id AS planId,
+           SELECT COUNT(o)
+            FROM Organization o
+            WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM Venda v
+                    WHERE v.organizationId = o.id
+                      AND v.dataEfetuacao >= :cutoff
+              )
+            """)
+    long countOrganizationsWithoutSalesSince(@Param("cutoff") LocalDate cutoff,
+                                             @Param("excludedOrganizationId") Integer excludedOrganizationId);
+    @Query("""
+           SELECT p.id AS planId,
                    p.nome AS planName,
                    COUNT(o) AS totalOrganizations,
                    SUM(CASE WHEN p.agendaHabilitada = true THEN 1 ELSE 0 END) AS agendaEnabledCount,
