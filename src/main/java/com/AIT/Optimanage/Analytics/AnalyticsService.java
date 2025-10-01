@@ -3,7 +3,7 @@ package com.AIT.Optimanage.Analytics;
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformEngajamentoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformFeatureAdoptionDTO;
-import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsOverviewDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
@@ -35,7 +35,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -182,7 +181,7 @@ public class AnalyticsService {
         return organization;
     }
 
-    public PlatformOrganizationsOverviewDTO obterResumoOrganizacoesPlataforma() {
+    public PlatformOrganizationsResumoDTO obterResumoPlataforma() {
         requirePlatformOrganization();
 
         LocalDate hoje = LocalDate.now();
@@ -202,43 +201,36 @@ public class AnalyticsService {
         );
 
         Map<LocalDate, Long> criadasPorDia = toDailyCountMap(criadasBruto);
-        Map<LocalDate, Long> assinadasPorDia = toDailyCountMap(assinadasBruto);
+        Map<LocalDate, Long> ativadasPorDia = toDailyCountMap(assinadasBruto);
 
-        List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> criadasSerie = buildTimeSeries(
+        List<PlatformOrganizationsResumoDTO.TimeSeriesPoint> criadasSerie = buildTimeSeries(
                 inicioJanela,
                 hoje,
                 criadasPorDia
         );
-        List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> assinadasSerie = buildTimeSeries(
+        List<PlatformOrganizationsResumoDTO.TimeSeriesPoint> ativadasSerie = buildTimeSeries(
                 inicioJanela,
                 hoje,
-                assinadasPorDia
+                ativadasPorDia
         );
 
-        Set<Integer> organizacoesAtivas = new HashSet<>();
-        List<Integer> vendasAtivas = vendaRepository.findDistinctOrganizationIdsWithSalesBetween(inicioJanela, hoje);
-        if (vendasAtivas != null) {
-            organizacoesAtivas.addAll(vendasAtivas);
-        }
-        List<Integer> comprasAtivas = compraRepository.findDistinctOrganizationIdsWithPurchasesBetween(inicioJanela, hoje);
-        if (comprasAtivas != null) {
-            organizacoesAtivas.addAll(comprasAtivas);
-        }
-        organizacoesAtivas.removeIf(this::isPlatformOrganization);
-
-        long totalAtivas = organizacoesAtivas.size();
+        long totalAtivas = organizationRepository.countOrganizationsActiveByDateRange(
+                inicioJanela,
+                hoje,
+                PlatformConstants.PLATFORM_ORGANIZATION_ID
+        );
         long totalOrganizacoes = organizationRepository.countAllExcluding(PlatformConstants.PLATFORM_ORGANIZATION_ID);
         long totalInativas = Math.max(totalOrganizacoes - totalAtivas, 0);
 
-        return PlatformOrganizationsOverviewDTO.builder()
+        return PlatformOrganizationsResumoDTO.builder()
                 .criadas(criadasSerie)
-                .assinadas(assinadasSerie)
+                .ativadas(ativadasSerie)
                 .totalAtivas(totalAtivas)
                 .totalInativas(totalInativas)
                 .build();
     }
 
-    public PlatformResumoDTO obterResumoPlataforma() {
+    public PlatformResumoDTO obterResumoFinanceiroPlataforma() {
         requirePlatformOrganization();
 
         BigDecimal totalVendas = defaultZero(vendaRepository.sumValorFinalGlobal(null));
@@ -516,10 +508,10 @@ public class AnalyticsService {
         return resultado;
     }
 
-    private List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> buildTimeSeries(LocalDate inicio,
-                                                                                   LocalDate fim,
-                                                                                   Map<LocalDate, Long> valores) {
-        List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> pontos = new ArrayList<>();
+    private List<PlatformOrganizationsResumoDTO.TimeSeriesPoint> buildTimeSeries(LocalDate inicio,
+                                                                                LocalDate fim,
+                                                                                Map<LocalDate, Long> valores) {
+        List<PlatformOrganizationsResumoDTO.TimeSeriesPoint> pontos = new ArrayList<>();
         if (inicio == null || fim == null || valores == null) {
             return pontos;
         }
@@ -527,7 +519,7 @@ public class AnalyticsService {
         LocalDate cursor = inicio;
         while (!cursor.isAfter(fim)) {
             long quantidade = valores.getOrDefault(cursor, 0L);
-            pontos.add(PlatformOrganizationsOverviewDTO.TimeSeriesPoint.builder()
+            pontos.add(PlatformOrganizationsResumoDTO.TimeSeriesPoint.builder()
                     .data(cursor)
                     .quantidade(quantidade)
                     .build());

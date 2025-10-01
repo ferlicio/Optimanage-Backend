@@ -72,4 +72,15 @@ public interface CompraRepository extends JpaRepository<Compra, Integer>, JpaSpe
             """)
     List<Integer> findDistinctOrganizationIdsWithPurchasesBetween(@Param("inicio") LocalDate inicio,
                                                                    @Param("fim") LocalDate fim);
+
+    @Query("""
+            SELECT COUNT(DISTINCT c.organizationId)
+            FROM Compra c
+            WHERE c.dataEfetuacao IS NOT NULL
+              AND c.dataEfetuacao BETWEEN :inicio AND :fim
+              AND (:excludedOrganizationId IS NULL OR c.organizationId <> :excludedOrganizationId)
+            """)
+    long countDistinctOrganizationsWithPurchasesBetween(@Param("inicio") LocalDate inicio,
+                                                         @Param("fim") LocalDate fim,
+                                                         @Param("excludedOrganizationId") Integer excludedOrganizationId);
 }
