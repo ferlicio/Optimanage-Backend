@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Analytics;
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformEngajamentoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformFeatureAdoptionDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformHealthScoreDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
@@ -33,8 +34,11 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -293,8 +297,84 @@ public class AnalyticsService {
                 .taxaRetencao60Dias(taxaRetencao60Dias)
                 .build();
     }
-  
-  
+
+
+    public PlatformHealthScoreDTO obterHealthScorePlataforma() {
+        requirePlatformOrganization();
+
+        LocalDate hoje = LocalDate.now();
+        LocalDate corte30Dias = hoje.minusDays(30);
+        LocalDate corte60Dias = hoje.minusDays(60);
+        LocalDate corte90Dias = hoje.minusDays(90);
+
+        Set<Integer> todasOrganizacoes = organizationRepository.findAll().stream()
+                .map(Organization::getId)
+                .filter(Objects::nonNull)
+                .filter(id -> !PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(id))
+                .collect(Collectors.toSet());
+
+        Set<Integer> organizacoesComVendas30Dias = new HashSet<>(sanitizeOrganizationIds(
+                vendaRepository.findDistinctOrganizationIdsWithSalesBetween(corte30Dias, hoje)
+        ));
+        organizacoesComVendas30Dias.retainAll(todasOrganizacoes);
+
+        Set<Integer> organizacoesComCompras30Dias = new HashSet<>(sanitizeOrganizationIds(
+                compraRepository.findDistinctOrganizationIdsWithPurchasesBetween(corte30Dias, hoje)
+        ));
+        organizacoesComCompras30Dias.retainAll(todasOrganizacoes);
+
+        Set<Integer> organizacoesComVendas60Dias = new HashSet<>(sanitizeOrganizationIds(
+                vendaRepository.findDistinctOrganizationIdsWithSalesBetween(corte60Dias, hoje)
+        ));
+        organizacoesComVendas60Dias.retainAll(todasOrganizacoes);
+
+        Set<Integer> organizacoesComCompras90Dias = new HashSet<>(sanitizeOrganizationIds(
+                compraRepository.findDistinctOrganizationIdsWithPurchasesBetween(corte90Dias, hoje)
+        ));
+        organizacoesComCompras90Dias.retainAll(todasOrganizacoes);
+
+        Set<Integer> ativoEmVendas = new HashSet<>(organizacoesComVendas30Dias);
+
+        Set<Integer> ativoEmCompras = new HashSet<>(organizacoesComCompras30Dias);
+        ativoEmCompras.removeAll(ativoEmVendas);
+
+        Set<Integer> semVendas60Dias = new HashSet<>(todasOrganizacoes);
+        semVendas60Dias.removeAll(organizacoesComVendas60Dias);
+
+        Set<Integer> emRisco = new HashSet<>(semVendas60Dias);
+        emRisco.retainAll(organizacoesComCompras90Dias);
+        emRisco.removeAll(ativoEmCompras);
+        emRisco.removeAll(ativoEmVendas);
+
+        Set<Integer> churn = new HashSet<>(todasOrganizacoes);
+        churn.removeAll(ativoEmVendas);
+        churn.removeAll(ativoEmCompras);
+        churn.removeAll(emRisco);
+        churn.removeAll(organizacoesComCompras90Dias);
+
+        long totalOrganizacoes = todasOrganizacoes.size();
+        long clientesSemVendasRecentes = Math.max(totalOrganizacoes - ativoEmVendas.size(), 0);
+
+        BigDecimal volumeCompras30Dias = defaultZero(
+                compraRepository.sumValorFinalGlobalBetweenDates(
+                        corte30Dias,
+                        hoje,
+                        PlatformConstants.PLATFORM_ORGANIZATION_ID
+                )
+        ).setScale(2, RoundingMode.HALF_UP);
+
+        return PlatformHealthScoreDTO.builder()
+                .totalOrganizations(totalOrganizacoes)
+                .clientesSemVendasRecentes(clientesSemVendasRecentes)
+                .volumeComprasUltimos30Dias(volumeCompras30Dias)
+                .ativoEmVendas(buildHealthSegment(ativoEmVendas.size(), totalOrganizacoes))
+                .ativoEmCompras(buildHealthSegment(ativoEmCompras.size(), totalOrganizacoes))
+                .emRisco(buildHealthSegment(emRisco.size(), totalOrganizacoes))
+                .churn(buildHealthSegment(churn.size(), totalOrganizacoes))
+                .build();
+    }
+
+
     public PlatformFeatureAdoptionDTO obterAdocaoRecursosPlataforma() {
         requirePlatformOrganization();
 
@@ -422,6 +502,29 @@ public class AnalyticsService {
 
     private BigDecimal defaultZero(BigDecimal valor) {
         return valor != null ? valor : BigDecimal.ZERO;
+    }
+
+    private PlatformHealthScoreDTO.HealthSegment buildHealthSegment(long quantity, long total) {
+        BigDecimal percentage = BigDecimal.ZERO;
+        if (total > 0 && quantity > 0) {
+            percentage = BigDecimal.valueOf(quantity)
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
+        }
+        return PlatformHealthScoreDTO.HealthSegment.builder()
+                .organizations(quantity)
+                .percentage(percentage)
+                .build();
+    }
+
+    private Set<Integer> sanitizeOrganizationIds(Collection<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return ids.stream()
+                .filter(Objects::nonNull)
+                .filter(id -> !PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(id))
+                .collect(Collectors.toSet());
     }
 
     private BigDecimal extractBigDecimal(Object valor) {
