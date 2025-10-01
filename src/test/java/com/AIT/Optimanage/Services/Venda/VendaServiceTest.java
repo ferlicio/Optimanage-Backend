@@ -7,6 +7,8 @@ import com.AIT.Optimanage.Models.Inventory.InventorySource;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
+import com.AIT.Optimanage.Models.User.Contador;
+import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaDTO;
 import com.AIT.Optimanage.Models.Venda.DTOs.VendaProdutoDTO;
@@ -43,13 +45,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -280,6 +285,90 @@ class VendaServiceTest {
         vendaService.atualizarVenda(loggedUser, venda.getId(), vendaDTO);
 
         assertEquals(0, venda.getValorPendente().compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    void registrarVendaComConflitoDeAgendamentoLancaExcecao() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate dataAgendada = hoje.plusDays(1);
+        LocalTime horaAgendada = LocalTime.of(10, 0);
+        Duration duracao = Duration.ofHours(1);
+
+        User loggedUser = new User();
+        loggedUser.setTenantId(9);
+
+        Plano plano = new Plano();
+        plano.setAgendaHabilitada(true);
+
+        Cliente cliente = new Cliente();
+        cliente.setId(33);
+
+        Contador contador = new Contador();
+        contador.setContagemAtual(1);
+
+        Produto produto = new Produto();
+        produto.setId(100);
+        produto.setValorVenda(new BigDecimal("80.00"));
+
+        Servico servico = new Servico();
+        servico.setId(200);
+        servico.setValorVenda(new BigDecimal("20.00"));
+
+        VendaProdutoDTO produtoDTO = new VendaProdutoDTO(produto.getId(), 1, BigDecimal.ZERO);
+        VendaServicoDTO servicoDTO = new VendaServicoDTO(servico.getId(), 1, BigDecimal.ZERO);
+
+        VendaDTO vendaDTO = VendaDTO.builder()
+                .clienteId(cliente.getId())
+                .dataEfetuacao(hoje)
+                .dataAgendada(dataAgendada)
+                .horaAgendada(horaAgendada)
+                .duracaoEstimada(duracao)
+                .dataCobranca(hoje.plusDays(5))
+                .descontoGeral(BigDecimal.ZERO)
+                .condicaoPagamento("Cartão")
+                .alteracoesPermitidas(1)
+                .status(StatusVenda.AGENDADA)
+                .observacoes("Venda agendada")
+                .produtos(List.of(produtoDTO))
+                .servicos(List.of(servicoDTO))
+                .build();
+
+        when(planoService.obterPlanoUsuario(loggedUser)).thenReturn(Optional.of(plano));
+        when(clienteService.listarUmCliente(vendaDTO.getClienteId())).thenReturn(cliente);
+        when(contadorService.BuscarContador(Tabela.VENDA)).thenReturn(contador);
+        when(produtoService.buscarProdutoAtivo(produto.getId())).thenReturn(produto);
+        when(servicoService.buscarServicoAtivo(servico.getId())).thenReturn(servico);
+        when(vendaRepository.save(any(Venda.class))).thenAnswer(invocation -> {
+            Venda venda = invocation.getArgument(0);
+            if (venda.getId() == null) {
+                venda.setId(500);
+            }
+            return venda;
+        });
+        when(vendaMapper.toResponse(any(Venda.class))).thenReturn(new VendaResponseDTO());
+        when(vendaProdutoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(vendaServicoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(agendaValidator.validarDataAgendamento(anyString())).thenReturn(dataAgendada);
+        when(agendaValidator.validarHoraAgendada(anyString())).thenReturn(horaAgendada);
+        when(agendaValidator.validarDuracao(any())).thenReturn(duracao);
+
+        doNothing().when(vendaValidator).validarVenda(any(VendaDTO.class), any(User.class));
+        doNothing().when(contadorService).IncrementarContador(Tabela.VENDA);
+        doNothing().when(clienteService).atualizarMetricasCliente(any());
+
+        doNothing()
+                .doThrow(new IllegalArgumentException("Já existe um agendamento para este usuário no período informado."))
+                .when(agendaValidator)
+                .validarConflitosAgendamentoVenda(eq(loggedUser), any(Venda.class), eq(dataAgendada), eq(horaAgendada),
+                        eq(duracao));
+
+        vendaService.registrarVenda(loggedUser, vendaDTO);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> vendaService.registrarVenda(loggedUser, vendaDTO));
+
+        assertEquals("Já existe um agendamento para este usuário no período informado.", exception.getMessage());
+        verify(vendaRepository, times(1)).save(any(Venda.class));
     }
 
     private Produto criarProdutoNovo() {

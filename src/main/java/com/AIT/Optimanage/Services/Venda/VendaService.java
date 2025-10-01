@@ -64,6 +64,7 @@ import org.springframework.security.access.AccessDeniedException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -193,6 +194,24 @@ public class VendaService {
         novaVenda.setVendaProdutos(vendaProdutos);
         novaVenda.setVendaServicos(vendaServicos);
         novaVenda.setTenantId(organizationId);
+
+        if (vendaDTO.getDataAgendada() != null && vendaDTO.getHoraAgendada() != null) {
+            LocalDate dataAgendadaNormalizada = agendaValidator
+                    .validarDataAgendamento(vendaDTO.getDataAgendada().toString());
+            DateTimeFormatter horaFormatter = DateTimeFormatter.ofPattern("HH:mm");
+            String horaFormatada = vendaDTO.getHoraAgendada().format(horaFormatter);
+            LocalTime horaAgendadaNormalizada = agendaValidator.validarHoraAgendada(horaFormatada);
+            Integer duracaoMinutos = Optional.ofNullable(vendaDTO.getDuracaoEstimada())
+                    .map(duration -> Math.toIntExact(duration.toMinutes()))
+                    .orElse(null);
+            Duration duracaoNormalizada = agendaValidator.validarDuracao(duracaoMinutos);
+
+            novaVenda.setDataAgendada(dataAgendadaNormalizada);
+            novaVenda.setHoraAgendada(horaAgendadaNormalizada);
+            novaVenda.setDuracaoEstimada(duracaoNormalizada);
+            agendaValidator.validarConflitosAgendamentoVenda(loggedUser, novaVenda, dataAgendadaNormalizada,
+                    horaAgendadaNormalizada, duracaoNormalizada);
+        }
 
         vendaRepository.save(novaVenda);
         vendaProdutoRepository.saveAll(vendaProdutos);
