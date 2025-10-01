@@ -20,9 +20,13 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
     @Query("""
             SELECT o
             FROM Organization o
-            LEFT JOIN Venda v ON v.organizationId = o.id AND v.dataEfetuacao >= :cutoff
             WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
-              AND v.id IS NULL
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM Venda v
+                    WHERE v.organizationId = o.id
+                      AND v.dataEfetuacao >= :cutoff
+              )
             """)
     List<Organization> findOrganizationsWithoutSalesSince(@Param("cutoff") LocalDate cutoff,
                                                           @Param("excludedOrganizationId") Integer excludedOrganizationId);
