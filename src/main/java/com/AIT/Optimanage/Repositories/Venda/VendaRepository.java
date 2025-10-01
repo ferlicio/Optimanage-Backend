@@ -106,12 +106,40 @@ public interface VendaRepository extends JpaRepository<Venda, Integer>, JpaSpeci
     BigDecimal sumValorFinalByOrganizationAndStatus(@Param("organizationId") Integer organizationId,
                                                     @Param("status") StatusVenda status);
 
+    @Query("""
+            SELECT COALESCE(SUM(v.valorFinal), 0)
+            FROM Venda v
+            WHERE (:organizationId IS NULL OR v.organizationId = :organizationId)
+            """)
+    BigDecimal sumValorFinalGlobal(@Param("organizationId") Integer organizationId);
+
     @Query("SELECT COALESCE(SUM(v.valorFinal), 0) FROM Venda v " +
             "WHERE v.organizationId = :organizationId " +
             "AND v.dataEfetuacao BETWEEN :inicio AND :fim")
     BigDecimal sumValorFinalByOrganizationBetweenDates(@Param("organizationId") Integer organizationId,
                                                        @Param("inicio") LocalDate inicio,
                                                        @Param("fim") LocalDate fim);
+
+    @Query("""
+            SELECT YEAR(v.dataEfetuacao) AS ano,
+                   MONTH(v.dataEfetuacao) AS mes,
+                   COALESCE(SUM(v.valorFinal), 0) AS total
+            FROM Venda v
+            WHERE (:organizationId IS NULL OR v.organizationId = :organizationId)
+              AND v.dataEfetuacao BETWEEN :inicio AND :fim
+            GROUP BY YEAR(v.dataEfetuacao), MONTH(v.dataEfetuacao)
+            ORDER BY ano, mes
+            """)
+    List<Object[]> sumValorFinalByMonthGlobal(@Param("organizationId") Integer organizationId,
+                                              @Param("inicio") LocalDate inicio,
+                                              @Param("fim") LocalDate fim);
+
+    @Query("""
+            SELECT COUNT(v)
+            FROM Venda v
+            WHERE (:organizationId IS NULL OR v.organizationId = :organizationId)
+            """)
+    long countByOrganizationOrGlobal(@Param("organizationId") Integer organizationId);
 
     @Query("SELECT COUNT(v) FROM Venda v " +
             "WHERE v.organizationId = :organizationId " +

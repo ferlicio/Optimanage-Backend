@@ -1,19 +1,20 @@
 package com.AIT.Optimanage.Analytics;
 
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
-import com.AIT.Optimanage.Models.Compra.Compra;
 import com.AIT.Optimanage.Models.Inventory.InventoryAlert;
 import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Models.User.User;
-import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
+import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Services.InventoryMonitoringService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Support.PlatformConstants;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,8 +23,11 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,16 +41,8 @@ public class AnalyticsService {
     private final OrganizationRepository organizationRepository;
 
     public ResumoDTO obterResumo() {
-        User user = CurrentUser.get();
-        if (user == null) {
-            throw new EntityNotFoundException("Usuário não autenticado");
-        }
-        Integer organizationId = CurrentUser.getOrganizationId();
-        if (organizationId == null) {
-            throw new EntityNotFoundException("Organização não encontrada");
-        }
-        Organization organization = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> new EntityNotFoundException("Organização não encontrada"));
+        Organization organization = getCurrentOrganizationOrThrow();
+        Integer organizationId = organization.getId();
         BigDecimal totalVendas = BigDecimal.ZERO;
         BigDecimal vendasResult = vendaRepository.sumValorFinalByOrganization(organizationId);
         if (vendasResult != null) {
@@ -83,14 +79,8 @@ public class AnalyticsService {
     }
 
     public PrevisaoDTO preverDemanda() {
-        User user = CurrentUser.get();
-        if (user == null) {
-            throw new EntityNotFoundException("Usuário não autenticado");
-        }
-        Integer organizationId = CurrentUser.getOrganizationId();
-        if (organizationId == null) {
-            throw new EntityNotFoundException("Organização não encontrada");
-        }
+        Organization organization = getCurrentOrganizationOrThrow();
+        Integer organizationId = organization.getId();
         List<Venda> vendas = vendaRepository.findAll().stream()
                 .filter(v -> organizationId.equals(v.getOrganizationId()))
                 .filter(v -> v.getDataEfetuacao() != null && v.getValorFinal() != null)
@@ -157,14 +147,8 @@ public class AnalyticsService {
     }
 
     public List<InventoryAlertDTO> listarAlertasEstoque() {
-        User user = CurrentUser.get();
-        if (user == null) {
-            throw new EntityNotFoundException("Usuário não autenticado");
-        }
-        Integer organizationId = CurrentUser.getOrganizationId();
-        if (organizationId == null) {
-            throw new EntityNotFoundException("Organização não encontrada");
-        }
+        Organization organization = getCurrentOrganizationOrThrow();
+        Integer organizationId = organization.getId();
         if (!planoService.isMonitoramentoEstoqueHabilitado(organizationId)) {
             throw new AccessDeniedException("Monitoramento de estoque não está habilitado no plano atual");
         }
@@ -175,6 +159,38 @@ public class AnalyticsService {
         return alertas.stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    public Organization requirePlatformOrganization() {
+        Organization organization = getCurrentOrganizationOrThrow();
+        if (!PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(organization.getId())) {
+            throw new AccessDeniedException("Acesso restrito à organização da plataforma");
+        }
+        return organization;
+    }
+
+    public PlatformResumoDTO obterResumoPlataforma() {
+        requirePlatformOrganization();
+
+        BigDecimal totalVendas = defaultZero(vendaRepository.sumValorFinalGlobal(null));
+        BigDecimal totalCompras = defaultZero(compraRepository.sumValorFinalGlobal(null));
+        BigDecimal lucro = totalVendas.subtract(totalCompras);
+
+        long quantidadeVendas = vendaRepository.countByOrganizationOrGlobal(null);
+        BigDecimal ticketMedio = quantidadeVendas > 0
+                ? totalVendas.divide(BigDecimal.valueOf(quantidadeVendas), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        LocalDate hoje = LocalDate.now();
+        YearMonth mesAtual = YearMonth.from(hoje);
+        YearMonth mesAnterior = mesAtual.minusMonths(1);
+        LocalDate inicioPeriodo = mesAnterior.atDay(1);
+        LocalDate fimPeriodo = mesAtual.atEndOfMonth();
+
+        List<Object[]> totaisMensais = vendaRepository.sumValorFinalByMonthGlobal(null, inicioPeriodo, fimPeriodo);
+        BigDecimal crescimentoMensal = calcularCrescimentoMensal(totaisMensais, mesAtual, mesAnterior);
+
+        return new PlatformResumoDTO(totalVendas, totalCompras, lucro, ticketMedio, crescimentoMensal);
     }
 
     private InventoryAlertDTO toDto(InventoryAlert alert) {
@@ -200,6 +216,66 @@ public class AnalyticsService {
         BigDecimal valorTotal = total != null ? total : BigDecimal.ZERO;
         return valorTotal.multiply(BigDecimal.valueOf(100))
                 .divide(meta, 2, RoundingMode.HALF_UP);
+    }
+
+    private Organization getCurrentOrganizationOrThrow() {
+        User user = CurrentUser.get();
+        if (user == null) {
+            throw new EntityNotFoundException("Usuário não autenticado");
+        }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Organização não encontrada"));
+    }
+
+    private BigDecimal calcularCrescimentoMensal(List<Object[]> totaisMensais,
+                                                 YearMonth mesAtual,
+                                                 YearMonth mesAnterior) {
+        if (totaisMensais == null || totaisMensais.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        Map<YearMonth, BigDecimal> totaisPorMes = new HashMap<>();
+        for (Object[] linha : totaisMensais) {
+            if (linha == null || linha.length < 3) {
+                continue;
+            }
+            Integer ano = (Integer) linha[0];
+            Integer mes = (Integer) linha[1];
+            BigDecimal total = extractBigDecimal(linha[2]);
+            if (ano != null && mes != null) {
+                totaisPorMes.put(YearMonth.of(ano, mes), defaultZero(total));
+            }
+        }
+
+        BigDecimal totalMesAtual = totaisPorMes.getOrDefault(mesAtual, BigDecimal.ZERO);
+        BigDecimal totalMesAnterior = totaisPorMes.getOrDefault(mesAnterior, BigDecimal.ZERO);
+
+        if (totalMesAnterior.compareTo(BigDecimal.ZERO) == 0) {
+            return totalMesAtual.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO : null;
+        }
+
+        return totalMesAtual.subtract(totalMesAnterior)
+                .divide(totalMesAnterior, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal defaultZero(BigDecimal valor) {
+        return valor != null ? valor : BigDecimal.ZERO;
+    }
+
+    private BigDecimal extractBigDecimal(Object valor) {
+        if (valor instanceof BigDecimal bigDecimal) {
+            return bigDecimal;
+        }
+        if (valor instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
+        }
+        return BigDecimal.ZERO;
     }
 }
 
