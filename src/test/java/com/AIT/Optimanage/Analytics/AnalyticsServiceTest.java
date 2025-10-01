@@ -1,5 +1,6 @@
 package com.AIT.Optimanage.Analytics;
 
+import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsOverviewDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
 import com.AIT.Optimanage.Models.Organization.Organization;
@@ -12,16 +13,19 @@ import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Services.InventoryMonitoringService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Support.PlatformConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -210,6 +215,67 @@ class AnalyticsServiceTest {
                         + uniformForecast.getValorPrevisto().setScale(3, RoundingMode.HALF_UP));
     }
 
+    @Test
+    void shouldSummarizePlatformOrganizationsOverview() {
+        CurrentUser.set(buildUser(PlatformConstants.PLATFORM_ORGANIZATION_ID));
+
+        Organization platformOrganization = buildOrganization(PlatformConstants.PLATFORM_ORGANIZATION_ID, null, null);
+        when(organizationRepository.findById(PlatformConstants.PLATFORM_ORGANIZATION_ID))
+                .thenReturn(java.util.Optional.of(platformOrganization));
+
+        LocalDate today = LocalDate.now();
+        LocalDate createdDate = today.minusDays(5);
+        LocalDate signedDate = today.minusDays(2);
+
+        List<Object[]> criadasAggregate = List.<Object[]>of(new Object[]{createdDate, 2L});
+        List<Object[]> assinadasAggregate = List.<Object[]>of(new Object[]{signedDate, 1L});
+
+        when(organizationRepository.countOrganizationsCreatedByDateRange(
+                any(LocalDateTime.class),
+                any(LocalDateTime.class),
+                eq(PlatformConstants.PLATFORM_ORGANIZATION_ID)
+        )).thenReturn(criadasAggregate);
+
+        when(organizationRepository.countOrganizationsSignedByDateRange(
+                any(LocalDate.class),
+                any(LocalDate.class),
+                eq(PlatformConstants.PLATFORM_ORGANIZATION_ID)
+        )).thenReturn(assinadasAggregate);
+
+        when(organizationRepository.countAllExcluding(PlatformConstants.PLATFORM_ORGANIZATION_ID)).thenReturn(5L);
+        when(vendaRepository.findDistinctOrganizationIdsWithSalesBetween(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of(10, 11));
+        when(compraRepository.findDistinctOrganizationIdsWithPurchasesBetween(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of(11, 12));
+
+        PlatformOrganizationsOverviewDTO overview = analyticsService.obterResumoOrganizacoesPlataforma();
+
+        assertNotNull(overview);
+        assertEquals(3, overview.getTotalAtivas());
+        assertEquals(2, overview.getTotalInativas());
+        assertEquals(30, overview.getCriadas().size());
+        assertEquals(30, overview.getAssinadas().size());
+
+        PlatformOrganizationsOverviewDTO.TimeSeriesPoint createdPoint = findPointByDate(overview.getCriadas(), createdDate);
+        assertNotNull(createdPoint);
+        assertEquals(2L, createdPoint.getQuantidade());
+
+        PlatformOrganizationsOverviewDTO.TimeSeriesPoint signedPoint = findPointByDate(overview.getAssinadas(), signedDate);
+        assertNotNull(signedPoint);
+        assertEquals(1L, signedPoint.getQuantidade());
+    }
+
+    @Test
+    void shouldRejectPlatformOverviewForNonPlatformOrganization() {
+        int organizationId = 99;
+        CurrentUser.set(buildUser(organizationId));
+
+        Organization organization = buildOrganization(organizationId, null, null);
+        when(organizationRepository.findById(organizationId)).thenReturn(java.util.Optional.of(organization));
+
+        assertThrows(AccessDeniedException.class, () -> analyticsService.obterResumoOrganizacoesPlataforma());
+    }
+
     private User buildUser(int organizationId) {
         User user = User.builder()
                 .nome("Test")
@@ -229,6 +295,14 @@ class AnalyticsServiceTest {
                 .build();
         organization.setId(id);
         return organization;
+    }
+
+    private PlatformOrganizationsOverviewDTO.TimeSeriesPoint findPointByDate(List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> series,
+                                                                             LocalDate date) {
+        return series.stream()
+                .filter(point -> date.equals(point.getData()))
+                .findFirst()
+                .orElse(null);
     }
 
     private void assertBigDecimalEquals(BigDecimal expected, BigDecimal actual) {

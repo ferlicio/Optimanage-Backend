@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -47,5 +48,40 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
             GROUP BY p.id, p.nome
             """)
     List<PlanFeatureAdoptionProjection> aggregateFeatureAdoptionByPlan(@Param("excludedOrganizationId") Integer excludedOrganizationId);
+
+    @Query("""
+            SELECT function('DATE', o.createdAt) AS dia,
+                   COUNT(o) AS quantidade
+            FROM Organization o
+            WHERE o.createdAt IS NOT NULL
+              AND o.createdAt BETWEEN :inicio AND :fim
+              AND (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+            GROUP BY function('DATE', o.createdAt)
+            ORDER BY dia
+            """)
+    List<Object[]> countOrganizationsCreatedByDateRange(@Param("inicio") LocalDateTime inicio,
+                                                         @Param("fim") LocalDateTime fim,
+                                                         @Param("excludedOrganizationId") Integer excludedOrganizationId);
+
+    @Query("""
+            SELECT o.dataAssinatura AS dia,
+                   COUNT(o) AS quantidade
+            FROM Organization o
+            WHERE o.dataAssinatura IS NOT NULL
+              AND o.dataAssinatura BETWEEN :inicio AND :fim
+              AND (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+            GROUP BY o.dataAssinatura
+            ORDER BY o.dataAssinatura
+            """)
+    List<Object[]> countOrganizationsSignedByDateRange(@Param("inicio") LocalDate inicio,
+                                                        @Param("fim") LocalDate fim,
+                                                        @Param("excludedOrganizationId") Integer excludedOrganizationId);
+
+    @Query("""
+            SELECT COUNT(o)
+            FROM Organization o
+            WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+            """)
+    long countAllExcluding(@Param("excludedOrganizationId") Integer excludedOrganizationId);
 }
 
