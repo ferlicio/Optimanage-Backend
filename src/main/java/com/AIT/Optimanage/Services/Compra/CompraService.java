@@ -61,6 +61,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -73,6 +74,7 @@ public class CompraService {
 
     private static final StatusTransitionPolicy<StatusCompra, Compra> STATUS_TRANSITION_POLICY =
             StatusTransitionPolicies.compraPolicy();
+    private static final DateTimeFormatter HORA_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private final CompraRepository compraRepository;
     private final FornecedorService fornecedorService;
@@ -143,6 +145,22 @@ public class CompraService {
             garantirAgendaHabilitada(plano);
         }
 
+        LocalDate dataAgendada = compraDTO.getDataAgendada();
+        LocalTime horaAgendada = compraDTO.getHoraAgendada();
+        Duration duracaoEstimada = compraDTO.getDuracaoEstimada();
+        if (dataAgendada != null || horaAgendada != null) {
+            dataAgendada = agendaValidator.validarDataAgendamento(
+                    Optional.ofNullable(dataAgendada).map(LocalDate::toString).orElse(null));
+            String horaFormatada = Optional.ofNullable(horaAgendada)
+                    .map(time -> time.format(HORA_FORMATTER))
+                    .orElse(null);
+            horaAgendada = agendaValidator.validarHoraAgendada(horaFormatada);
+            Integer duracaoMinutos = Optional.ofNullable(duracaoEstimada)
+                    .map(duration -> Math.toIntExact(duration.toMinutes()))
+                    .orElse(null);
+            duracaoEstimada = agendaValidator.validarDuracao(duracaoMinutos);
+        }
+
         Integer organizationId = CurrentUser.getOrganizationId();
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
@@ -153,9 +171,9 @@ public class CompraService {
                 .fornecedor(fornecedor)
                 .sequencialUsuario(contador.getContagemAtual())
                 .dataEfetuacao(compraDTO.getDataEfetuacao())
-                .dataAgendada(compraDTO.getDataAgendada())
-                .horaAgendada(compraDTO.getHoraAgendada())
-                .duracaoEstimada(compraDTO.getDuracaoEstimada())
+                .dataAgendada(dataAgendada)
+                .horaAgendada(horaAgendada)
+                .duracaoEstimada(duracaoEstimada)
                 .valorFinal(BigDecimal.ZERO)
                 .condicaoPagamento(compraDTO.getCondicaoPagamento())
                 .valorPendente(BigDecimal.ZERO)
@@ -163,6 +181,7 @@ public class CompraService {
                 .observacoes(compraDTO.getObservacoes())
                 .build();
 
+        novaCompra.setTenantId(organizationId);
         List<CompraProduto> compraProdutos = criarListaProdutos(compraDTO.getProdutos(), novaCompra);
         List<CompraServico> compraServicos = criarListaServicos(compraDTO.getServicos(), novaCompra);
         novaCompra.setCompraProdutos(compraProdutos);
@@ -180,8 +199,13 @@ public class CompraService {
         novaCompra.setValorFinal(valorTotal);
         novaCompra.setValorPendente(valorTotal.subtract(valorPago));
 
-        
-        novaCompra.setTenantId(organizationId);
+        if (novaCompra.getDataAgendada() != null) {
+            Integer userId = Optional.ofNullable(novaCompra.getCreatedBy())
+                    .orElseGet(() -> Optional.ofNullable(CurrentUser.get()).map(User::getId).orElse(null));
+            agendaValidator.validarConflitosAgendamentoCompra(novaCompra, userId, novaCompra.getDataAgendada(),
+                    novaCompra.getHoraAgendada(), novaCompra.getDuracaoEstimada());
+        }
+
         compraRepository.save(novaCompra);
         compraProdutoRepository.saveAll(compraProdutos);
         compraServicoRepository.saveAll(compraServicos);

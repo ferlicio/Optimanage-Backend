@@ -11,11 +11,14 @@ import com.AIT.Optimanage.Models.Compra.DTOs.CompraServicoDTO;
 import com.AIT.Optimanage.Models.Compra.Related.StatusCompra;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Models.Enums.StatusPagamento;
+import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Inventory.InventorySource;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.Produto;
 import com.AIT.Optimanage.Models.Servico;
+import com.AIT.Optimanage.Models.User.Contador;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Models.User.Tabela;
 import com.AIT.Optimanage.Repositories.Compra.CompraProdutoRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Compra.CompraServicoRepository;
@@ -40,6 +43,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -49,9 +53,12 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -74,6 +81,7 @@ class CompraServiceTest {
     @Mock private CompraValidator compraValidator;
     @Mock private PlanoService planoService;
     @Mock private AgendaValidator agendaValidator;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private CompraService compraService;
@@ -96,8 +104,14 @@ class CompraServiceTest {
                 .thenAnswer(invocation -> LocalDate.parse(invocation.getArgument(0)));
         lenient().when(agendaValidator.validarHoraAgendada(anyString()))
                 .thenAnswer(invocation -> LocalTime.parse(invocation.getArgument(0)));
-        lenient().when(agendaValidator.validarDuracao(anyInt()))
-                .thenAnswer(invocation -> Duration.ofMinutes(((Integer) invocation.getArgument(0)).longValue()));
+        lenient().when(agendaValidator.validarDuracao(any()))
+                .thenAnswer(invocation -> {
+                    Integer minutos = invocation.getArgument(0);
+                    if (minutos == null) {
+                        return Duration.ofHours(1);
+                    }
+                    return Duration.ofMinutes(minutos.longValue());
+                });
         doNothing().when(agendaValidator)
                 .validarConflitosAgendamentoCompra(any(), any(), any(), any(), any());
     }
@@ -381,6 +395,60 @@ class CompraServiceTest {
         verify(inventoryService).incrementar(produtoAtualizado.getId(), 3, InventorySource.COMPRA, compra.getId(),
                 "Atualização da compra #" + compra.getId());
         assertEquals(expectedResponse, response);
+    }
+
+    @Test
+    void criarCompraComConflitoDeAgendaParaMesmoUsuarioELancaExcecao() {
+        Fornecedor fornecedor = new Fornecedor();
+        fornecedor.setId(5);
+
+        Contador contador = new Contador();
+        contador.setContagemAtual(1);
+
+        Produto produto = Produto.builder()
+                .custo(BigDecimal.valueOf(25))
+                .valorVenda(BigDecimal.valueOf(30))
+                .build();
+        produto.setId(9);
+
+        Servico servico = Servico.builder()
+                .custo(BigDecimal.valueOf(40))
+                .valorVenda(BigDecimal.valueOf(50))
+                .build();
+        servico.setId(4);
+
+        when(fornecedorService.listarUmFornecedor(fornecedor.getId())).thenReturn(fornecedor);
+        when(contadorService.BuscarContador(Tabela.COMPRA)).thenReturn(contador);
+        when(produtoService.buscarProdutoAtivo(produto.getId())).thenReturn(produto);
+        when(servicoService.buscarServicoAtivo(servico.getId())).thenReturn(servico);
+        when(compraRepository.save(any(Compra.class))).thenAnswer(invocation -> {
+            Compra compra = invocation.getArgument(0);
+            if (compra.getId() == null) {
+                compra.setId(1);
+            }
+            return compra;
+        });
+        when(compraMapper.toResponse(any(Compra.class))).thenReturn(new CompraResponseDTO());
+
+        CompraDTO compraDTO = CompraDTO.builder()
+                .fornecedorId(fornecedor.getId())
+                .dataEfetuacao(LocalDate.now())
+                .dataAgendada(LocalDate.now().plusDays(1))
+                .horaAgendada(LocalTime.of(10, 0))
+                .duracaoEstimada(Duration.ofMinutes(60))
+                .status(StatusCompra.AGUARDANDO_EXECUCAO)
+                .produtos(Collections.singletonList(new CompraProdutoDTO(produto.getId(), 1, produto.getCusto())))
+                .servicos(Collections.singletonList(new CompraServicoDTO(servico.getId(), 1)))
+                .build();
+
+        compraService.criarCompra(compraDTO);
+
+        doThrow(new IllegalArgumentException("Já existe um agendamento para este usuário no período informado."))
+                .when(agendaValidator)
+                .validarConflitosAgendamentoCompra(any(Compra.class), any(), any(), any(), any());
+
+        assertThrows(IllegalArgumentException.class, () -> compraService.criarCompra(compraDTO));
+        verify(compraRepository, times(1)).save(any(Compra.class));
     }
 }
 
