@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Analytics;
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformEngajamentoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformFeatureAdoptionDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsOverviewDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
@@ -26,10 +27,15 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -169,10 +175,66 @@ public class AnalyticsService {
 
     public Organization requirePlatformOrganization() {
         Organization organization = getCurrentOrganizationOrThrow();
-        if (!PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(organization.getId())) {
+        if (!isPlatformOrganization(organization)) {
             throw new AccessDeniedException("Acesso restrito à organização da plataforma");
         }
         return organization;
+    }
+
+    public PlatformOrganizationsOverviewDTO obterResumoOrganizacoesPlataforma() {
+        requirePlatformOrganization();
+
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioJanela = hoje.minusDays(29);
+        LocalDateTime inicioJanelaDateTime = inicioJanela.atStartOfDay();
+        LocalDateTime fimJanelaDateTime = hoje.atTime(LocalTime.MAX);
+
+        List<Object[]> criadasBruto = organizationRepository.countOrganizationsCreatedByDateRange(
+                inicioJanelaDateTime,
+                fimJanelaDateTime,
+                PlatformConstants.PLATFORM_ORGANIZATION_ID
+        );
+        List<Object[]> assinadasBruto = organizationRepository.countOrganizationsSignedByDateRange(
+                inicioJanela,
+                hoje,
+                PlatformConstants.PLATFORM_ORGANIZATION_ID
+        );
+
+        Map<LocalDate, Long> criadasPorDia = toDailyCountMap(criadasBruto);
+        Map<LocalDate, Long> assinadasPorDia = toDailyCountMap(assinadasBruto);
+
+        List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> criadasSerie = buildTimeSeries(
+                inicioJanela,
+                hoje,
+                criadasPorDia
+        );
+        List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> assinadasSerie = buildTimeSeries(
+                inicioJanela,
+                hoje,
+                assinadasPorDia
+        );
+
+        Set<Integer> organizacoesAtivas = new HashSet<>();
+        List<Integer> vendasAtivas = vendaRepository.findDistinctOrganizationIdsWithSalesBetween(inicioJanela, hoje);
+        if (vendasAtivas != null) {
+            organizacoesAtivas.addAll(vendasAtivas);
+        }
+        List<Integer> comprasAtivas = compraRepository.findDistinctOrganizationIdsWithPurchasesBetween(inicioJanela, hoje);
+        if (comprasAtivas != null) {
+            organizacoesAtivas.addAll(comprasAtivas);
+        }
+        organizacoesAtivas.removeIf(this::isPlatformOrganization);
+
+        long totalAtivas = organizacoesAtivas.size();
+        long totalOrganizacoes = organizationRepository.countAllExcluding(PlatformConstants.PLATFORM_ORGANIZATION_ID);
+        long totalInativas = Math.max(totalOrganizacoes - totalAtivas, 0);
+
+        return PlatformOrganizationsOverviewDTO.builder()
+                .criadas(criadasSerie)
+                .assinadas(assinadasSerie)
+                .totalAtivas(totalAtivas)
+                .totalInativas(totalInativas)
+                .build();
     }
 
     public PlatformResumoDTO obterResumoPlataforma() {
@@ -431,6 +493,76 @@ public class AnalyticsService {
         }
 
         return totalDias.divide(BigDecimal.valueOf(contador), 2, RoundingMode.HALF_UP);
+    }
+
+    private boolean isPlatformOrganization(Integer organizationId) {
+        return organizationId != null && PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(organizationId);
+    }
+
+    private boolean isPlatformOrganization(Organization organization) {
+        return organization != null && isPlatformOrganization(organization.getId());
+    }
+
+    private Map<LocalDate, Long> toDailyCountMap(List<Object[]> linhas) {
+        if (linhas == null || linhas.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<LocalDate, Long> resultado = new HashMap<>();
+        for (Object[] linha : linhas) {
+            if (linha == null || linha.length < 2) {
+                continue;
+            }
+            LocalDate data = toLocalDate(linha[0]);
+            Long quantidade = toLong(linha[1]);
+            if (data != null && quantidade != null) {
+                resultado.merge(data, quantidade, Long::sum);
+            }
+        }
+        return resultado;
+    }
+
+    private List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> buildTimeSeries(LocalDate inicio,
+                                                                                   LocalDate fim,
+                                                                                   Map<LocalDate, Long> valores) {
+        List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> pontos = new ArrayList<>();
+        if (inicio == null || fim == null || valores == null) {
+            return pontos;
+        }
+
+        LocalDate cursor = inicio;
+        while (!cursor.isAfter(fim)) {
+            long quantidade = valores.getOrDefault(cursor, 0L);
+            pontos.add(PlatformOrganizationsOverviewDTO.TimeSeriesPoint.builder()
+                    .data(cursor)
+                    .quantidade(quantidade)
+                    .build());
+            cursor = cursor.plusDays(1);
+        }
+        return pontos;
+    }
+
+    private LocalDate toLocalDate(Object valor) {
+        if (valor instanceof LocalDate localDate) {
+            return localDate;
+        }
+        if (valor instanceof LocalDateTime localDateTime) {
+            return localDateTime.toLocalDate();
+        }
+        if (valor instanceof java.sql.Date sqlDate) {
+            return sqlDate.toLocalDate();
+        }
+        if (valor instanceof java.util.Date utilDate) {
+            return utilDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        }
+        return null;
+    }
+
+    private Long toLong(Object valor) {
+        if (valor instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
     }
 }
 

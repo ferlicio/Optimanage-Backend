@@ -180,4 +180,25 @@ public interface VendaRepository extends JpaRepository<Venda, Integer>, JpaSpeci
             """)
     List<Object[]> findPrimeiraVendaPorOrganizacao(@Param("inicio") LocalDate inicio,
                                                    @Param("fim") LocalDate fim);
+
+    @Query("""
+            SELECT v.dataEfetuacao AS dia,
+                   COUNT(DISTINCT v.organizationId) AS quantidade
+            FROM Venda v
+            WHERE v.dataEfetuacao IS NOT NULL
+              AND v.dataEfetuacao BETWEEN :inicio AND :fim
+            GROUP BY v.dataEfetuacao
+            ORDER BY v.dataEfetuacao
+            """)
+    List<Object[]> countDistinctOrganizationsWithSalesByDate(@Param("inicio") LocalDate inicio,
+                                                              @Param("fim") LocalDate fim);
+
+    @Query("""
+            SELECT DISTINCT v.organizationId
+            FROM Venda v
+            WHERE v.dataEfetuacao IS NOT NULL
+              AND v.dataEfetuacao BETWEEN :inicio AND :fim
+            """)
+    List<Integer> findDistinctOrganizationIdsWithSalesBetween(@Param("inicio") LocalDate inicio,
+                                                               @Param("fim") LocalDate fim);
 }

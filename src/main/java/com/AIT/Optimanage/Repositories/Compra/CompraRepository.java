@@ -51,4 +51,25 @@ public interface CompraRepository extends JpaRepository<Compra, Integer>, JpaSpe
     List<Compra> findByFornecedorIdAndOrganizationIdAndStatusIn(@Param("fornecedorId") Integer fornecedorId,
                                                                 @Param("organizationId") Integer organizationId,
                                                                 @Param("statuses") List<StatusCompra> statuses);
+
+    @Query("""
+            SELECT c.dataEfetuacao AS dia,
+                   COUNT(DISTINCT c.organizationId) AS quantidade
+            FROM Compra c
+            WHERE c.dataEfetuacao IS NOT NULL
+              AND c.dataEfetuacao BETWEEN :inicio AND :fim
+            GROUP BY c.dataEfetuacao
+            ORDER BY c.dataEfetuacao
+            """)
+    List<Object[]> countDistinctOrganizationsWithPurchasesByDate(@Param("inicio") LocalDate inicio,
+                                                                  @Param("fim") LocalDate fim);
+
+    @Query("""
+            SELECT DISTINCT c.organizationId
+            FROM Compra c
+            WHERE c.dataEfetuacao IS NOT NULL
+              AND c.dataEfetuacao BETWEEN :inicio AND :fim
+            """)
+    List<Integer> findDistinctOrganizationIdsWithPurchasesBetween(@Param("inicio") LocalDate inicio,
+                                                                   @Param("fim") LocalDate fim);
 }
