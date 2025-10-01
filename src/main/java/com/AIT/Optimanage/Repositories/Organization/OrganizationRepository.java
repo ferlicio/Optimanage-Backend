@@ -43,8 +43,9 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
                    SUM(CASE WHEN p.integracaoMarketplaceHabilitada = true THEN 1 ELSE 0 END) AS integracaoMarketplaceEnabledCount
             FROM Organization o
             JOIN o.planoAtivoId p
+            WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
             GROUP BY p.id, p.nome
             """)
-    List<PlanFeatureAdoptionProjection> aggregateFeatureAdoptionByPlan();
+    List<PlanFeatureAdoptionProjection> aggregateFeatureAdoptionByPlan(@Param("excludedOrganizationId") Integer excludedOrganizationId);
 }
 

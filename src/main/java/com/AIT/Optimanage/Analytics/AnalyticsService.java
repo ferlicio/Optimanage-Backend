@@ -243,7 +243,8 @@ public class AnalyticsService {
     public PlatformFeatureAdoptionDTO obterAdocaoRecursosPlataforma() {
         requirePlatformOrganization();
 
-        List<PlanFeatureAdoptionProjection> aggregations = organizationRepository.aggregateFeatureAdoptionByPlan();
+        List<PlanFeatureAdoptionProjection> aggregations = organizationRepository
+                .aggregateFeatureAdoptionByPlan(PlatformConstants.PLATFORM_ORGANIZATION_ID);
 
         long totalOrganizations = aggregations.stream()
                 .mapToLong(PlanFeatureAdoptionProjection::getTotalOrganizations)
