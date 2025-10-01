@@ -36,6 +36,13 @@ public interface CompraRepository extends JpaRepository<Compra, Integer>, JpaSpe
                                                     @Param("status") StatusCompra status);
 
     @Query("""
+            SELECT COALESCE(SUM(c.valorFinal), 0)
+            FROM Compra c
+            WHERE (:organizationId IS NULL OR c.organizationId = :organizationId)
+            """)
+    BigDecimal sumValorFinalGlobal(@Param("organizationId") Integer organizationId);
+
+    @Query("""
             SELECT c FROM Compra c
             WHERE c.fornecedor.id = :fornecedorId
               AND c.organizationId = :organizationId

@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Analytics;
 
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
 import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
@@ -32,6 +33,12 @@ public class AnalyticsController extends V1BaseController {
     @GetMapping("/estoque-critico")
     public ResponseEntity<List<InventoryAlertDTO>> estoqueCritico() {
         return ok(analyticsService.listarAlertasEstoque());
+    }
+
+    @GetMapping("/plataforma/resumo")
+    public ResponseEntity<PlatformResumoDTO> resumoPlataforma() {
+        analyticsService.requirePlatformOrganization();
+        return ok(analyticsService.obterResumoPlataforma());
     }
 }
 
