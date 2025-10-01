@@ -14,13 +14,18 @@ import com.AIT.Optimanage.Services.InventoryMonitoringService;
 import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 
 @Service
@@ -75,16 +80,95 @@ public class AnalyticsService {
             return new PrevisaoDTO(BigDecimal.ZERO);
         }
 
-        // Forecast using a simple linear regression from Apache Commons Math.
-        // This placeholder approach can be replaced by an AI-based model in the future.
-        SimpleRegression regression = new SimpleRegression();
-        int i = 0;
-        for (Venda venda : vendas) {
-            regression.addData(i++, venda.getValorFinal().doubleValue());
+        List<DailySalesPoint> pontosDiarios = agregarPorDia(vendas);
+        if (pontosDiarios.size() < 2) {
+            return new PrevisaoDTO(BigDecimal.ZERO);
         }
 
-        double forecast = regression.predict(i);
-        return new PrevisaoDTO(BigDecimal.valueOf(forecast));
+        long proximoDiaIndex = pontosDiarios.get(pontosDiarios.size() - 1).dayIndex() + 1;
+        double forecast = preverComPesosRecencia(pontosDiarios, proximoDiaIndex);
+
+        double ajusteSazonal = calcularAjusteSazonal(pontosDiarios);
+        double previsaoAjustada = forecast;
+        if (!Double.isNaN(ajusteSazonal)) {
+            previsaoAjustada = (forecast * 0.7) + (ajusteSazonal * 0.3);
+        }
+
+        return new PrevisaoDTO(BigDecimal.valueOf(previsaoAjustada));
+    }
+
+    private List<DailySalesPoint> agregarPorDia(List<Venda> vendas) {
+        Map<LocalDate, BigDecimal> totalPorDia = new LinkedHashMap<>();
+        for (Venda venda : vendas) {
+            LocalDate data = venda.getDataEfetuacao();
+            if (data == null) {
+                continue;
+            }
+            BigDecimal valor = venda.getValorFinal();
+            if (valor == null) {
+                valor = BigDecimal.ZERO;
+            }
+            totalPorDia.merge(data, valor, BigDecimal::add);
+        }
+
+        if (totalPorDia.isEmpty()) {
+            return List.of();
+        }
+
+        LocalDate primeiraData = totalPorDia.keySet().iterator().next();
+        List<DailySalesPoint> pontos = new ArrayList<>(totalPorDia.size());
+        for (Map.Entry<LocalDate, BigDecimal> entry : totalPorDia.entrySet()) {
+            long dayIndex = ChronoUnit.DAYS.between(primeiraData, entry.getKey());
+            pontos.add(new DailySalesPoint(entry.getKey(), entry.getValue().doubleValue(), dayIndex));
+        }
+        return pontos;
+    }
+
+    private double preverComPesosRecencia(List<DailySalesPoint> pontosDiarios, long proximoDiaIndex) {
+        int n = pontosDiarios.size();
+        double sumW = 0;
+        double sumWX = 0;
+        double sumWY = 0;
+        double sumWXX = 0;
+        double sumWXY = 0;
+
+        int ultimoIndice = n - 1;
+        for (int i = 0; i < n; i++) {
+            DailySalesPoint ponto = pontosDiarios.get(i);
+            double x = ponto.dayIndex();
+            double y = ponto.total();
+            double pesoRecencia = 1.0 + ((double) i / Math.max(1, ultimoIndice));
+            sumW += pesoRecencia;
+            sumWX += pesoRecencia * x;
+            sumWY += pesoRecencia * y;
+            sumWXX += pesoRecencia * x * x;
+            sumWXY += pesoRecencia * x * y;
+        }
+
+        double denominador = (sumW * sumWXX) - (sumWX * sumWX);
+        if (Math.abs(denominador) < 1e-9) {
+            return pontosDiarios.get(ultimoIndice).total();
+        }
+
+        double slope = ((sumW * sumWXY) - (sumWX * sumWY)) / denominador;
+        double intercept = (sumWY - (slope * sumWX)) / sumW;
+        return intercept + (slope * proximoDiaIndex);
+    }
+
+    private double calcularAjusteSazonal(List<DailySalesPoint> pontosDiarios) {
+        DailySalesPoint ultimoPonto = pontosDiarios.get(pontosDiarios.size() - 1);
+        LocalDate proximaData = ultimoPonto.date().plusDays(1);
+        int mes = proximaData.getMonthValue();
+
+        OptionalDouble mediaMensal = pontosDiarios.stream()
+                .filter(p -> p.date().getMonthValue() == mes)
+                .mapToDouble(DailySalesPoint::total)
+                .average();
+
+        return mediaMensal.orElse(Double.NaN);
+    }
+
+    private record DailySalesPoint(LocalDate date, double total, long dayIndex) {
     }
 
     public List<InventoryAlertDTO> listarAlertasEstoque() {
