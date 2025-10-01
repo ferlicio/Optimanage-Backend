@@ -46,7 +46,8 @@ public class AnalyticsController extends V1BaseController {
     @GetMapping("/plataforma/engajamento")
     public ResponseEntity<PlatformEngajamentoDTO> engajamentoPlataforma() {
         return ok(analyticsService.obterEngajamentoPlataforma());
-  
+    }
+
     @GetMapping("/plataforma/adocao-recursos")
     public ResponseEntity<PlatformFeatureAdoptionDTO> adocaoRecursosPlataforma() {
         return ok(analyticsService.obterAdocaoRecursosPlataforma());
