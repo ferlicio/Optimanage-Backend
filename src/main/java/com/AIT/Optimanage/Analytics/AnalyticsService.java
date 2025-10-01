@@ -2,6 +2,7 @@ package com.AIT.Optimanage.Analytics;
 
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformEngajamentoDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformFeatureAdoptionDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
@@ -11,6 +12,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
+import com.AIT.Optimanage.Repositories.Organization.PlanFeatureAdoptionProjection;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Services.InventoryMonitoringService;
@@ -196,6 +198,7 @@ public class AnalyticsService {
 
         return new PlatformResumoDTO(totalVendas, totalCompras, lucro, ticketMedio, crescimentoMensal);
     }
+  
 
     public PlatformEngajamentoDTO obterEngajamentoPlataforma() {
         requirePlatformOrganization();
@@ -235,6 +238,50 @@ public class AnalyticsService {
                 .taxaRetencao60Dias(taxaRetencao60Dias)
                 .build();
     }
+  
+  
+    public PlatformFeatureAdoptionDTO obterAdocaoRecursosPlataforma() {
+        requirePlatformOrganization();
+
+        List<PlanFeatureAdoptionProjection> aggregations = organizationRepository.aggregateFeatureAdoptionByPlan();
+
+        long totalOrganizations = aggregations.stream()
+                .mapToLong(PlanFeatureAdoptionProjection::getTotalOrganizations)
+                .sum();
+
+        long agendaEnabled = aggregations.stream()
+                .mapToLong(PlanFeatureAdoptionProjection::getAgendaEnabledCount)
+                .sum();
+        long recomendacoesEnabled = aggregations.stream()
+                .mapToLong(PlanFeatureAdoptionProjection::getRecomendacoesEnabledCount)
+                .sum();
+        long pagamentosEnabled = aggregations.stream()
+                .mapToLong(PlanFeatureAdoptionProjection::getPagamentosEnabledCount)
+                .sum();
+        long suportePrioritarioEnabled = aggregations.stream()
+                .mapToLong(PlanFeatureAdoptionProjection::getSuportePrioritarioEnabledCount)
+                .sum();
+        long monitoramentoEstoqueEnabled = aggregations.stream()
+                .mapToLong(PlanFeatureAdoptionProjection::getMonitoramentoEstoqueEnabledCount)
+                .sum();
+        long metricasProdutoEnabled = aggregations.stream()
+                .mapToLong(PlanFeatureAdoptionProjection::getMetricasProdutoEnabledCount)
+                .sum();
+        long integracaoMarketplaceEnabled = aggregations.stream()
+                .mapToLong(PlanFeatureAdoptionProjection::getIntegracaoMarketplaceEnabledCount)
+                .sum();
+
+        return PlatformFeatureAdoptionDTO.builder()
+                .totalOrganizations(totalOrganizations)
+                .agenda(buildFeatureAdoptionMetrics(agendaEnabled, totalOrganizations))
+                .recomendacoes(buildFeatureAdoptionMetrics(recomendacoesEnabled, totalOrganizations))
+                .pagamentos(buildFeatureAdoptionMetrics(pagamentosEnabled, totalOrganizations))
+                .suportePrioritario(buildFeatureAdoptionMetrics(suportePrioritarioEnabled, totalOrganizations))
+                .monitoramentoEstoque(buildFeatureAdoptionMetrics(monitoramentoEstoqueEnabled, totalOrganizations))
+                .metricasProduto(buildFeatureAdoptionMetrics(metricasProdutoEnabled, totalOrganizations))
+                .integracaoMarketplace(buildFeatureAdoptionMetrics(integracaoMarketplaceEnabled, totalOrganizations))
+                .build();
+    }
 
     private InventoryAlertDTO toDto(InventoryAlert alert) {
         return InventoryAlertDTO.builder()
@@ -259,6 +306,23 @@ public class AnalyticsService {
         BigDecimal valorTotal = total != null ? total : BigDecimal.ZERO;
         return valorTotal.multiply(BigDecimal.valueOf(100))
                 .divide(meta, 2, RoundingMode.HALF_UP);
+    }
+
+    private PlatformFeatureAdoptionDTO.FeatureAdoptionMetrics buildFeatureAdoptionMetrics(long enabledOrganizations,
+                                                                                        long totalOrganizations) {
+        BigDecimal adoptionPercentage;
+        if (totalOrganizations == 0) {
+            adoptionPercentage = BigDecimal.ZERO;
+        } else {
+            adoptionPercentage = BigDecimal.valueOf(enabledOrganizations)
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(BigDecimal.valueOf(totalOrganizations), 2, RoundingMode.HALF_UP);
+        }
+
+        return PlatformFeatureAdoptionDTO.FeatureAdoptionMetrics.builder()
+                .organizations(enabledOrganizations)
+                .adoptionPercentage(adoptionPercentage)
+                .build();
     }
 
     private Organization getCurrentOrganizationOrThrow() {
