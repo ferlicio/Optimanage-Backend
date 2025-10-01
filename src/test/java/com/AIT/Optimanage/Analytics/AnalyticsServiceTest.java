@@ -148,6 +148,8 @@ class AnalyticsServiceTest {
         int organizationId = 30;
         CurrentUser.set(buildUser(organizationId));
 
+        when(organizationRepository.findById(organizationId)).thenReturn(java.util.Optional.of(buildOrganization(organizationId, null, null)));
+
         List<Venda> duplicatedSales = List.of(
                 venda(organizationId, LocalDate.of(2024, 1, 1), new BigDecimal("100")),
                 venda(organizationId, LocalDate.of(2024, 1, 1), new BigDecimal("50")),
@@ -178,6 +180,8 @@ class AnalyticsServiceTest {
     void shouldReactToIrregularIntervalsInForecast() {
         int organizationId = 40;
         CurrentUser.set(buildUser(organizationId));
+
+        when(organizationRepository.findById(organizationId)).thenReturn(java.util.Optional.of(buildOrganization(organizationId, null, null)));
 
         List<Venda> irregularSpacing = List.of(
                 venda(organizationId, LocalDate.of(2024, 1, 1), new BigDecimal("150")),
