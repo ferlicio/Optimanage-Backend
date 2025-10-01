@@ -12,9 +12,9 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class PlatformOrganizationsOverviewDTO {
+public class PlatformOrganizationsResumoDTO {
     private List<TimeSeriesPoint> criadas;
-    private List<TimeSeriesPoint> assinadas;
+    private List<TimeSeriesPoint> ativadas;
     private long totalAtivas;
     private long totalInativas;
 

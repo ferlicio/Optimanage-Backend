@@ -1,6 +1,6 @@
 package com.AIT.Optimanage.Analytics;
 
-import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsOverviewDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
 import com.AIT.Optimanage.Models.Organization.Organization;
@@ -216,7 +216,7 @@ class AnalyticsServiceTest {
     }
 
     @Test
-    void shouldSummarizePlatformOrganizationsOverview() {
+    void shouldSummarizePlatformOrganizationsResumo() {
         CurrentUser.set(buildUser(PlatformConstants.PLATFORM_ORGANIZATION_ID));
 
         Organization platformOrganization = buildOrganization(PlatformConstants.PLATFORM_ORGANIZATION_ID, null, null);
@@ -243,37 +243,41 @@ class AnalyticsServiceTest {
         )).thenReturn(assinadasAggregate);
 
         when(organizationRepository.countAllExcluding(PlatformConstants.PLATFORM_ORGANIZATION_ID)).thenReturn(5L);
-        when(vendaRepository.findDistinctOrganizationIdsWithSalesBetween(any(LocalDate.class), any(LocalDate.class)))
-                .thenReturn(List.of(10, 11));
-        when(compraRepository.findDistinctOrganizationIdsWithPurchasesBetween(any(LocalDate.class), any(LocalDate.class)))
-                .thenReturn(List.of(11, 12));
+        when(organizationRepository.countOrganizationsActiveByDateRange(any(LocalDate.class), any(LocalDate.class),
+                eq(PlatformConstants.PLATFORM_ORGANIZATION_ID))).thenReturn(3L);
 
-        PlatformOrganizationsOverviewDTO overview = analyticsService.obterResumoOrganizacoesPlataforma();
+        PlatformOrganizationsResumoDTO overview = analyticsService.obterResumoPlataforma();
 
         assertNotNull(overview);
         assertEquals(3, overview.getTotalAtivas());
         assertEquals(2, overview.getTotalInativas());
         assertEquals(30, overview.getCriadas().size());
-        assertEquals(30, overview.getAssinadas().size());
+        assertEquals(30, overview.getAtivadas().size());
 
-        PlatformOrganizationsOverviewDTO.TimeSeriesPoint createdPoint = findPointByDate(overview.getCriadas(), createdDate);
+        verify(organizationRepository).countOrganizationsActiveByDateRange(
+                any(LocalDate.class),
+                any(LocalDate.class),
+                eq(PlatformConstants.PLATFORM_ORGANIZATION_ID)
+        );
+
+        PlatformOrganizationsResumoDTO.TimeSeriesPoint createdPoint = findPointByDate(overview.getCriadas(), createdDate);
         assertNotNull(createdPoint);
         assertEquals(2L, createdPoint.getQuantidade());
 
-        PlatformOrganizationsOverviewDTO.TimeSeriesPoint signedPoint = findPointByDate(overview.getAssinadas(), signedDate);
-        assertNotNull(signedPoint);
-        assertEquals(1L, signedPoint.getQuantidade());
+        PlatformOrganizationsResumoDTO.TimeSeriesPoint activatedPoint = findPointByDate(overview.getAtivadas(), signedDate);
+        assertNotNull(activatedPoint);
+        assertEquals(1L, activatedPoint.getQuantidade());
     }
 
     @Test
-    void shouldRejectPlatformOverviewForNonPlatformOrganization() {
+    void shouldRejectPlatformResumoForNonPlatformOrganization() {
         int organizationId = 99;
         CurrentUser.set(buildUser(organizationId));
 
         Organization organization = buildOrganization(organizationId, null, null);
         when(organizationRepository.findById(organizationId)).thenReturn(java.util.Optional.of(organization));
 
-        assertThrows(AccessDeniedException.class, () -> analyticsService.obterResumoOrganizacoesPlataforma());
+        assertThrows(AccessDeniedException.class, () -> analyticsService.obterResumoPlataforma());
     }
 
     private User buildUser(int organizationId) {
@@ -297,8 +301,8 @@ class AnalyticsServiceTest {
         return organization;
     }
 
-    private PlatformOrganizationsOverviewDTO.TimeSeriesPoint findPointByDate(List<PlatformOrganizationsOverviewDTO.TimeSeriesPoint> series,
-                                                                             LocalDate date) {
+    private PlatformOrganizationsResumoDTO.TimeSeriesPoint findPointByDate(List<PlatformOrganizationsResumoDTO.TimeSeriesPoint> series,
+                                                                           LocalDate date) {
         return series.stream()
                 .filter(point -> date.equals(point.getData()))
                 .findFirst()

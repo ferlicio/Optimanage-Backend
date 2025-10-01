@@ -64,6 +64,16 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
                                                          @Param("excludedOrganizationId") Integer excludedOrganizationId);
 
     @Query("""
+            SELECT COUNT(o)
+            FROM Organization o
+            WHERE o.createdAt IS NOT NULL
+              AND o.createdAt >= :inicio
+              AND (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+            """)
+    long countOrganizationsCreatedSince(@Param("inicio") LocalDateTime inicio,
+                                        @Param("excludedOrganizationId") Integer excludedOrganizationId);
+
+    @Query("""
             SELECT o.dataAssinatura AS dia,
                    COUNT(o) AS quantidade
             FROM Organization o
@@ -80,8 +90,41 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
     @Query("""
             SELECT COUNT(o)
             FROM Organization o
+            WHERE o.dataAssinatura IS NOT NULL
+              AND o.dataAssinatura >= :inicio
+              AND (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+            """)
+    long countOrganizationsSignedSince(@Param("inicio") LocalDate inicio,
+                                       @Param("excludedOrganizationId") Integer excludedOrganizationId);
+
+    @Query("""
+            SELECT COUNT(o)
+            FROM Organization o
             WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
             """)
     long countAllExcluding(@Param("excludedOrganizationId") Integer excludedOrganizationId);
+
+    @Query("""
+            SELECT COUNT(o)
+            FROM Organization o
+            WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+              AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM Venda v
+                        WHERE v.organizationId = o.id
+                          AND v.dataEfetuacao BETWEEN :inicio AND :fim
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM Compra c
+                        WHERE c.organizationId = o.id
+                          AND c.dataEfetuacao BETWEEN :inicio AND :fim
+                    )
+              )
+            """)
+    long countOrganizationsActiveByDateRange(@Param("inicio") LocalDate inicio,
+                                             @Param("fim") LocalDate fim,
+                                             @Param("excludedOrganizationId") Integer excludedOrganizationId);
 }
 

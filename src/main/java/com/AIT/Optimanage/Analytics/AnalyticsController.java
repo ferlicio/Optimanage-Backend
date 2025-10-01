@@ -3,7 +3,7 @@ package com.AIT.Optimanage.Analytics;
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformEngajamentoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformFeatureAdoptionDTO;
-import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsOverviewDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
@@ -38,9 +38,14 @@ public class AnalyticsController extends V1BaseController {
         return ok(analyticsService.listarAlertasEstoque());
     }
 
-    @GetMapping("/plataforma/resumo")
-    public ResponseEntity<PlatformResumoDTO> resumoPlataforma() {
+    @GetMapping({"/plataforma/organizacoes/visao-geral", "/plataforma/organizacoes/resumo"})
+    public ResponseEntity<PlatformOrganizationsResumoDTO> resumoOrganizacoesPlataforma() {
         return ok(analyticsService.obterResumoPlataforma());
+    }
+
+    @GetMapping({"/plataforma/resumo", "/plataforma/resumo-financeiro"})
+    public ResponseEntity<PlatformResumoDTO> resumoFinanceiroPlataforma() {
+        return ok(analyticsService.obterResumoFinanceiroPlataforma());
     }
 
     @GetMapping("/plataforma/engajamento")
@@ -53,9 +58,5 @@ public class AnalyticsController extends V1BaseController {
         return ok(analyticsService.obterAdocaoRecursosPlataforma());
     }
 
-    @GetMapping("/plataforma/organizacoes/visao-geral")
-    public ResponseEntity<PlatformOrganizationsOverviewDTO> overviewOrganizacoesPlataforma() {
-        return ok(analyticsService.obterResumoOrganizacoesPlataforma());
-    }
 }
 
