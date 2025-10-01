@@ -1,6 +1,7 @@
 package com.AIT.Optimanage.Analytics;
 
 import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformEngajamentoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
@@ -24,10 +25,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -193,6 +197,46 @@ public class AnalyticsService {
         return new PlatformResumoDTO(totalVendas, totalCompras, lucro, ticketMedio, crescimentoMensal);
     }
 
+    public PlatformEngajamentoDTO obterEngajamentoPlataforma() {
+        requirePlatformOrganization();
+
+        LocalDate hoje = LocalDate.now();
+        LocalDate corte30Dias = hoje.minusDays(30);
+        LocalDate corte60Dias = hoje.minusDays(60);
+
+        long organizacoesAtivas30Dias = vendaRepository.countDistinctOrganizationsByPeriodo(corte30Dias, hoje);
+        long organizacoesAtivas60Dias = vendaRepository.countDistinctOrganizationsByPeriodo(corte60Dias, hoje);
+
+        long organizacoesInativas60Dias = organizationRepository
+                .findOrganizationsWithoutSalesSince(corte60Dias, PlatformConstants.PLATFORM_ORGANIZATION_ID)
+                .size();
+
+        Map<Integer, LocalDate> primeirasVendas = vendaRepository.findPrimeiraVendaPorOrganizacao(null, hoje)
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(linha -> linha.length >= 2 && linha[0] instanceof Integer && linha[1] instanceof LocalDate)
+                .collect(Collectors.toMap(
+                        linha -> (Integer) linha[0],
+                        linha -> (LocalDate) linha[1],
+                        (existing, ignored) -> existing
+                ));
+
+        BigDecimal tempoMedioPrimeiraVenda = calcularTempoMedioPrimeiraVenda(primeirasVendas);
+        long totalOrganizacoesComVendas = primeirasVendas.size();
+
+        BigDecimal taxaRetencao30Dias = calcularTaxaRetencao(organizacoesAtivas30Dias, totalOrganizacoesComVendas);
+        BigDecimal taxaRetencao60Dias = calcularTaxaRetencao(organizacoesAtivas60Dias, totalOrganizacoesComVendas);
+
+        return PlatformEngajamentoDTO.builder()
+                .organizacoesAtivas30Dias(organizacoesAtivas30Dias)
+                .organizacoesAtivas60Dias(organizacoesAtivas60Dias)
+                .organizacoesInativas60Dias(organizacoesInativas60Dias)
+                .tempoMedioPrimeiraVendaDias(tempoMedioPrimeiraVenda)
+                .taxaRetencao30Dias(taxaRetencao30Dias)
+                .taxaRetencao60Dias(taxaRetencao60Dias)
+                .build();
+    }
+
     private InventoryAlertDTO toDto(InventoryAlert alert) {
         return InventoryAlertDTO.builder()
                 .produtoId(alert.getProduto().getId())
@@ -276,6 +320,53 @@ public class AnalyticsService {
             return BigDecimal.valueOf(number.doubleValue());
         }
         return BigDecimal.ZERO;
+    }
+
+    private BigDecimal calcularTaxaRetencao(long ativos, long totalBase) {
+        if (totalBase <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(ativos)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(totalBase), 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calcularTempoMedioPrimeiraVenda(Map<Integer, LocalDate> primeirasVendas) {
+        if (primeirasVendas == null || primeirasVendas.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        Set<Integer> organizationIds = primeirasVendas.keySet();
+        Iterable<Organization> organizations = organizationRepository.findAllById(organizationIds);
+
+        BigDecimal totalDias = BigDecimal.ZERO;
+        long contador = 0L;
+
+        for (Organization organization : organizations) {
+            if (organization == null) {
+                continue;
+            }
+            LocalDate dataAssinatura = organization.getDataAssinatura();
+            LocalDate primeiraVenda = primeirasVendas.get(organization.getId());
+
+            if (dataAssinatura == null || primeiraVenda == null) {
+                continue;
+            }
+
+            long dias = ChronoUnit.DAYS.between(dataAssinatura, primeiraVenda);
+            if (dias < 0) {
+                dias = 0;
+            }
+
+            totalDias = totalDias.add(BigDecimal.valueOf(dias));
+            contador++;
+        }
+
+        if (contador == 0L) {
+            return BigDecimal.ZERO;
+        }
+
+        return totalDias.divide(BigDecimal.valueOf(contador), 2, RoundingMode.HALF_UP);
     }
 }
 

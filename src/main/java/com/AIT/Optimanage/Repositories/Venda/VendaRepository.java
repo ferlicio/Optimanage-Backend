@@ -141,6 +141,15 @@ public interface VendaRepository extends JpaRepository<Venda, Integer>, JpaSpeci
             """)
     long countByOrganizationOrGlobal(@Param("organizationId") Integer organizationId);
 
+    @Query("""
+            SELECT COUNT(DISTINCT v.organizationId)
+            FROM Venda v
+            WHERE (:inicio IS NULL OR v.dataEfetuacao >= :inicio)
+              AND (:fim IS NULL OR v.dataEfetuacao <= :fim)
+            """)
+    long countDistinctOrganizationsByPeriodo(@Param("inicio") LocalDate inicio,
+                                             @Param("fim") LocalDate fim);
+
     @Query("SELECT COUNT(v) FROM Venda v " +
             "WHERE v.organizationId = :organizationId " +
             "AND v.cliente.id = :clienteId " +
@@ -161,4 +170,14 @@ public interface VendaRepository extends JpaRepository<Venda, Integer>, JpaSpeci
                                        @Param("userId") Integer userId,
                                        @Param("inicio") LocalDate inicio,
                                        @Param("fim") LocalDate fim);
+
+    @Query("""
+            SELECT v.organizationId, MIN(v.dataEfetuacao)
+            FROM Venda v
+            WHERE (:inicio IS NULL OR v.dataEfetuacao >= :inicio)
+              AND (:fim IS NULL OR v.dataEfetuacao <= :fim)
+            GROUP BY v.organizationId
+            """)
+    List<Object[]> findPrimeiraVendaPorOrganizacao(@Param("inicio") LocalDate inicio,
+                                                   @Param("fim") LocalDate fim);
 }
