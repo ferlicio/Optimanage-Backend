@@ -38,12 +38,12 @@ public class AnalyticsController extends V1BaseController {
         return ok(analyticsService.listarAlertasEstoque());
     }
 
-    @GetMapping("/plataforma/resumo")
-    public ResponseEntity<PlatformOrganizationsResumoDTO> resumoPlataforma() {
+    @GetMapping({"/plataforma/organizacoes/visao-geral", "/plataforma/organizacoes/resumo"})
+    public ResponseEntity<PlatformOrganizationsResumoDTO> resumoOrganizacoesPlataforma() {
         return ok(analyticsService.obterResumoPlataforma());
     }
 
-    @GetMapping("/plataforma/resumo-financeiro")
+    @GetMapping({"/plataforma/resumo", "/plataforma/resumo-financeiro"})
     public ResponseEntity<PlatformResumoDTO> resumoFinanceiroPlataforma() {
         return ok(analyticsService.obterResumoFinanceiroPlataforma());
     }
