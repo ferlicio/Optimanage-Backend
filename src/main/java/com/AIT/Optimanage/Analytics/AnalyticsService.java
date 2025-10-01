@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 
 @Service
@@ -250,27 +251,13 @@ public class AnalyticsService {
                 .mapToLong(PlanFeatureAdoptionProjection::getTotalOrganizations)
                 .sum();
 
-        long agendaEnabled = aggregations.stream()
-                .mapToLong(PlanFeatureAdoptionProjection::getAgendaEnabledCount)
-                .sum();
-        long recomendacoesEnabled = aggregations.stream()
-                .mapToLong(PlanFeatureAdoptionProjection::getRecomendacoesEnabledCount)
-                .sum();
-        long pagamentosEnabled = aggregations.stream()
-                .mapToLong(PlanFeatureAdoptionProjection::getPagamentosEnabledCount)
-                .sum();
-        long suportePrioritarioEnabled = aggregations.stream()
-                .mapToLong(PlanFeatureAdoptionProjection::getSuportePrioritarioEnabledCount)
-                .sum();
-        long monitoramentoEstoqueEnabled = aggregations.stream()
-                .mapToLong(PlanFeatureAdoptionProjection::getMonitoramentoEstoqueEnabledCount)
-                .sum();
-        long metricasProdutoEnabled = aggregations.stream()
-                .mapToLong(PlanFeatureAdoptionProjection::getMetricasProdutoEnabledCount)
-                .sum();
-        long integracaoMarketplaceEnabled = aggregations.stream()
-                .mapToLong(PlanFeatureAdoptionProjection::getIntegracaoMarketplaceEnabledCount)
-                .sum();
+        long agendaEnabled = sumFeature(aggregations, PlanFeatureAdoptionProjection::getAgendaEnabledCount);
+        long recomendacoesEnabled = sumFeature(aggregations, PlanFeatureAdoptionProjection::getRecomendacoesEnabledCount);
+        long pagamentosEnabled = sumFeature(aggregations, PlanFeatureAdoptionProjection::getPagamentosEnabledCount);
+        long suportePrioritarioEnabled = sumFeature(aggregations, PlanFeatureAdoptionProjection::getSuportePrioritarioEnabledCount);
+        long monitoramentoEstoqueEnabled = sumFeature(aggregations, PlanFeatureAdoptionProjection::getMonitoramentoEstoqueEnabledCount);
+        long metricasProdutoEnabled = sumFeature(aggregations, PlanFeatureAdoptionProjection::getMetricasProdutoEnabledCount);
+        long integracaoMarketplaceEnabled = sumFeature(aggregations, PlanFeatureAdoptionProjection::getIntegracaoMarketplaceEnabledCount);
 
         return PlatformFeatureAdoptionDTO.builder()
                 .totalOrganizations(totalOrganizations)
@@ -324,6 +311,13 @@ public class AnalyticsService {
                 .organizations(enabledOrganizations)
                 .adoptionPercentage(adoptionPercentage)
                 .build();
+    }
+
+    private long sumFeature(List<PlanFeatureAdoptionProjection> aggregations,
+                            ToLongFunction<PlanFeatureAdoptionProjection> extractor) {
+        return aggregations.stream()
+                .mapToLong(extractor)
+                .sum();
     }
 
     private Organization getCurrentOrganizationOrThrow() {
