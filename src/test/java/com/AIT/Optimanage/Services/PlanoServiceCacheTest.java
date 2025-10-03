@@ -151,7 +151,7 @@ class PlanoServiceCacheTest {
         assertThat(second).contains(novo);
         verify(organizationRepository, times(3)).findById(1);
         verify(organizationRepository, times(1)).save(info);
-        verify(planoRepository, times(1)).findById(10);
+        verify(planoRepository, times(2)).findById(10);
         verify(planoRepository, times(2)).findById(20);
     }
 }

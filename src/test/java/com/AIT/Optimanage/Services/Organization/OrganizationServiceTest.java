@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Services.AuditTrailService;
 import com.AIT.Optimanage.Support.PlatformConstants;
 import com.AIT.Optimanage.Support.TenantContext;
 import org.junit.jupiter.api.AfterEach;
@@ -27,6 +28,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,6 +51,9 @@ class OrganizationServiceTest {
     @Mock
     private com.AIT.Optimanage.Config.JwtService jwtService;
 
+    @Mock
+    private AuditTrailService auditTrailService;
+
     @InjectMocks
     private OrganizationService organizationService;
 
@@ -65,8 +70,13 @@ class OrganizationServiceTest {
     @Test
     void criarOrganizacaoPersistsWithGeneratedTenant() {
         Plano plano = Plano.builder()
+                .nome("Trial")
+                .valor(0f)
+                .duracaoDias(30)
+                .qtdAcessos(1)
                 .maxUsuarios(10)
                 .build();
+        plano.setId(12);
         when(planoRepository.findById(1)).thenReturn(Optional.of(plano));
         when(passwordEncoder.encode("ownerPass")).thenReturn("encodedPass");
 
@@ -124,5 +134,13 @@ class OrganizationServiceTest {
         assertThat(persistedOwner.getOrganizationId()).isEqualTo(42);
         assertThat(persistedOrganization.getOrganizationId()).isEqualTo(42);
         assertThat(TenantContext.getTenantId()).isEqualTo(99);
+
+        verify(auditTrailService).recordPlanSubscription(
+                eq(persistedOrganization),
+                isNull(),
+                eq(plano),
+                eq(false),
+                eq(true)
+        );
     }
 }
