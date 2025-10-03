@@ -13,6 +13,7 @@ import com.AIT.Optimanage.Models.Organization.Organization;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationPlanFinancialProjection;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.Organization.PlanFeatureAdoptionProjection;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
@@ -255,7 +256,46 @@ public class AnalyticsService {
         List<Object[]> totaisMensais = vendaRepository.sumValorFinalByMonthGlobal(null, inicioPeriodo, fimPeriodo);
         BigDecimal crescimentoMensal = calcularCrescimentoMensal(totaisMensais, mesAtual, mesAnterior);
 
-        return new PlatformResumoDTO(totalVendas, totalCompras, lucro, ticketMedio, crescimentoMensal);
+        List<OrganizationPlanFinancialProjection> planosFinanceiros = organizationRepository
+                .aggregatePlanFinancials(PlatformConstants.PLATFORM_ORGANIZATION_ID);
+
+        List<PlatformResumoDTO.PlanoReceitaDTO> receitaPorPlano = new ArrayList<>();
+        BigDecimal receitaRecorrenteMensal = BigDecimal.ZERO;
+        BigDecimal receitaRecorrenteAnual = BigDecimal.ZERO;
+
+        for (OrganizationPlanFinancialProjection projection : planosFinanceiros) {
+            BigDecimal valorPlano = toBigDecimal(projection.getPlanValue());
+            Integer duracaoPlano = projection.getPlanDurationDays();
+            long quantidadeOrganizacoes = projection.getOrganizationCount() != null
+                    ? projection.getOrganizationCount()
+                    : 0L;
+
+            BigDecimal receitaMensalPorOrganizacao = calcularReceitaMensalRecorrente(valorPlano, duracaoPlano);
+            BigDecimal receitaMensalPlano = receitaMensalPorOrganizacao.multiply(BigDecimal.valueOf(quantidadeOrganizacoes));
+            BigDecimal receitaAnualPlano = receitaMensalPlano.multiply(BigDecimal.valueOf(12));
+
+            receitaRecorrenteMensal = receitaRecorrenteMensal.add(receitaMensalPlano);
+            receitaRecorrenteAnual = receitaRecorrenteAnual.add(receitaAnualPlano);
+
+            receitaPorPlano.add(PlatformResumoDTO.PlanoReceitaDTO.builder()
+                    .planoId(projection.getPlanId())
+                    .planoNome(projection.getPlanName())
+                    .quantidadeOrganizacoes(quantidadeOrganizacoes)
+                    .receitaRecorrenteMensal(receitaMensalPlano.setScale(2, RoundingMode.HALF_UP))
+                    .receitaRecorrenteAnual(receitaAnualPlano.setScale(2, RoundingMode.HALF_UP))
+                    .build());
+        }
+
+        return PlatformResumoDTO.builder()
+                .volumeTotalVendas(totalVendas)
+                .volumeTotalCompras(totalCompras)
+                .lucroAgregado(lucro)
+                .ticketMedio(ticketMedio)
+                .crescimentoMensal(crescimentoMensal)
+                .receitaRecorrenteMensal(receitaRecorrenteMensal.setScale(2, RoundingMode.HALF_UP))
+                .receitaRecorrenteAnual(receitaRecorrenteAnual.setScale(2, RoundingMode.HALF_UP))
+                .receitaPorPlano(receitaPorPlano)
+                .build();
     }
   
 
@@ -502,6 +542,19 @@ public class AnalyticsService {
 
     private BigDecimal defaultZero(BigDecimal valor) {
         return valor != null ? valor : BigDecimal.ZERO;
+    }
+
+    private BigDecimal toBigDecimal(Float valor) {
+        return valor != null ? BigDecimal.valueOf(valor.doubleValue()) : BigDecimal.ZERO;
+    }
+
+    private BigDecimal calcularReceitaMensalRecorrente(BigDecimal valorPlano, Integer duracaoDias) {
+        if (valorPlano == null || duracaoDias == null || duracaoDias <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return valorPlano.multiply(BigDecimal.valueOf(30))
+                .divide(BigDecimal.valueOf(duracaoDias), 6, RoundingMode.HALF_UP);
     }
 
     private PlatformHealthScoreDTO.HealthSegment buildHealthSegment(long quantity, long total) {
