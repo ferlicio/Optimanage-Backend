@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
+import com.AIT.Optimanage.Models.Organization.TrialType;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -16,4 +20,7 @@ public class OrganizationResponse {
     private String razaoSocial;
     private String nomeFantasia;
     private Integer ownerUserId;
+    private LocalDate trialInicio;
+    private LocalDate trialFim;
+    private TrialType trialTipo;
 }

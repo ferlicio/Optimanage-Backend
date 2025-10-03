@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
 import com.AIT.Optimanage.Models.Organization.Organization;
+import com.AIT.Optimanage.Models.Organization.TrialType;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
@@ -283,14 +284,58 @@ class AnalyticsServiceTest {
         LocalDateTime now = LocalDateTime.now();
 
         List<OrganizationOnboardingProjection> allOrganizations = List.of(
-                onboarding(now.minusDays(40), today.minusDays(35)),
-                onboarding(now.minusDays(10), today.minusDays(2)),
-                onboarding(now.minusDays(5), null)
+                onboarding(
+                        now.minusDays(40),
+                        today.minusDays(35),
+                        today.minusDays(40),
+                        today.minusDays(26),
+                        TrialType.PLAN_DEFAULT
+                ),
+                onboarding(
+                        now.minusDays(20),
+                        null,
+                        today.minusDays(20),
+                        today.minusDays(1),
+                        TrialType.PLAN_DEFAULT
+                ),
+                onboarding(
+                        now.minusDays(10),
+                        today.minusDays(2),
+                        today.minusDays(10),
+                        today.minusDays(3),
+                        TrialType.CUSTOM
+                ),
+                onboarding(
+                        now.minusDays(5),
+                        null,
+                        today.minusDays(5),
+                        today.plusDays(5),
+                        TrialType.CUSTOM
+                )
         );
 
         List<OrganizationOnboardingProjection> recentOrganizations = List.of(
-                onboarding(now.minusDays(10), today.minusDays(2)),
-                onboarding(now.minusDays(5), null)
+                onboarding(
+                        now.minusDays(20),
+                        null,
+                        today.minusDays(20),
+                        today.minusDays(1),
+                        TrialType.PLAN_DEFAULT
+                ),
+                onboarding(
+                        now.minusDays(10),
+                        today.minusDays(2),
+                        today.minusDays(10),
+                        today.minusDays(3),
+                        TrialType.CUSTOM
+                ),
+                onboarding(
+                        now.minusDays(5),
+                        null,
+                        today.minusDays(5),
+                        today.plusDays(5),
+                        TrialType.CUSTOM
+                )
         );
 
         when(organizationRepository.findOrganizationOnboardingDates(any(), any(), any()))
@@ -299,13 +344,18 @@ class AnalyticsServiceTest {
         PlatformOnboardingMetricsDTO metrics = analyticsService.obterOnboardingMetricsPlataforma();
 
         assertNotNull(metrics);
-        assertEquals(3, metrics.getTotalOrganizacoes());
+        assertEquals(4, metrics.getTotalOrganizacoes());
         assertEquals(2, metrics.getTotalOrganizacoesAssinadas());
         assertBigDecimalEquals(new BigDecimal("6.50"), metrics.getTempoMedioDiasAteAssinatura());
         assertBigDecimalEquals(new BigDecimal("50.00"), metrics.getPercentualAssinatura7Dias());
         assertBigDecimalEquals(new BigDecimal("100.00"), metrics.getPercentualAssinatura30Dias());
-        assertBigDecimalEquals(new BigDecimal("66.67"), metrics.getTaxaConversaoTotal());
-        assertBigDecimalEquals(new BigDecimal("50.00"), metrics.getTaxaConversaoUltimos30Dias());
+        assertBigDecimalEquals(new BigDecimal("50.00"), metrics.getTaxaConversaoTotal());
+        assertBigDecimalEquals(new BigDecimal("33.33"), metrics.getTaxaConversaoUltimos30Dias());
+        assertEquals(4, metrics.getTotalTrials());
+        assertEquals(1, metrics.getTrialsAtivos());
+        assertEquals(1, metrics.getTrialsExpirados());
+        assertBigDecimalEquals(new BigDecimal("50.00"), metrics.getTaxaConversaoTrials());
+        assertBigDecimalEquals(new BigDecimal("25.00"), metrics.getTaxaConversaoTrialsNoPrazo());
     }
 
     @Test
@@ -329,6 +379,11 @@ class AnalyticsServiceTest {
         assertBigDecimalEquals(BigDecimal.ZERO, metrics.getPercentualAssinatura30Dias());
         assertBigDecimalEquals(BigDecimal.ZERO, metrics.getTaxaConversaoTotal());
         assertBigDecimalEquals(BigDecimal.ZERO, metrics.getTaxaConversaoUltimos30Dias());
+        assertEquals(0, metrics.getTotalTrials());
+        assertEquals(0, metrics.getTrialsAtivos());
+        assertEquals(0, metrics.getTrialsExpirados());
+        assertBigDecimalEquals(BigDecimal.ZERO, metrics.getTaxaConversaoTrials());
+        assertBigDecimalEquals(BigDecimal.ZERO, metrics.getTaxaConversaoTrialsNoPrazo());
     }
 
     @Test
@@ -371,8 +426,12 @@ class AnalyticsServiceTest {
                 .orElse(null);
     }
 
-    private OrganizationOnboardingProjection onboarding(LocalDateTime createdAt, LocalDate signedAt) {
-        return new OnboardingProjectionStub(createdAt, signedAt);
+    private OrganizationOnboardingProjection onboarding(LocalDateTime createdAt,
+                                                         LocalDate signedAt,
+                                                         LocalDate trialInicio,
+                                                         LocalDate trialFim,
+                                                         TrialType trialTipo) {
+        return new OnboardingProjectionStub(createdAt, signedAt, trialInicio, trialFim, trialTipo);
     }
 
     private void assertBigDecimalEquals(BigDecimal expected, BigDecimal actual) {
@@ -390,10 +449,20 @@ class AnalyticsServiceTest {
     private static class OnboardingProjectionStub implements OrganizationOnboardingProjection {
         private final LocalDateTime createdAt;
         private final LocalDate dataAssinatura;
+        private final LocalDate trialInicio;
+        private final LocalDate trialFim;
+        private final TrialType trialTipo;
 
-        private OnboardingProjectionStub(LocalDateTime createdAt, LocalDate dataAssinatura) {
+        private OnboardingProjectionStub(LocalDateTime createdAt,
+                                         LocalDate dataAssinatura,
+                                         LocalDate trialInicio,
+                                         LocalDate trialFim,
+                                         TrialType trialTipo) {
             this.createdAt = createdAt;
             this.dataAssinatura = dataAssinatura;
+            this.trialInicio = trialInicio;
+            this.trialFim = trialFim;
+            this.trialTipo = trialTipo;
         }
 
         @Override
@@ -404,6 +473,21 @@ class AnalyticsServiceTest {
         @Override
         public LocalDate getDataAssinatura() {
             return dataAssinatura;
+        }
+
+        @Override
+        public LocalDate getTrialInicio() {
+            return trialInicio;
+        }
+
+        @Override
+        public LocalDate getTrialFim() {
+            return trialFim;
+        }
+
+        @Override
+        public TrialType getTrialTipo() {
+            return trialTipo;
         }
     }
 }

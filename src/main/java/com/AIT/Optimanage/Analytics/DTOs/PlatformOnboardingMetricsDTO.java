@@ -16,4 +16,9 @@ public class PlatformOnboardingMetricsDTO {
     BigDecimal percentualAssinatura30Dias;
     BigDecimal taxaConversaoTotal;
     BigDecimal taxaConversaoUltimos30Dias;
+    long totalTrials;
+    long trialsAtivos;
+    long trialsExpirados;
+    BigDecimal taxaConversaoTrials;
+    BigDecimal taxaConversaoTrialsNoPrazo;
 }

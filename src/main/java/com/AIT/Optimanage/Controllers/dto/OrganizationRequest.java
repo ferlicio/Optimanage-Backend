@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+import com.AIT.Optimanage.Models.Organization.TrialType;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -38,6 +40,12 @@ public class OrganizationRequest {
 
     @NotNull
     private Integer planoId;
+
+    private LocalDate trialInicio;
+
+    private LocalDate trialFim;
+
+    private TrialType trialTipo;
 
     @Valid
     @NotNull

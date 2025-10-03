@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.AuditableEntity;
 import com.AIT.Optimanage.Models.OwnableEntity;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
+import com.AIT.Optimanage.Models.Organization.TrialType;
 import com.AIT.Optimanage.Models.Audit.OwnerEntityListener;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -72,5 +73,12 @@ public class Organization extends AuditableEntity implements OwnableEntity {
 
     @Column(precision = 2)
     private Float metaAnual;
+
+    private LocalDate trialInicio;
+
+    private LocalDate trialFim;
+
+    @Enumerated(EnumType.STRING)
+    private TrialType trialTipo;
 }
 
