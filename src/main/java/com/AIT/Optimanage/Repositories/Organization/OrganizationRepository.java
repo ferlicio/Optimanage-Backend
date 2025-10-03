@@ -126,5 +126,17 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
     long countOrganizationsActiveByDateRange(@Param("inicio") LocalDate inicio,
                                              @Param("fim") LocalDate fim,
                                              @Param("excludedOrganizationId") Integer excludedOrganizationId);
+
+    @Query("""
+            SELECT o.createdAt AS createdAt,
+                   o.dataAssinatura AS dataAssinatura
+            FROM Organization o
+            WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+              AND (:createdSince IS NULL OR o.createdAt >= :createdSince)
+              AND (:signedSince IS NULL OR o.dataAssinatura >= :signedSince)
+            """)
+    List<OrganizationOnboardingProjection> findOrganizationOnboardingDates(@Param("createdSince") LocalDateTime createdSince,
+                                                                           @Param("signedSince") LocalDate signedSince,
+                                                                           @Param("excludedOrganizationId") Integer excludedOrganizationId);
 }
 
