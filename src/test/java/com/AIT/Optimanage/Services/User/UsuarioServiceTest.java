@@ -10,12 +10,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.AIT.Optimanage.Controllers.User.dto.UserResponse;
+import com.AIT.Optimanage.Models.Organization.Organization;
+import com.AIT.Optimanage.Models.Plano;
+import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Support.PlatformConstants;
+import com.AIT.Optimanage.Services.AuditTrailService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +45,7 @@ class UsuarioServiceTest {
     @Mock private PlanoRepository planoRepository;
     @Mock private CacheManager cacheManager;
     @Mock private BCryptPasswordEncoder passwordEncoder;
+    @Mock private AuditTrailService auditTrailService;
 
     @InjectMocks private UsuarioService usuarioService;
 
@@ -57,6 +62,54 @@ class UsuarioServiceTest {
     @AfterEach
     void tearDown() {
         CurrentUser.clear();
+    }
+
+    @Test
+    void atualizarPlanoAtivoRegistraAuditoria() {
+        User usuario = User.builder().role(Role.OWNER).build();
+        usuario.setId(1);
+        usuario.setTenantId(10);
+        usuario.setOrganizationId(77);
+
+        Plano planoAnterior = Plano.builder()
+                .nome("Trial")
+                .valor(0f)
+                .duracaoDias(30)
+                .qtdAcessos(1)
+                .build();
+        planoAnterior.setId(5);
+
+        Plano novoPlano = Plano.builder()
+                .nome("Premium")
+                .valor(199.9f)
+                .duracaoDias(30)
+                .qtdAcessos(1)
+                .build();
+        novoPlano.setId(8);
+
+        Organization organization = Organization.builder()
+                .ownerUser(usuario)
+                .planoAtivoId(planoAnterior)
+                .build();
+        organization.setId(77);
+        organization.setTenantId(77);
+
+        when(userRepository.findByIdAndOrganizationId(1, 10)).thenReturn(Optional.of(usuario));
+        when(organizationRepository.findById(77)).thenReturn(Optional.of(organization));
+        when(planoRepository.findById(5)).thenReturn(Optional.of(planoAnterior));
+        when(planoRepository.findById(8)).thenReturn(Optional.of(novoPlano));
+        when(userRepository.countByOrganizationIdAndAtivoTrue(77)).thenReturn(1L);
+        when(organizationRepository.save(organization)).thenReturn(organization);
+
+        usuarioService.atualizarPlanoAtivo(1, 8);
+
+        verify(auditTrailService).recordPlanSubscription(
+                eq(organization),
+                eq(planoAnterior),
+                eq(novoPlano),
+                eq(true),
+                eq(false)
+        );
     }
 
     @Test

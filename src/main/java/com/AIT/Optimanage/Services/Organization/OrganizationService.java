@@ -13,6 +13,7 @@ import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.AuditTrailService;
 import com.AIT.Optimanage.Support.PlatformConstants;
 import com.AIT.Optimanage.Support.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,6 +32,7 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final PlanoRepository planoRepository;
+    private final AuditTrailService auditTrailService;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -77,6 +79,14 @@ public class OrganizationService {
             owner.setTenantId(orgId);
             owner.setOrganization(organization);
             organization.setTenantId(orgId);
+
+            auditTrailService.recordPlanSubscription(
+                    organization,
+                    null,
+                    plano,
+                    false,
+                    isTrialPlan(plano)
+            );
 
             return OrganizationResponse.builder()
                     .id(orgId)
@@ -177,5 +187,13 @@ public class OrganizationService {
         if (limite != null && limite > 0 && usuariosAtivos + novosUsuarios > limite) {
             throw new IllegalStateException("Limite de usuários do plano atingido");
         }
+    }
+
+    private boolean isTrialPlan(Plano plano) {
+        if (plano == null) {
+            return false;
+        }
+        Float valor = plano.getValor();
+        return valor == null || Float.compare(valor, 0f) <= 0;
     }
 }

@@ -1,6 +1,8 @@
 package com.AIT.Optimanage.Services;
 
 import com.AIT.Optimanage.Models.Audit.AuditTrail;
+import com.AIT.Optimanage.Models.Organization.Organization;
+import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Repositories.Audit.AuditTrailRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Support.TenantContext;
@@ -23,6 +25,42 @@ public class AuditTrailService {
 
     public void recordSaleCancellation(Integer vendaId, String details) {
         record("VENDA", vendaId, "CANCELAMENTO_VENDA", details);
+    }
+
+    public void recordPlanSubscription(
+            Organization organization,
+            Plano previousPlan,
+            Plano newPlan,
+            boolean previousTrial,
+            boolean newTrial
+    ) {
+        if (organization == null) {
+            return;
+        }
+
+        String previousPlanInfo = previousPlan == null
+                ? "Nenhum"
+                : String.format("%s (ID: %d, trial=%s)",
+                previousPlan.getNome(),
+                previousPlan.getId(),
+                previousTrial);
+
+        String newPlanInfo = newPlan == null
+                ? "Nenhum"
+                : String.format("%s (ID: %d, trial=%s)",
+                newPlan.getNome(),
+                newPlan.getId(),
+                newTrial);
+
+        String details = String.format(
+                "Organização: %s (ID: %d); Plano anterior: %s; Plano atual: %s",
+                organization.getNomeFantasia(),
+                organization.getId(),
+                previousPlanInfo,
+                newPlanInfo
+        );
+
+        record("ORGANIZACAO", organization.getId(), "ALTERACAO_ASSINATURA_PLANO", details);
     }
 
     public void record(String entityType, Integer entityId, String action, String details) {

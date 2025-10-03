@@ -10,6 +10,7 @@ import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Support.PlatformConstants;
+import com.AIT.Optimanage.Services.AuditTrailService;
 import java.util.Optional;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class UsuarioService {
     private final PlanoRepository planoRepository;
     private final CacheManager cacheManager;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final AuditTrailService auditTrailService;
 
     public UserResponse salvarUsuario(UserRequest request) {
         Integer organizationId = CurrentUser.getOrganizationId();
@@ -86,6 +88,12 @@ public class UsuarioService {
         if (organization.getOwnerUser() == null || !organization.getOwnerUser().getId().equals(usuario.getId())) {
             throw new AccessDeniedException("Usuário não autorizado a alterar o plano da organização");
         }
+
+        Plano planoAnterior = null;
+        Integer planoAtualId = organization.getPlanoAtivoId();
+        if (planoAtualId != null) {
+            planoAnterior = planoRepository.findById(planoAtualId).orElse(null);
+        }
         Plano plano = planoRepository.findById(novoPlanoId)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
 
@@ -95,6 +103,14 @@ public class UsuarioService {
         organization.setPlanoAtivoId(plano);
         organizationRepository.save(organization);
         evictPlanoCache(organization.getId());
+
+        auditTrailService.recordPlanSubscription(
+                organization,
+                planoAnterior,
+                plano,
+                isTrialPlan(planoAnterior),
+                isTrialPlan(plano)
+        );
         return toResponse(usuario);
     }
 
@@ -170,6 +186,14 @@ public class UsuarioService {
      */
     private boolean isPlatformOrganization(Integer organizationId) {
         return PlatformConstants.PLATFORM_ORGANIZATION_ID.equals(organizationId);
+    }
+
+    private boolean isTrialPlan(Plano plano) {
+        if (plano == null) {
+            return false;
+        }
+        Float valor = plano.getValor();
+        return valor == null || Float.compare(valor, 0f) <= 0;
     }
 }
 
