@@ -1,5 +1,6 @@
 package com.AIT.Optimanage.Analytics;
 
+import com.AIT.Optimanage.Analytics.DTOs.PlatformOnboardingMetricsDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
@@ -8,6 +9,7 @@ import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationOnboardingProjection;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
@@ -270,6 +272,66 @@ class AnalyticsServiceTest {
     }
 
     @Test
+    void shouldComputePlatformOnboardingMetrics() {
+        CurrentUser.set(buildUser(PlatformConstants.PLATFORM_ORGANIZATION_ID));
+
+        Organization platformOrganization = buildOrganization(PlatformConstants.PLATFORM_ORGANIZATION_ID, null, null);
+        when(organizationRepository.findById(PlatformConstants.PLATFORM_ORGANIZATION_ID))
+                .thenReturn(java.util.Optional.of(platformOrganization));
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
+
+        List<OrganizationOnboardingProjection> allOrganizations = List.of(
+                onboarding(now.minusDays(40), today.minusDays(35)),
+                onboarding(now.minusDays(10), today.minusDays(2)),
+                onboarding(now.minusDays(5), null)
+        );
+
+        List<OrganizationOnboardingProjection> recentOrganizations = List.of(
+                onboarding(now.minusDays(10), today.minusDays(2)),
+                onboarding(now.minusDays(5), null)
+        );
+
+        when(organizationRepository.findOrganizationOnboardingDates(any(), any(), any()))
+                .thenReturn(allOrganizations, recentOrganizations);
+
+        PlatformOnboardingMetricsDTO metrics = analyticsService.obterOnboardingMetricsPlataforma();
+
+        assertNotNull(metrics);
+        assertEquals(3, metrics.getTotalOrganizacoes());
+        assertEquals(2, metrics.getTotalOrganizacoesAssinadas());
+        assertBigDecimalEquals(new BigDecimal("6.50"), metrics.getTempoMedioDiasAteAssinatura());
+        assertBigDecimalEquals(new BigDecimal("50.00"), metrics.getPercentualAssinatura7Dias());
+        assertBigDecimalEquals(new BigDecimal("100.00"), metrics.getPercentualAssinatura30Dias());
+        assertBigDecimalEquals(new BigDecimal("66.67"), metrics.getTaxaConversaoTotal());
+        assertBigDecimalEquals(new BigDecimal("50.00"), metrics.getTaxaConversaoUltimos30Dias());
+    }
+
+    @Test
+    void shouldReturnZeroedOnboardingMetricsWhenNoOrganizations() {
+        CurrentUser.set(buildUser(PlatformConstants.PLATFORM_ORGANIZATION_ID));
+
+        Organization platformOrganization = buildOrganization(PlatformConstants.PLATFORM_ORGANIZATION_ID, null, null);
+        when(organizationRepository.findById(PlatformConstants.PLATFORM_ORGANIZATION_ID))
+                .thenReturn(java.util.Optional.of(platformOrganization));
+
+        when(organizationRepository.findOrganizationOnboardingDates(any(), any(), any()))
+                .thenReturn(List.of(), List.of());
+
+        PlatformOnboardingMetricsDTO metrics = analyticsService.obterOnboardingMetricsPlataforma();
+
+        assertNotNull(metrics);
+        assertEquals(0, metrics.getTotalOrganizacoes());
+        assertEquals(0, metrics.getTotalOrganizacoesAssinadas());
+        assertBigDecimalEquals(BigDecimal.ZERO, metrics.getTempoMedioDiasAteAssinatura());
+        assertBigDecimalEquals(BigDecimal.ZERO, metrics.getPercentualAssinatura7Dias());
+        assertBigDecimalEquals(BigDecimal.ZERO, metrics.getPercentualAssinatura30Dias());
+        assertBigDecimalEquals(BigDecimal.ZERO, metrics.getTaxaConversaoTotal());
+        assertBigDecimalEquals(BigDecimal.ZERO, metrics.getTaxaConversaoUltimos30Dias());
+    }
+
+    @Test
     void shouldRejectPlatformResumoForNonPlatformOrganization() {
         int organizationId = 99;
         CurrentUser.set(buildUser(organizationId));
@@ -309,6 +371,10 @@ class AnalyticsServiceTest {
                 .orElse(null);
     }
 
+    private OrganizationOnboardingProjection onboarding(LocalDateTime createdAt, LocalDate signedAt) {
+        return new OnboardingProjectionStub(createdAt, signedAt);
+    }
+
     private void assertBigDecimalEquals(BigDecimal expected, BigDecimal actual) {
         assertEquals(0, expected.compareTo(actual), () -> "Expected " + expected + " but was " + actual);
     }
@@ -319,5 +385,25 @@ class AnalyticsServiceTest {
         venda.setDataEfetuacao(data);
         venda.setValorFinal(valorFinal);
         return venda;
+    }
+
+    private static class OnboardingProjectionStub implements OrganizationOnboardingProjection {
+        private final LocalDateTime createdAt;
+        private final LocalDate dataAssinatura;
+
+        private OnboardingProjectionStub(LocalDateTime createdAt, LocalDate dataAssinatura) {
+            this.createdAt = createdAt;
+            this.dataAssinatura = dataAssinatura;
+        }
+
+        @Override
+        public LocalDateTime getCreatedAt() {
+            return createdAt;
+        }
+
+        @Override
+        public LocalDate getDataAssinatura() {
+            return dataAssinatura;
+        }
     }
 }

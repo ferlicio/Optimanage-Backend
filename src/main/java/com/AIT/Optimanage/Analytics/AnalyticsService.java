@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Analytics.DTOs.InventoryAlertDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformEngajamentoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformFeatureAdoptionDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformHealthScoreDTO;
+import com.AIT.Optimanage.Analytics.DTOs.PlatformOnboardingMetricsDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformOrganizationsResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PlatformResumoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
@@ -14,6 +15,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationPlanFinancialProjection;
+import com.AIT.Optimanage.Repositories.Organization.OrganizationOnboardingProjection;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.Organization.PlanFeatureAdoptionProjection;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
@@ -235,6 +237,77 @@ public class AnalyticsService {
                 .build();
     }
 
+    public PlatformOnboardingMetricsDTO obterOnboardingMetricsPlataforma() {
+        requirePlatformOrganization();
+
+        Integer excludedOrganizationId = PlatformConstants.PLATFORM_ORGANIZATION_ID;
+
+        List<OrganizationOnboardingProjection> allOrganizations = emptyIfNull(
+                organizationRepository.findOrganizationOnboardingDates(null, null, excludedOrganizationId)
+        );
+
+        LocalDateTime recentCutoff = LocalDateTime.now().minusDays(30);
+        List<OrganizationOnboardingProjection> recentOrganizations = emptyIfNull(
+                organizationRepository.findOrganizationOnboardingDates(recentCutoff, null, excludedOrganizationId)
+        );
+
+        long totalOrganizations = allOrganizations.size();
+        long signedOrganizations = allOrganizations.stream()
+                .filter(organization -> organization.getDataAssinatura() != null)
+                .count();
+
+        BigDecimal totalDaysToSignature = BigDecimal.ZERO;
+        long eligibleForAverage = 0L;
+        long signedWithin7Days = 0L;
+        long signedWithin30Days = 0L;
+
+        for (OrganizationOnboardingProjection organization : allOrganizations) {
+            LocalDateTime createdAt = organization.getCreatedAt();
+            LocalDate signedAt = organization.getDataAssinatura();
+            if (createdAt == null || signedAt == null) {
+                continue;
+            }
+
+            long daysBetween = ChronoUnit.DAYS.between(createdAt.toLocalDate(), signedAt);
+            if (daysBetween < 0) {
+                daysBetween = 0;
+            }
+
+            totalDaysToSignature = totalDaysToSignature.add(BigDecimal.valueOf(daysBetween));
+            eligibleForAverage++;
+
+            if (daysBetween <= 7) {
+                signedWithin7Days++;
+            }
+            if (daysBetween <= 30) {
+                signedWithin30Days++;
+            }
+        }
+
+        BigDecimal averageDaysToSignature = eligibleForAverage > 0
+                ? totalDaysToSignature.divide(BigDecimal.valueOf(eligibleForAverage), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        BigDecimal percentageWithin7Days = calcularTaxaRetencao(signedWithin7Days, eligibleForAverage);
+        BigDecimal percentageWithin30Days = calcularTaxaRetencao(signedWithin30Days, eligibleForAverage);
+        BigDecimal conversionRate = calcularTaxaRetencao(signedOrganizations, totalOrganizations);
+
+        long recentSignedOrganizations = recentOrganizations.stream()
+                .filter(organization -> organization.getDataAssinatura() != null)
+                .count();
+        BigDecimal recentConversionRate = calcularTaxaRetencao(recentSignedOrganizations, recentOrganizations.size());
+
+        return PlatformOnboardingMetricsDTO.builder()
+                .totalOrganizacoes(totalOrganizations)
+                .totalOrganizacoesAssinadas(signedOrganizations)
+                .tempoMedioDiasAteAssinatura(averageDaysToSignature)
+                .percentualAssinatura7Dias(percentageWithin7Days)
+                .percentualAssinatura30Dias(percentageWithin30Days)
+                .taxaConversaoTotal(conversionRate)
+                .taxaConversaoUltimos30Dias(recentConversionRate)
+                .build();
+    }
+
     public PlatformResumoDTO obterResumoFinanceiroPlataforma() {
         requirePlatformOrganization();
 
@@ -443,6 +516,10 @@ public class AnalyticsService {
                 .metricasProduto(buildFeatureAdoptionMetrics(metricasProdutoEnabled, totalOrganizations))
                 .integracaoMarketplace(buildFeatureAdoptionMetrics(integracaoMarketplaceEnabled, totalOrganizations))
                 .build();
+    }
+
+    private <T> List<T> emptyIfNull(List<T> valores) {
+        return valores != null ? valores : List.of();
     }
 
     private InventoryAlertDTO toDto(InventoryAlert alert) {
