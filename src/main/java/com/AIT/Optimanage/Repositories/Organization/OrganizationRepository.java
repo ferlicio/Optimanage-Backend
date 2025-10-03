@@ -142,7 +142,10 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
 
     @Query("""
             SELECT o.createdAt AS createdAt,
-                   o.dataAssinatura AS dataAssinatura
+                   o.dataAssinatura AS dataAssinatura,
+                   o.trialInicio AS trialInicio,
+                   o.trialFim AS trialFim,
+                   o.trialTipo AS trialTipo
             FROM Organization o
             WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
               AND (:createdSince IS NULL OR o.createdAt >= :createdSince)

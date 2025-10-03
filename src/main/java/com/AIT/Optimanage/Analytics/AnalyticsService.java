@@ -11,6 +11,7 @@ import com.AIT.Optimanage.Analytics.DTOs.PrevisaoDTO;
 import com.AIT.Optimanage.Analytics.DTOs.ResumoDTO;
 import com.AIT.Optimanage.Models.Inventory.InventoryAlert;
 import com.AIT.Optimanage.Models.Organization.Organization;
+import com.AIT.Optimanage.Models.Organization.TrialType;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Repositories.Compra.CompraRepository;
@@ -260,10 +261,37 @@ public class AnalyticsService {
         long eligibleForAverage = 0L;
         long signedWithin7Days = 0L;
         long signedWithin30Days = 0L;
+        long trialsTotal = 0L;
+        long trialsAtivos = 0L;
+        long trialsExpirados = 0L;
+        long trialsConvertidos = 0L;
+        long trialsConvertidosNoPrazo = 0L;
+        LocalDate hoje = LocalDate.now();
 
         for (OrganizationOnboardingProjection organization : allOrganizations) {
             LocalDateTime createdAt = organization.getCreatedAt();
             LocalDate signedAt = organization.getDataAssinatura();
+            LocalDate trialInicio = organization.getTrialInicio();
+            LocalDate trialFim = organization.getTrialFim();
+            TrialType trialTipo = organization.getTrialTipo();
+            boolean possuiTrial = trialInicio != null || trialFim != null || trialTipo != null;
+
+            if (possuiTrial) {
+                trialsTotal++;
+                if (signedAt != null) {
+                    trialsConvertidos++;
+                    if (trialFim == null || !signedAt.isAfter(trialFim)) {
+                        trialsConvertidosNoPrazo++;
+                    }
+                } else {
+                    if (trialFim != null && trialFim.isBefore(hoje)) {
+                        trialsExpirados++;
+                    } else {
+                        trialsAtivos++;
+                    }
+                }
+            }
+
             if (createdAt == null || signedAt == null) {
                 continue;
             }
@@ -296,6 +324,8 @@ public class AnalyticsService {
                 .filter(organization -> organization.getDataAssinatura() != null)
                 .count();
         BigDecimal recentConversionRate = calcularTaxaRetencao(recentSignedOrganizations, recentOrganizations.size());
+        BigDecimal trialConversionRate = calcularTaxaRetencao(trialsConvertidos, trialsTotal);
+        BigDecimal trialOnTimeConversionRate = calcularTaxaRetencao(trialsConvertidosNoPrazo, trialsTotal);
 
         return PlatformOnboardingMetricsDTO.builder()
                 .totalOrganizacoes(totalOrganizations)
@@ -305,6 +335,11 @@ public class AnalyticsService {
                 .percentualAssinatura30Dias(percentageWithin30Days)
                 .taxaConversaoTotal(conversionRate)
                 .taxaConversaoUltimos30Dias(recentConversionRate)
+                .totalTrials(trialsTotal)
+                .trialsAtivos(trialsAtivos)
+                .trialsExpirados(trialsExpirados)
+                .taxaConversaoTrials(trialConversionRate)
+                .taxaConversaoTrialsNoPrazo(trialOnTimeConversionRate)
                 .build();
     }
 

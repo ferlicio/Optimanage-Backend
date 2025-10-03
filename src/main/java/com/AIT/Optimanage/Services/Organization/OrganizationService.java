@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Controllers.User.dto.UserRequest;
 import com.AIT.Optimanage.Controllers.dto.OrganizationRequest;
 import com.AIT.Optimanage.Controllers.dto.OrganizationResponse;
 import com.AIT.Optimanage.Models.Organization.Organization;
+import com.AIT.Optimanage.Models.Organization.TrialType;
 import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
@@ -23,6 +24,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @Service
@@ -44,6 +46,13 @@ public class OrganizationService {
 
         validarLimiteUsuarios(plano, 0, 1);
 
+        boolean planoEhTrial = isTrialPlan(plano);
+        LocalDate trialInicio = request.getTrialInicio();
+        LocalDate trialFim = request.getTrialFim();
+        TrialType trialTipo = request.getTrialTipo();
+
+        validarIntervaloTrial(trialInicio, trialFim);
+
         Integer previousTenant = TenantContext.getTenantId();
         try {
             TenantContext.setTenantId(PlatformConstants.PLATFORM_ORGANIZATION_ID);
@@ -59,6 +68,27 @@ public class OrganizationService {
                     .build();
             owner = userRepository.save(owner);
 
+            if (planoEhTrial) {
+                if (trialInicio == null) {
+                    trialInicio = request.getDataAssinatura();
+                }
+                if (trialFim == null && trialInicio != null) {
+                    Integer duracao = plano.getDuracaoDias();
+                    if (duracao != null && duracao > 0) {
+                        trialFim = trialInicio.plusDays(duracao);
+                    }
+                }
+                if (trialTipo == null) {
+                    trialTipo = TrialType.PLAN_DEFAULT;
+                }
+            }
+
+            if ((trialInicio != null || trialFim != null) && trialTipo == null) {
+                trialTipo = TrialType.CUSTOM;
+            }
+
+            validarIntervaloTrial(trialInicio, trialFim);
+
             Organization organization = Organization.builder()
                     .ownerUser(owner)
                     .planoAtivoId(plano)
@@ -69,6 +99,9 @@ public class OrganizationService {
                     .email(request.getEmail())
                     .permiteOrcamento(request.getPermiteOrcamento())
                     .dataAssinatura(request.getDataAssinatura())
+                    .trialInicio(trialInicio)
+                    .trialFim(trialFim)
+                    .trialTipo(trialTipo)
                     .build();
             organization = organizationRepository.save(organization);
 
@@ -94,6 +127,9 @@ public class OrganizationService {
                     .razaoSocial(organization.getRazaoSocial())
                     .nomeFantasia(organization.getNomeFantasia())
                     .ownerUserId(owner.getId())
+                    .trialInicio(organization.getTrialInicio())
+                    .trialFim(organization.getTrialFim())
+                    .trialTipo(organization.getTrialTipo())
                     .build();
         } finally {
             if (previousTenant != null) {
@@ -195,5 +231,11 @@ public class OrganizationService {
         }
         Float valor = plano.getValor();
         return valor == null || Float.compare(valor, 0f) <= 0;
+    }
+
+    private void validarIntervaloTrial(LocalDate inicio, LocalDate fim) {
+        if (inicio != null && fim != null && fim.isBefore(inicio)) {
+            throw new IllegalArgumentException("Data de fim do trial não pode ser anterior ao início");
+        }
     }
 }
