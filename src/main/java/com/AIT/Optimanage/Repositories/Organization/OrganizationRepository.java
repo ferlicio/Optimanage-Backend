@@ -50,6 +50,19 @@ public interface OrganizationRepository extends JpaRepository<Organization, Inte
     List<PlanFeatureAdoptionProjection> aggregateFeatureAdoptionByPlan(@Param("excludedOrganizationId") Integer excludedOrganizationId);
 
     @Query("""
+            SELECT p.id AS planId,
+                   p.nome AS planName,
+                   p.valor AS planValue,
+                   p.duracaoDias AS planDurationDays,
+                   COUNT(o) AS organizationCount
+            FROM Organization o
+            JOIN o.planoAtivoId p
+            WHERE (:excludedOrganizationId IS NULL OR o.id <> :excludedOrganizationId)
+            GROUP BY p.id, p.nome, p.valor, p.duracaoDias
+            """)
+    List<OrganizationPlanFinancialProjection> aggregatePlanFinancials(@Param("excludedOrganizationId") Integer excludedOrganizationId);
+
+    @Query("""
             SELECT function('DATE', o.createdAt) AS dia,
                    COUNT(o) AS quantidade
             FROM Organization o
