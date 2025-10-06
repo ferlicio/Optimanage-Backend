@@ -36,7 +36,7 @@ public class TrialExpirationScheduler {
         try {
             TenantContext.setTenantId(PlatformConstants.PLATFORM_ORGANIZATION_ID);
 
-            Plano basePlan = planoRepository.findByNomeIgnoreCase(PlatformConstants.VIEW_ONLY_PLAN_NAME)
+            Plano platformBasePlan = planoRepository.findByNomeIgnoreCase(PlatformConstants.VIEW_ONLY_PLAN_NAME)
                     .orElseThrow(() -> new IllegalStateException("Plano base de visualização não encontrado"));
 
             LocalDate today = LocalDate.now(clock);
@@ -55,9 +55,10 @@ public class TrialExpirationScheduler {
                     continue;
                 }
 
-                boolean planChanged = currentPlan == null || !currentPlan.getId().equals(basePlan.getId());
+                Plano tenantViewOnlyPlan = resolveTenantViewOnlyPlan(organization, platformBasePlan);
+                boolean planChanged = currentPlan == null || !currentPlan.getId().equals(tenantViewOnlyPlan.getId());
                 Plano previousPlan = currentPlan;
-                organization.setPlanoAtivoId(basePlan);
+                organization.setPlanoAtivoId(tenantViewOnlyPlan);
                 organization.setTrialInicio(null);
                 organization.setTrialFim(null);
                 organization.setTrialTipo(null);
@@ -65,7 +66,7 @@ public class TrialExpirationScheduler {
 
                 evictPlanoCache(organization.getId());
                 if (planChanged) {
-                    recordAudit(organization, previousPlan, basePlan);
+                    recordAudit(organization, previousPlan, tenantViewOnlyPlan);
                 }
             }
         } finally {
@@ -75,6 +76,45 @@ public class TrialExpirationScheduler {
                 TenantContext.clear();
             }
         }
+    }
+
+    private Plano resolveTenantViewOnlyPlan(Organization organization, Plano platformBasePlan) {
+        Integer previousTenant = TenantContext.getTenantId();
+        try {
+            TenantContext.setTenantId(organization.getId());
+            return planoRepository.findByNomeIgnoreCaseAndOrganizationId(
+                            PlatformConstants.VIEW_ONLY_PLAN_NAME,
+                            organization.getId())
+                    .orElseGet(() -> cloneViewOnlyPlanForTenant(platformBasePlan));
+        } finally {
+            if (previousTenant != null) {
+                TenantContext.setTenantId(previousTenant);
+            } else {
+                TenantContext.clear();
+            }
+        }
+    }
+
+    private Plano cloneViewOnlyPlanForTenant(Plano platformBasePlan) {
+        Plano tenantPlan = Plano.builder()
+                .nome(platformBasePlan.getNome())
+                .valor(platformBasePlan.getValor())
+                .duracaoDias(platformBasePlan.getDuracaoDias())
+                .qtdAcessos(platformBasePlan.getQtdAcessos())
+                .maxUsuarios(platformBasePlan.getMaxUsuarios())
+                .maxProdutos(platformBasePlan.getMaxProdutos())
+                .maxClientes(platformBasePlan.getMaxClientes())
+                .maxFornecedores(platformBasePlan.getMaxFornecedores())
+                .maxServicos(platformBasePlan.getMaxServicos())
+                .agendaHabilitada(platformBasePlan.getAgendaHabilitada())
+                .recomendacoesHabilitadas(platformBasePlan.getRecomendacoesHabilitadas())
+                .pagamentosHabilitados(platformBasePlan.getPagamentosHabilitados())
+                .suportePrioritario(platformBasePlan.getSuportePrioritario())
+                .monitoramentoEstoqueHabilitado(platformBasePlan.getMonitoramentoEstoqueHabilitado())
+                .metricasProdutoHabilitadas(platformBasePlan.getMetricasProdutoHabilitadas())
+                .integracaoMarketplaceHabilitada(platformBasePlan.getIntegracaoMarketplaceHabilitada())
+                .build();
+        return planoRepository.save(tenantPlan);
     }
 
     private LocalDate resolveTrialEndDate(Organization organization, Plano currentPlan) {

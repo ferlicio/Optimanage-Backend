@@ -105,14 +105,20 @@ class TrialExpirationSchedulerTest {
         scheduler.downgradeExpiredTrials();
 
         Organization updated = organizationRepository.findById(organizationId).orElseThrow();
-        assertThat(updated.getPlanoAtivoId()).isEqualTo(basePlan.getId());
+        Plano assignedPlan = planoRepository.findById(updated.getPlanoAtivoId()).orElseThrow();
+        assertThat(assignedPlan.getNome()).isEqualTo(PlatformConstants.VIEW_ONLY_PLAN_NAME);
+        assertThat(assignedPlan.getTenantId()).isEqualTo(organizationId);
+        assertThat(assignedPlan.getValor()).isEqualTo(basePlan.getValor());
+        assertThat(assignedPlan.getDuracaoDias()).isEqualTo(basePlan.getDuracaoDias());
         assertThat(updated.getTrialInicio()).isNull();
         assertThat(updated.getTrialFim()).isNull();
         assertThat(updated.getTrialTipo()).isNull();
 
         assertPlanCacheEvicted(organizationId);
 
-        List<AuditTrail> entries = auditTrailRepository.findAll();
+        List<AuditTrail> entries = auditTrailRepository.findAll().stream()
+                .filter(entry -> organizationId.equals(entry.getTenantId()))
+                .toList();
         assertThat(entries).hasSize(1);
         AuditTrail entry = entries.get(0);
         assertThat(entry.getTenantId()).isEqualTo(organizationId);
@@ -151,12 +157,18 @@ class TrialExpirationSchedulerTest {
         scheduler.downgradeExpiredTrials();
 
         Organization updated = organizationRepository.findById(organizationId).orElseThrow();
-        assertThat(updated.getPlanoAtivoId()).isEqualTo(basePlan.getId());
+        Plano assignedPlan = planoRepository.findById(updated.getPlanoAtivoId()).orElseThrow();
+        assertThat(assignedPlan.getNome()).isEqualTo(PlatformConstants.VIEW_ONLY_PLAN_NAME);
+        assertThat(assignedPlan.getTenantId()).isEqualTo(organizationId);
+        assertThat(assignedPlan.getValor()).isEqualTo(basePlan.getValor());
+        assertThat(assignedPlan.getDuracaoDias()).isEqualTo(basePlan.getDuracaoDias());
         assertThat(updated.getTrialInicio()).isNull();
         assertThat(updated.getTrialFim()).isNull();
         assertThat(updated.getTrialTipo()).isNull();
 
-        List<AuditTrail> entries = auditTrailRepository.findAll();
+        List<AuditTrail> entries = auditTrailRepository.findAll().stream()
+                .filter(entry -> organizationId.equals(entry.getTenantId()))
+                .toList();
         assertThat(entries).hasSize(1);
     }
 
