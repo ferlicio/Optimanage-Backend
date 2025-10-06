@@ -51,7 +51,7 @@ public class TrialExpirationScheduler {
                 }
 
                 LocalDate trialEndDate = resolveTrialEndDate(organization, currentPlan);
-                if (trialEndDate == null || !trialEndDate.isBefore(today)) {
+                if (trialEndDate == null || trialEndDate.isAfter(today)) {
                     continue;
                 }
 
