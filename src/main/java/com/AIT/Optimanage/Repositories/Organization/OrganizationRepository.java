@@ -14,6 +14,8 @@ import java.util.List;
 @Repository
 public interface OrganizationRepository extends JpaRepository<Organization, Integer> {
 
+    List<Organization> findAllByTrialTipoIsNotNull();
+
     @Modifying(clearAutomatically = true)
     @Query("update Organization o set o.organizationId = :organizationId where o.id = :organizationId")
     void updateOrganizationTenant(@Param("organizationId") Integer organizationId);

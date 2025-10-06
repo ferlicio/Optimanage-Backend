@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.PlanoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Support.PlatformConstants;
 import com.AIT.Optimanage.Support.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
@@ -32,13 +33,17 @@ public class PlatformDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (organizationRepository.existsById(1)) {
-            return;
-        }
+        Integer previousTenant = TenantContext.getTenantId();
+        try {
+            TenantContext.setTenantId(PlatformConstants.PLATFORM_ORGANIZATION_ID);
 
-        TenantContext.setTenantId(1);
+            ensureViewOnlyPlanExists();
 
-        Plano plan = Plano.builder()
+            if (organizationRepository.existsById(PlatformConstants.PLATFORM_ORGANIZATION_ID)) {
+                return;
+            }
+
+            Plano plan = Plano.builder()
                 .nome("Platform")
                 .valor(0f)
                 .duracaoDias(0)
@@ -55,10 +60,9 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .monitoramentoEstoqueHabilitado(true)
                 .integracaoMarketplaceHabilitada(true)
                 .build();
-        plan.setId(1);
-        planoRepository.save(plan);
+            planoRepository.save(plan);
 
-        Plano trialSevenDays = Plano.builder()
+            Plano trialSevenDays = Plano.builder()
                 .nome("Trial 7 dias")
                 .valor(0f)
                 .duracaoDias(7)
@@ -76,10 +80,9 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .metricasProdutoHabilitadas(true)
                 .integracaoMarketplaceHabilitada(true)
                 .build();
-        trialSevenDays.setId(2);
-        planoRepository.save(trialSevenDays);
+            planoRepository.save(trialSevenDays);
 
-        Plano trialFourteenDays = Plano.builder()
+            Plano trialFourteenDays = Plano.builder()
                 .nome("Trial 14 dias")
                 .valor(0f)
                 .duracaoDias(14)
@@ -96,10 +99,9 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .metricasProdutoHabilitadas(true)
                 .integracaoMarketplaceHabilitada(false)
                 .build();
-        trialFourteenDays.setId(3);
-        planoRepository.save(trialFourteenDays);
+            planoRepository.save(trialFourteenDays);
 
-        Plano trialThirtyDays = Plano.builder()
+            Plano trialThirtyDays = Plano.builder()
                 .nome("Trial 30 dias")
                 .valor(0f)
                 .duracaoDias(30)
@@ -116,10 +118,9 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .metricasProdutoHabilitadas(false)
                 .integracaoMarketplaceHabilitada(false)
                 .build();
-        trialThirtyDays.setId(4);
-        planoRepository.save(trialThirtyDays);
+            planoRepository.save(trialThirtyDays);
 
-        User owner = User.builder()
+            User owner = User.builder()
                 .nome("Platform")
                 .sobrenome("Owner")
                 .email("owner@platform.local")
@@ -127,11 +128,10 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .role(Role.OWNER)
                 .ativo(true)
                 .build();
-        owner.setId(1);
-        owner.setTenantId(1);
-        userRepository.save(owner);
+            owner.setTenantId(1);
+            userRepository.save(owner);
 
-        Organization organization = Organization.builder()
+            Organization organization = Organization.builder()
                 .ownerUser(owner)
                 .planoAtivoId(plan)
                 .cnpj("00000000000000")
@@ -140,13 +140,45 @@ public class PlatformDataInitializer implements ApplicationRunner {
                 .permiteOrcamento(true)
                 .dataAssinatura(LocalDate.now())
                 .build();
-        organization.setId(1);
-        organization.setTenantId(1);
-        organizationRepository.save(organization);
+            organization.setTenantId(1);
+            organizationRepository.save(organization);
 
-        owner.setOrganization(organization);
-        userRepository.save(owner);
+            owner.setOrganization(organization);
+            userRepository.save(owner);
+        } finally {
+            if (previousTenant != null) {
+                TenantContext.setTenantId(previousTenant);
+            } else {
+                TenantContext.clear();
+            }
+        }
+    }
 
-        TenantContext.clear();
+    private void ensureViewOnlyPlanExists() {
+        boolean exists = planoRepository.findByNomeIgnoreCase(PlatformConstants.VIEW_ONLY_PLAN_NAME)
+                .isPresent();
+        if (exists) {
+            return;
+        }
+
+        Plano viewOnlyPlan = Plano.builder()
+                .nome(PlatformConstants.VIEW_ONLY_PLAN_NAME)
+                .valor(0f)
+                .duracaoDias(0)
+                .qtdAcessos(0)
+                .maxUsuarios(0)
+                .maxProdutos(0)
+                .maxClientes(0)
+                .maxFornecedores(0)
+                .maxServicos(0)
+                .agendaHabilitada(false)
+                .recomendacoesHabilitadas(false)
+                .pagamentosHabilitados(false)
+                .suportePrioritario(false)
+                .monitoramentoEstoqueHabilitado(false)
+                .metricasProdutoHabilitadas(false)
+                .integracaoMarketplaceHabilitada(false)
+                .build();
+        planoRepository.save(viewOnlyPlan);
     }
 }
