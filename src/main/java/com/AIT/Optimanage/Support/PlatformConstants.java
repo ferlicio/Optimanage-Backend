@@ -14,5 +14,11 @@ public final class PlatformConstants {
      * organization can perform cross-tenant management operations.
      */
     public static final Integer PLATFORM_ORGANIZATION_ID = 1;
+
+    /**
+     * Nome do plano base utilizado para organizações após o término do período trial.
+     */
+    public static final String VIEW_ONLY_PLAN_NAME = "Somente visualização";
+
 }
 
