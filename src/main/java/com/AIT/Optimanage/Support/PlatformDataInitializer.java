@@ -58,6 +58,67 @@ public class PlatformDataInitializer implements ApplicationRunner {
         plan.setId(1);
         planoRepository.save(plan);
 
+        Plano trialSevenDays = Plano.builder()
+                .nome("Trial 7 dias")
+                .valor(0f)
+                .duracaoDias(7)
+                .qtdAcessos(500)
+                .maxUsuarios(5)
+                .maxProdutos(120)
+                .maxClientes(120)
+                .maxFornecedores(60)
+                .maxServicos(60)
+                .agendaHabilitada(true)
+                .recomendacoesHabilitadas(true)
+                .pagamentosHabilitados(true)
+                .suportePrioritario(true)
+                .monitoramentoEstoqueHabilitado(true)
+                .metricasProdutoHabilitadas(true)
+                .integracaoMarketplaceHabilitada(true)
+                .build();
+        trialSevenDays.setId(2);
+        planoRepository.save(trialSevenDays);
+
+        Plano trialFourteenDays = Plano.builder()
+                .nome("Trial 14 dias")
+                .valor(0f)
+                .duracaoDias(14)
+                .qtdAcessos(300)
+                .maxUsuarios(4)
+                .maxProdutos(80)
+                .maxClientes(80)
+                .maxFornecedores(40)
+                .maxServicos(40)
+                .agendaHabilitada(true)
+                .recomendacoesHabilitadas(true)
+                .pagamentosHabilitados(true)
+                .monitoramentoEstoqueHabilitado(true)
+                .metricasProdutoHabilitadas(true)
+                .integracaoMarketplaceHabilitada(false)
+                .build();
+        trialFourteenDays.setId(3);
+        planoRepository.save(trialFourteenDays);
+
+        Plano trialThirtyDays = Plano.builder()
+                .nome("Trial 30 dias")
+                .valor(0f)
+                .duracaoDias(30)
+                .qtdAcessos(150)
+                .maxUsuarios(3)
+                .maxProdutos(40)
+                .maxClientes(40)
+                .maxFornecedores(20)
+                .maxServicos(20)
+                .agendaHabilitada(true)
+                .recomendacoesHabilitadas(false)
+                .pagamentosHabilitados(false)
+                .monitoramentoEstoqueHabilitado(false)
+                .metricasProdutoHabilitadas(false)
+                .integracaoMarketplaceHabilitada(false)
+                .build();
+        trialThirtyDays.setId(4);
+        planoRepository.save(trialThirtyDays);
+
         User owner = User.builder()
                 .nome("Platform")
                 .sobrenome("Owner")
