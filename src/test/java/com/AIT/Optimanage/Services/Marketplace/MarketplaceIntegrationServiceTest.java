@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Models.User.Role;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Marketplace.MarketplaceIntegrationRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.PlanoService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +42,9 @@ class MarketplaceIntegrationServiceTest {
     @Mock
     private PlanoService planoService;
 
+    @Mock
+    private PlanoAccessGuard planoAccessGuard;
+
     private MarketplaceIntegrationService integrationService;
 
     private Clock fixedClock;
@@ -49,7 +53,12 @@ class MarketplaceIntegrationServiceTest {
     @BeforeEach
     void setUp() {
         fixedClock = Clock.fixed(Instant.parse("2024-02-20T12:00:00Z"), ZoneOffset.UTC);
-        integrationService = new MarketplaceIntegrationService(integrationRepository, planoService, fixedClock);
+        integrationService = new MarketplaceIntegrationService(
+                integrationRepository,
+                planoService,
+                planoAccessGuard,
+                fixedClock
+        );
 
         loggedUser = new User();
         loggedUser.setId(10);
@@ -97,6 +106,7 @@ class MarketplaceIntegrationServiceTest {
 
         ArgumentCaptor<MarketplaceIntegration> captor = ArgumentCaptor.forClass(MarketplaceIntegration.class);
         verify(integrationRepository).save(captor.capture());
+        verify(planoAccessGuard).garantirPermissaoDeEscrita(321);
         MarketplaceIntegration salvo = captor.getValue();
 
         assertThat(salvo.getOrganizationId()).isEqualTo(321);
@@ -128,6 +138,7 @@ class MarketplaceIntegrationServiceTest {
 
         verify(integrationRepository).findByOrganizationId(321);
         verify(integrationRepository).save(eq(integration));
+        verify(planoAccessGuard).garantirPermissaoDeEscrita(321);
 
         LocalDateTime expectedTime = LocalDateTime.ofInstant(fixedClock.instant(), fixedClock.getZone());
         assertThat(integration.getLastSyncAt()).isEqualTo(expectedTime);
