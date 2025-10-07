@@ -27,6 +27,7 @@ public class InventoryService {
 
     private final ProdutoRepository produtoRepository;
     private final InventoryHistoryRepository historyRepository;
+    private final PlanoAccessGuard planoAccessGuard;
 
     @Transactional
     public void incrementar(Integer produtoId, Integer quantidade) {
@@ -55,6 +56,8 @@ public class InventoryService {
         }
         Integer organizationId = Optional.ofNullable(TenantContext.getTenantId())
                 .orElseThrow(() -> new IllegalStateException("Organização não definida no contexto."));
+
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
 
         Produto produto = produtoRepository.findByIdAndOrganizationId(produtoId, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado: " + produtoId));
