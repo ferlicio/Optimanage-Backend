@@ -14,6 +14,7 @@ import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Repositories.ServicoRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Support.PlatformConstants;
 import com.AIT.Optimanage.Support.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,8 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class PlanoService {
+
+    public static final String VIEW_ONLY_PLAN_IDENTIFIER = PlatformConstants.VIEW_ONLY_PLAN_NAME;
 
     private final PlanoRepository planoRepository;
     private final OrganizationRepository organizationRepository;
@@ -133,6 +136,14 @@ public class PlanoService {
         return organizationRepository.findById(finalOrganizationId)
                 .map(Organization::getPlanoAtivoId)
                 .flatMap(planoRepository::findById);
+    }
+
+    public boolean isPlanoSomenteVisualizacao(Plano plano) {
+        if (plano == null) {
+            return false;
+        }
+        String nome = plano.getNome();
+        return nome != null && VIEW_ONLY_PLAN_IDENTIFIER.equalsIgnoreCase(nome.trim());
     }
 
     public PlanoQuotaResponse obterPlanoAtual(User user) {

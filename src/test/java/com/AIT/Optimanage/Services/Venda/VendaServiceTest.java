@@ -29,6 +29,7 @@ import com.AIT.Optimanage.Services.Venda.PagamentoVendaService;
 import com.AIT.Optimanage.Services.AuditTrailService;
 import com.AIT.Optimanage.Services.Payment.PaymentConfigService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
@@ -105,6 +106,8 @@ class VendaServiceTest {
     private InventoryService inventoryService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private PlanoAccessGuard planoAccessGuard;
 
     @InjectMocks
     private VendaService vendaService;

@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Models.Enums.StatusPagamento;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Repositories.Compra.PagamentoCompraRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.util.List;
 public class PagamentoCompraService {
 
     private final PagamentoCompraRepository pagamentoCompraRepository;
+    private final PlanoAccessGuard planoAccessGuard;
 
     public List<CompraPagamento> listarPagamentosCompra(Integer idCompra) {
         Integer organizationId = CurrentUser.getOrganizationId();
@@ -56,6 +58,7 @@ public class PagamentoCompraService {
     }
 
     public void registrarPagamento(Compra compra, Integer idPagamento) {
+        garantirEscrita(compra != null ? compra.getOrganizationId() : null);
         CompraPagamento pagamento = listarUmPagamentoCompra(compra , idPagamento);
 
         pagamento.setDataPagamento(LocalDate.now());
@@ -65,6 +68,7 @@ public class PagamentoCompraService {
     }
 
     public void lancarPagamento(Compra compra, PagamentoDTO pagamento) {
+        garantirEscrita(compra != null ? compra.getOrganizationId() : null);
 
         CompraPagamento compraPagamento = CompraPagamento.builder()
                 .compra(compra)
@@ -81,6 +85,7 @@ public class PagamentoCompraService {
     }
 
     public CompraPagamento editarPagamento(Compra compra, PagamentoDTO pagamento, Integer idPagamento) {
+        garantirEscrita(compra != null ? compra.getOrganizationId() : null);
         CompraPagamento compraPagamento = listarUmPagamentoCompra(compra, idPagamento);
 
         compraPagamento.setValorPago(pagamento.getValorPago());
@@ -95,6 +100,7 @@ public class PagamentoCompraService {
 
     public void estornarPagamento(Integer idPagamento) {
         CompraPagamento compraPagamento = listarUmPagamento(idPagamento);
+        garantirEscrita(compraPagamento.getCompra() != null ? compraPagamento.getCompra().getOrganizationId() : null);
         if (compraPagamento.getStatusPagamento() != StatusPagamento.PAGO) {
             throw new RuntimeException("Pagamento não pode ser estornado");
         }
@@ -104,6 +110,7 @@ public class PagamentoCompraService {
 
     public void estornarPagamento(CompraPagamento pagamento) {
         CompraPagamento compraPagamento = listarUmPagamento(pagamento.getId());
+        garantirEscrita(compraPagamento.getCompra() != null ? compraPagamento.getCompra().getOrganizationId() : null);
         if (compraPagamento.getStatusPagamento() != StatusPagamento.PAGO) {
             throw new RuntimeException("Pagamento não pode ser estornado");
         }
@@ -113,7 +120,15 @@ public class PagamentoCompraService {
 
     public void cancelarPagamento(CompraPagamento pagamento) {
         CompraPagamento compraPagamento = listarUmPagamento(pagamento.getId());
+        garantirEscrita(compraPagamento.getCompra() != null ? compraPagamento.getCompra().getOrganizationId() : null);
         compraPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
         pagamentoCompraRepository.save(compraPagamento);
+    }
+
+    private void garantirEscrita(Integer organizationId) {
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
     }
 }

@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.ClienteContato;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteContatoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ public class ClienteContatoService {
 
     private final ClienteContatoRepository clienteContatoRepository;
     private final ClienteService clienteService;
+    private final PlanoAccessGuard planoAccessGuard;
 
     public List<ClienteContato> listarContatos(Integer idCliente) {
         Integer organizationId = CurrentUser.getOrganizationId();
@@ -38,6 +40,8 @@ public class ClienteContatoService {
     public ClienteContato cadastrarContato(Integer idCliente, ClienteContato contato) {
         Cliente cliente = clienteService.listarUmCliente(idCliente);
 
+        planoAccessGuard.garantirPermissaoDeEscrita(cliente.getOrganizationId());
+
         contato.setId(null);
         contato.setCliente(cliente);
         contato.setTenantId(cliente.getOrganizationId());
@@ -47,6 +51,8 @@ public class ClienteContatoService {
     public ClienteContato editarContato(Integer idCliente, Integer idContato, ClienteContato contato) {
         ClienteContato contatoExistente = listarUmContato(idCliente, idContato);
 
+        planoAccessGuard.garantirPermissaoDeEscrita(contatoExistente.getOrganizationId());
+
         contato.setId(contatoExistente.getId());
         contato.setCliente(contatoExistente.getCliente());
         contato.setTenantId(contatoExistente.getOrganizationId());
@@ -55,6 +61,7 @@ public class ClienteContatoService {
 
     public void excluirContato(Integer idCliente, Integer idContato) {
         ClienteContato contato = listarUmContato(idCliente, idContato);
+        planoAccessGuard.garantirPermissaoDeEscrita(contato.getOrganizationId());
         clienteContatoRepository.delete(contato);
     }
 }

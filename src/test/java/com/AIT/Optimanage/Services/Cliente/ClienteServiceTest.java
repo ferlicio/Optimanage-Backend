@@ -14,7 +14,7 @@ class ClienteServiceTest {
         cliente.setTipoPessoa(TipoPessoa.PF);
         cliente.setInscricaoMunicipal("12345");
 
-        ClienteService service = new ClienteService(null, null, null, null);
+        ClienteService service = new ClienteService(null, null, null, null, null);
         service.validarCliente(cliente);
 
         assertNull(cliente.getInscricaoMunicipal());
