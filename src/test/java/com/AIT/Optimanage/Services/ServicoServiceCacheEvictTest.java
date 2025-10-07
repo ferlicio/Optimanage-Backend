@@ -10,6 +10,7 @@ import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.ServicoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.PlanoService;
 import com.AIT.Optimanage.Support.TenantContext;
 import org.junit.jupiter.api.AfterEach;
@@ -49,6 +50,9 @@ class ServicoServiceCacheEvictTest {
 
     @MockBean
     private PlanoService planoService;
+
+    @MockBean
+    private PlanoAccessGuard planoAccessGuard;
 
     @Autowired
     private CacheManager cacheManager;
@@ -100,7 +104,7 @@ class ServicoServiceCacheEvictTest {
         cache.clear();
         CurrentUser.clear();
         TenantContext.clear();
-        Mockito.reset(servicoRepository, servicoMapper, planoService);
+        Mockito.reset(servicoRepository, servicoMapper, planoService, planoAccessGuard);
     }
 
     private void primeCache() {

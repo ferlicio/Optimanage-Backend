@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Models.Search;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ProdutoService {
 
     private final ProdutoRepository produtoRepository;
     private final ProdutoMapper produtoMapper;
+    private final PlanoAccessGuard planoAccessGuard;
     private final PlanoService planoService;
 
     @Cacheable(value = "produtos", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
@@ -66,6 +68,7 @@ public class ProdutoService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Plano plano = planoService.obterPlanoUsuario(loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
         long produtosAtivos = produtoRepository.countByOrganizationIdAndAtivoTrue(organizationId);
@@ -82,7 +85,13 @@ public class ProdutoService {
     @Transactional
     @CacheEvict(value = "produtos", allEntries = true)
     public ProdutoResponse editarProduto(Integer idProduto, ProdutoRequest request) {
-        Produto produtoSalvo = buscarProdutoAtivo(idProduto);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        Produto produtoSalvo = produtoRepository.findByIdAndOrganizationIdAndAtivoTrue(idProduto, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
         Produto produto = produtoMapper.toEntity(request);
         produto.setId(produtoSalvo.getId());
         produto.setTenantId(produtoSalvo.getOrganizationId());
@@ -95,7 +104,13 @@ public class ProdutoService {
     @Transactional
     @CacheEvict(value = "produtos", allEntries = true)
     public void excluirProduto(Integer idProduto) {
-        Produto produto = buscarProdutoAtivo(idProduto);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        Produto produto = produtoRepository.findByIdAndOrganizationIdAndAtivoTrue(idProduto, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
         produto.setAtivo(false);
         produtoRepository.save(produto);
     }
@@ -109,19 +124,27 @@ public class ProdutoService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Plano plano = planoService.obterPlanoUsuario(loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
         long produtosAtivos = produtoRepository.countByOrganizationIdAndAtivoTrue(organizationId);
         validarLimiteProdutos(plano, produtosAtivos, 1);
 
-        Produto produto = buscarProduto(idProduto);
+        Produto produto = produtoRepository.findByIdAndOrganizationId(idProduto, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
         produto.setAtivo(true);
         Produto atualizado = produtoRepository.save(produto);
         return produtoMapper.toResponse(atualizado);
     }
 
     public void removerProduto(Integer idProduto) {
-        Produto produto = buscarProduto(idProduto);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        Produto produto = produtoRepository.findByIdAndOrganizationId(idProduto, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
         produtoRepository.delete(produto);
     }
 

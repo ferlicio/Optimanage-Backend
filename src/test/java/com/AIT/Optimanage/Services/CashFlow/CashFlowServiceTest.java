@@ -17,6 +17,7 @@ import com.AIT.Optimanage.Repositories.CashFlow.CashFlowEntryRepository;
 import com.AIT.Optimanage.Repositories.Compra.PagamentoCompraRepository;
 import com.AIT.Optimanage.Repositories.Venda.PagamentoVendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,13 +56,16 @@ class CashFlowServiceTest {
     @Mock
     private PagamentoCompraRepository pagamentoCompraRepository;
 
+    @Mock
+    private PlanoAccessGuard planoAccessGuard;
+
     private CashFlowService cashFlowService;
 
     @BeforeEach
     void setUp() {
         CashFlowMapper mapper = Mappers.getMapper(CashFlowMapper.class);
         cashFlowService = new CashFlowService(cashFlowEntryRepository, pagamentoVendaRepository,
-                pagamentoCompraRepository, mapper);
+                pagamentoCompraRepository, mapper, planoAccessGuard);
 
         var user = com.AIT.Optimanage.Models.User.User.builder().build();
         user.setTenantId(99);

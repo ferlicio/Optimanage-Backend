@@ -38,6 +38,7 @@ import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
 import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.AuditTrailService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
@@ -97,6 +98,7 @@ public class VendaService {
     private final OrganizationRepository organizationRepository;
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
+    private final PlanoAccessGuard planoAccessGuard;
 
     @Cacheable(value = "vendas", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#loggedUser, #pesquisa)")
     @Transactional(readOnly = true)
@@ -126,10 +128,7 @@ public class VendaService {
     }
 
     private Venda getVenda(User loggedUser, Integer idVenda) {
-        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
-        if (organizationId == null) {
-            throw new EntityNotFoundException("Organização não encontrada");
-        }
+        Integer organizationId = resolveOrganizationId(loggedUser);
         return vendaRepository.findDetailedByIdAndOrganizationId(idVenda, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Venda não encontrada"));
     }
@@ -147,12 +146,9 @@ public class VendaService {
             garantirAgendaHabilitada(plano);
         }
 
+        Integer organizationId = garantirAcessoDeEscrita(loggedUser);
         Cliente cliente = clienteService.listarUmCliente(vendaDTO.getClienteId());
         Contador contador = contadorService.BuscarContador(Tabela.VENDA);
-        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
-        if (organizationId == null) {
-            throw new EntityNotFoundException("Organização não encontrada");
-        }
         BigDecimal descontoGeral = Optional.ofNullable(vendaDTO.getDescontoGeral()).orElse(BigDecimal.ZERO);
 
         Venda novaVenda = Venda.builder()
@@ -228,6 +224,7 @@ public class VendaService {
     @Transactional
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO atualizarVenda(User loggedUser, Integer vendaId, VendaDTO vendaDTO) {
+        garantirAcessoDeEscrita(loggedUser);
         vendaValidator.validarVenda(vendaDTO, loggedUser);
         if (vendaDTO.getDataAgendada() != null) {
             Plano plano = obterPlanoAtivo(loggedUser);
@@ -305,6 +302,7 @@ public class VendaService {
     }
 
     public VendaResponseDTO confirmarVenda(User loggedUser, Integer idVenda) {
+        garantirAcessoDeEscrita(loggedUser);
         Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.ORCAMENTO && venda.getVendaServicos().isEmpty()) {
             atualizarStatus(venda, StatusVenda.PENDENTE);
@@ -320,6 +318,7 @@ public class VendaService {
     }
 
     public VendaResponseDTO pagarVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
+        garantirAcessoDeEscrita(loggedUser);
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -334,6 +333,7 @@ public class VendaService {
     }
 
     public PaymentResponseDTO iniciarPagamentoExterno(User loggedUser, Integer idVenda, PaymentRequestDTO request) {
+        garantirAcessoDeEscrita(loggedUser);
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -352,6 +352,7 @@ public class VendaService {
     }
 
     public VendaResponseDTO confirmarPagamentoExterno(User loggedUser, Integer idVenda, PaymentConfirmationDTO confirmDTO) {
+        garantirAcessoDeEscrita(loggedUser);
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -367,6 +368,7 @@ public class VendaService {
     }
 
     public VendaResponseDTO lancarPagamentoVenda(User loggedUser, Integer idVenda, List<PagamentoDTO> pagamentoDTO) {
+        garantirAcessoDeEscrita(loggedUser);
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -397,6 +399,7 @@ public class VendaService {
 
 
     public VendaResponseDTO estornarVendaIntegral(User loggedUser, Integer idVenda) {
+        garantirAcessoDeEscrita(loggedUser);
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -422,6 +425,7 @@ public class VendaService {
     }
 
     public VendaResponseDTO estornarPagamentoVenda(User loggedUser, Integer idVenda, Integer idPagamento) {
+        garantirAcessoDeEscrita(loggedUser);
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirPagamentosHabilitados(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -467,6 +471,7 @@ public class VendaService {
 
     public VendaResponseDTO agendarVenda(User loggedUser, Integer idVenda, String dataAgendada, String horaAgendada,
                                          Integer duracaoMinutos) {
+        garantirAcessoDeEscrita(loggedUser);
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirAgendaHabilitada(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -494,6 +499,7 @@ public class VendaService {
     }
 
     public VendaResponseDTO finalizarAgendamentoVenda(User loggedUser, Integer idVenda) {
+        garantirAcessoDeEscrita(loggedUser);
         Plano plano = obterPlanoAtivo(loggedUser);
         garantirAgendaHabilitada(plano);
         Venda venda = getVenda(loggedUser, idVenda);
@@ -515,6 +521,7 @@ public class VendaService {
     }
 
     public VendaResponseDTO finalizarVenda(User loggedUser, Integer idVenda) {
+        garantirAcessoDeEscrita(loggedUser);
         Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.ORCAMENTO) {
             throw new IllegalArgumentException("Uma venda orçamento não pode ser finalizada.");
@@ -532,6 +539,7 @@ public class VendaService {
     @Transactional
     @CacheEvict(value = "vendas", allEntries = true)
     public VendaResponseDTO cancelarVenda(User loggedUser, Integer idVenda) {
+        garantirAcessoDeEscrita(loggedUser);
         Venda venda = getVenda(loggedUser, idVenda);
         if (venda.getStatus() == StatusVenda.CANCELADA) {
             return vendaMapper.toResponse(venda);
@@ -651,6 +659,20 @@ public class VendaService {
                 atualizarStatus(venda, StatusVenda.PARCIALMENTE_PAGA);
             }
         }
+    }
+
+    private Integer garantirAcessoDeEscrita(User loggedUser) {
+        Integer organizationId = resolveOrganizationId(loggedUser);
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        return organizationId;
+    }
+
+    private Integer resolveOrganizationId(User loggedUser) {
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        return organizationId;
     }
 
     private Plano obterPlanoAtivo(User loggedUser) {

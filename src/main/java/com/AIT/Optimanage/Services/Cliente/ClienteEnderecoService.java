@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.Cliente.Cliente;
 import com.AIT.Optimanage.Models.Cliente.ClienteEndereco;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteEnderecoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ public class ClienteEnderecoService {
 
     private final ClienteEnderecoRepository clienteEnderecoRepository;
     private final ClienteService clienteService;
+    private final PlanoAccessGuard planoAccessGuard;
 
     public List<ClienteEndereco> listarEnderecos(Integer idCliente) {
         Integer organizationId = CurrentUser.getOrganizationId();
@@ -38,6 +40,8 @@ public class ClienteEnderecoService {
     public ClienteEndereco cadastrarEndereco(Integer idCliente, ClienteEndereco endereco) {
         Cliente cliente = clienteService.listarUmCliente(idCliente);
 
+        planoAccessGuard.garantirPermissaoDeEscrita(cliente.getOrganizationId());
+
         endereco.setId(null);
         endereco.setCliente(cliente);
         endereco.setTenantId(cliente.getOrganizationId());
@@ -47,6 +51,8 @@ public class ClienteEnderecoService {
     public ClienteEndereco editarEndereco(Integer idCliente, Integer idEndereco, ClienteEndereco endereco) {
         ClienteEndereco enderecoExistente = listarUmEndereco(idCliente, idEndereco);
 
+        planoAccessGuard.garantirPermissaoDeEscrita(enderecoExistente.getOrganizationId());
+
         endereco.setId(enderecoExistente.getId());
         endereco.setCliente(enderecoExistente.getCliente());
         endereco.setTenantId(enderecoExistente.getOrganizationId());
@@ -55,6 +61,7 @@ public class ClienteEnderecoService {
 
     public void excluirEndereco(Integer idCliente, Integer idEndereco) {
         ClienteEndereco endereco = listarUmEndereco(idCliente, idEndereco);
+        planoAccessGuard.garantirPermissaoDeEscrita(endereco.getOrganizationId());
         clienteEnderecoRepository.delete(endereco);
     }
 }

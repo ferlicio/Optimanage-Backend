@@ -13,6 +13,7 @@ import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
 import com.AIT.Optimanage.Repositories.ServicoRepository;
 import com.AIT.Optimanage.Mappers.PlanoMapper;
 import com.AIT.Optimanage.Services.AuditTrailService;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.User.UsuarioService;
 import com.AIT.Optimanage.Support.TenantContext;
 import org.junit.jupiter.api.AfterEach;
@@ -67,6 +68,9 @@ class PlanoServiceCacheTest {
 
     @MockBean
     private AuditTrailService auditTrailService;
+
+    @MockBean
+    private PlanoAccessGuard planoAccessGuard;
 
     @AfterEach
     void tearDown() {

@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Models.Servico;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Repositories.ServicoRepository;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class ServicoService {
 
     private final ServicoRepository servicoRepository;
     private final ServicoMapper servicoMapper;
+    private final PlanoAccessGuard planoAccessGuard;
     private final PlanoService planoService;
 
     @Cacheable(value = "servicos", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
@@ -64,6 +66,7 @@ public class ServicoService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Plano plano = planoService.obterPlanoUsuario(loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
         long servicosAtivos = servicoRepository.countByOrganizationIdAndAtivoTrue(organizationId);
@@ -78,8 +81,13 @@ public class ServicoService {
     @Transactional
     @CacheEvict(value = "servicos", allEntries = true)
     public ServicoResponse editarServico(Integer idServico, ServicoRequest request) {
-        User loggedUser = CurrentUser.get();
-        Servico servicoSalvo = buscarServicoAtivo(idServico);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        Servico servicoSalvo = servicoRepository.findByIdAndOrganizationIdAndAtivoTrue(idServico, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
         Servico servico = servicoMapper.toEntity(request);
         servico.setId(servicoSalvo.getId());
         servico.setTenantId(servicoSalvo.getOrganizationId());
@@ -90,23 +98,30 @@ public class ServicoService {
     @Transactional
     @CacheEvict(value = "servicos", allEntries = true)
     public void excluirServico(Integer idServico) {
-        User loggedUser = CurrentUser.get();
-        Servico servico = buscarServicoAtivo(idServico);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        Servico servico = servicoRepository.findByIdAndOrganizationIdAndAtivoTrue(idServico, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
         servico.setAtivo(false);
         servicoRepository.save(servico);
     }
 
     public ServicoResponse restaurarServico(Integer idServico) {
         User loggedUser = CurrentUser.get();
-        Servico servico = buscarServico(idServico);
         if (loggedUser == null) {
             throw new EntityNotFoundException("Usuário não autenticado");
         }
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        Servico servico = servicoRepository.findByIdAndOrganizationId(idServico, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
         if (!Boolean.TRUE.equals(servico.getAtivo())) {
-            Integer organizationId = CurrentUser.getOrganizationId();
-            if (organizationId == null) {
-                throw new EntityNotFoundException("Organização não encontrada");
-            }
             Plano plano = planoService.obterPlanoUsuario(loggedUser)
                     .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
             long servicosAtivos = servicoRepository.countByOrganizationIdAndAtivoTrue(organizationId);
@@ -118,8 +133,13 @@ public class ServicoService {
     }
 
     public void removerServico(Integer idServico) {
-        User loggedUser = CurrentUser.get();
-        Servico servico = buscarServico(idServico);
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        Servico servico = servicoRepository.findByIdAndOrganizationId(idServico, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Servico não encontrado"));
         servicoRepository.delete(servico);
     }
 

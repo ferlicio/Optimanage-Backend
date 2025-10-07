@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.Venda.Venda;
 import com.AIT.Optimanage.Models.Venda.VendaPagamento;
 import com.AIT.Optimanage.Repositories.Venda.PagamentoVendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import java.util.List;
 public class PagamentoVendaService {
 
     private final PagamentoVendaRepository pagamentoVendaRepository;
+    private final PlanoAccessGuard planoAccessGuard;
 
     public List<VendaPagamento> listarPagamentosVenda(User loggedUser, Integer idVenda) {
         Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
@@ -54,6 +56,7 @@ public class PagamentoVendaService {
     }
 
     public void registrarPagamento(User logedUser, Venda venda, Integer idPagamento) {
+        garantirEscrita(logedUser, venda);
         VendaPagamento pagamento = listarUmPagamentoVenda(logedUser, venda, idPagamento);
 
         pagamento.setDataPagamento(LocalDate.now());
@@ -63,6 +66,7 @@ public class PagamentoVendaService {
     }
 
     public void lancarPagamento(Venda venda, PagamentoDTO pagamentoDTO) {
+        garantirEscrita(venda);
 
         VendaPagamento pagamento = VendaPagamento.builder()
                 .venda(venda)
@@ -80,6 +84,7 @@ public class PagamentoVendaService {
 
     public void estornarPagamento(User logedUser, Integer idPagamento){
         VendaPagamento vendaPagamento = listarUmPagamento(logedUser, idPagamento);
+        garantirEscrita(logedUser, vendaPagamento.getVenda());
         if (vendaPagamento.getStatusPagamento() != StatusPagamento.PAGO) {
             throw new RuntimeException("O pagamento não pode ser estornado");
         }
@@ -89,11 +94,36 @@ public class PagamentoVendaService {
 
     public void estornarPagamento(User logedUser, VendaPagamento pagamento) {
         VendaPagamento vendaPagamento = listarUmPagamento(logedUser, pagamento.getId());
+        garantirEscrita(logedUser, vendaPagamento.getVenda());
         if (vendaPagamento.getStatusPagamento() != StatusPagamento.PAGO) {
             throw new RuntimeException("O pagamento não pode ser estornado");
         }
         vendaPagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
         pagamentoVendaRepository.save(vendaPagamento);
+    }
+
+    private void garantirEscrita(User loggedUser, Venda venda) {
+        Integer organizationId = resolveOrganizationId(loggedUser, venda);
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+    }
+
+    private void garantirEscrita(Venda venda) {
+        Integer organizationId = venda != null ? venda.getOrganizationId() : null;
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+    }
+
+    private Integer resolveOrganizationId(User loggedUser, Venda venda) {
+        Integer organizationId = loggedUser != null ? loggedUser.getTenantId() : CurrentUser.getOrganizationId();
+        if (organizationId == null && venda != null) {
+            organizationId = venda.getOrganizationId();
+        }
+        if (organizationId == null) {
+            throw new RuntimeException("Organização não encontrada");
+        }
+        return organizationId;
     }
 
 }

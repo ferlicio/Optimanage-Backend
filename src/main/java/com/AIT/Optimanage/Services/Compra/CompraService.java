@@ -35,6 +35,7 @@ import com.AIT.Optimanage.Services.Fornecedor.FornecedorMetricsService;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.InventoryService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.User.ContadorService;
@@ -92,6 +93,7 @@ public class CompraService {
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
     private final FornecedorMetricsService fornecedorMetricsService;
+    private final PlanoAccessGuard planoAccessGuard;
 
     @Cacheable(value = "compras", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
     @Transactional(readOnly = true)
@@ -161,10 +163,7 @@ public class CompraService {
             duracaoEstimada = agendaValidator.validarDuracao(duracaoMinutos);
         }
 
-        Integer organizationId = CurrentUser.getOrganizationId();
-        if (organizationId == null) {
-            throw new EntityNotFoundException("Organização não encontrada");
-        }
+        Integer organizationId = garantirAcessoDeEscrita();
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(compraDTO.getFornecedorId());
         Contador contador = contadorService.BuscarContador(Tabela.COMPRA);
         Compra novaCompra = Compra.builder()
@@ -219,6 +218,7 @@ public class CompraService {
     @Transactional
     @CacheEvict(value = "compras", allEntries = true)
     public CompraResponseDTO editarCompra(Integer idCompra, CompraDTO compraDTO) {
+        garantirAcessoDeEscrita();
         compraValidator.validarCompra(compraDTO);
         if (compraDTO.getDataAgendada() != null) {
             Plano plano = obterPlanoAtual();
@@ -286,6 +286,7 @@ public class CompraService {
 
     @Transactional
     public CompraResponseDTO confirmarCompra(Integer idCompra) {
+        garantirAcessoDeEscrita();
         Compra compra = getCompra(idCompra);
         StatusCompra statusAnterior = compra.getStatus();
         if (statusAnterior == StatusCompra.ORCAMENTO && compra.getCompraServicos().isEmpty()) {
@@ -303,6 +304,7 @@ public class CompraService {
     }
 
     public CompraResponseDTO pagarCompra(Integer idCompra, Integer idPagamento) {
+        garantirAcessoDeEscrita();
         Plano plano = obterPlanoAtual();
         garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
@@ -318,6 +320,7 @@ public class CompraService {
 
     @Transactional
     public CompraResponseDTO lancarPagamentoCompra(Integer idCompra, List<PagamentoDTO> pagamentoDTO) {
+        garantirAcessoDeEscrita();
         Plano plano = obterPlanoAtual();
         garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
@@ -347,6 +350,7 @@ public class CompraService {
     }
 
     public CompraResponseDTO estornarCompraIntegral(Integer idCompra) {
+        garantirAcessoDeEscrita();
         Plano plano = obterPlanoAtual();
         garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
@@ -371,6 +375,7 @@ public class CompraService {
     }
 
     public CompraResponseDTO estornarPagamentoCompra(Integer idCompra, Integer idPagamento) {
+        garantirAcessoDeEscrita();
         Plano plano = obterPlanoAtual();
         garantirPagamentosHabilitados(plano);
         Compra compra = getCompra(idCompra);
@@ -399,6 +404,7 @@ public class CompraService {
 
     public CompraResponseDTO agendarCompra(Integer idCompra, String dataAgendada, String horaAgendada,
                                            Integer duracaoMinutos) {
+        garantirAcessoDeEscrita();
         Plano plano = obterPlanoAtual();
         garantirAgendaHabilitada(plano);
         Compra compra = getCompra(idCompra);
@@ -433,6 +439,7 @@ public class CompraService {
     }
 
     public CompraResponseDTO finalizarAgendamentoCompra(Integer idCompra) {
+        garantirAcessoDeEscrita();
         Plano plano = obterPlanoAtual();
         garantirAgendaHabilitada(plano);
         Compra compra = getCompra(idCompra);
@@ -451,6 +458,7 @@ public class CompraService {
     }
 
     public CompraResponseDTO finalizarCompra(Integer idCompra) {
+        garantirAcessoDeEscrita();
         Compra compra = getCompra(idCompra);
         atualizarStatus(compra, StatusCompra.CONCRETIZADO);
         Compra salvo = compraRepository.save(compra);
@@ -461,6 +469,7 @@ public class CompraService {
     @CacheEvict(value = "compras", allEntries = true)
     @Transactional
     public CompraResponseDTO cancelarCompra(Integer idCompra) {
+        garantirAcessoDeEscrita();
         Compra compra = getCompra(idCompra);
         StatusCompra statusAnterior = compra.getStatus();
         STATUS_TRANSITION_POLICY.validate(statusAnterior, StatusCompra.CANCELADO, compra);
@@ -639,6 +648,15 @@ public class CompraService {
                 atualizarStatus(compra, StatusCompra.PARCIALMENTE_PAGO);
             }
         }
+    }
+
+    private Integer garantirAcessoDeEscrita() {
+        Integer organizationId = CurrentUser.getOrganizationId();
+        if (organizationId == null) {
+            throw new EntityNotFoundException("Organização não encontrada");
+        }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
+        return organizationId;
     }
 
     private Plano obterPlanoAtual() {

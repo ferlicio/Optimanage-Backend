@@ -11,6 +11,7 @@ import com.AIT.Optimanage.Repositories.UserRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Support.PlatformConstants;
 import com.AIT.Optimanage.Services.AuditTrailService;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import java.util.Optional;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -34,12 +35,15 @@ public class UsuarioService {
     private final CacheManager cacheManager;
     private final BCryptPasswordEncoder passwordEncoder;
     private final AuditTrailService auditTrailService;
+    private final PlanoAccessGuard planoAccessGuard;
 
     public UserResponse salvarUsuario(UserRequest request) {
         Integer organizationId = CurrentUser.getOrganizationId();
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
 
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Informações do usuário não encontradas"));
@@ -115,6 +119,8 @@ public class UsuarioService {
     }
 
     public void desativarUsuario(Integer id) {
+        Integer organizationId = requireOrganizationId();
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         User usuario = getUsuario(id);
         usuario.setAtivo(false);
         userRepository.save(usuario);

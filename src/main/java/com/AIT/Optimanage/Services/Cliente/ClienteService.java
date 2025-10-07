@@ -12,6 +12,7 @@ import com.AIT.Optimanage.Models.Venda.Related.StatusVenda;
 import com.AIT.Optimanage.Repositories.Cliente.ClienteRepository;
 import com.AIT.Optimanage.Repositories.Venda.VendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
     private final ClienteMapper clienteMapper;
+    private final PlanoAccessGuard planoAccessGuard;
     private final PlanoService planoService;
     private final VendaRepository vendaRepository;
 
@@ -92,6 +94,7 @@ public class ClienteService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Plano plano = planoService.obterPlanoUsuario(loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
         long clientesAtivos = clienteRepository.countByOrganizationIdAndAtivoTrue(organizationId);
@@ -116,6 +119,7 @@ public class ClienteService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Cliente clienteSalvo = clienteRepository.findByIdAndOrganizationIdAndAtivoTrue(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         Cliente cliente = clienteMapper.toEntity(request);
@@ -138,6 +142,7 @@ public class ClienteService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Cliente cliente = clienteRepository.findByIdAndOrganizationIdAndAtivoTrue(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         cliente.setAtivo(false);
@@ -152,6 +157,7 @@ public class ClienteService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Cliente cliente = clienteRepository.findByIdAndOrganizationId(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         if (loggedUser == null) {
@@ -176,6 +182,7 @@ public class ClienteService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Cliente cliente = clienteRepository.findByIdAndOrganizationId(idCliente, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
         clienteRepository.delete(cliente);

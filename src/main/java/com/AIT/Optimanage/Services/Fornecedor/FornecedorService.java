@@ -10,6 +10,7 @@ import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class FornecedorService {
 
     private final FornecedorRepository fornecedorRepository;
     private final FornecedorMapper fornecedorMapper;
+    private final PlanoAccessGuard planoAccessGuard;
     private final PlanoService planoService;
 
     @Cacheable(value = "fornecedores", key = "T(com.AIT.Optimanage.Support.CacheKeyResolver).userScopedKey(#pesquisa)")
@@ -87,6 +89,7 @@ public class FornecedorService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Plano plano = planoService.obterPlanoUsuario(loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
         long fornecedoresAtivos = fornecedorRepository.countByOrganizationIdAndAtivoTrue(organizationId);
@@ -107,6 +110,7 @@ public class FornecedorService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Fornecedor fornecedorSalvo = fornecedorRepository.findByIdAndOrganizationIdAndAtivoTrue(idFornecedor, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         Fornecedor fornecedor = fornecedorMapper.toEntity(request);
@@ -126,6 +130,7 @@ public class FornecedorService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Fornecedor fornecedor = fornecedorRepository.findByIdAndOrganizationIdAndAtivoTrue(idFornecedor, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedor.setAtivo(false);
@@ -142,6 +147,7 @@ public class FornecedorService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Plano plano = planoService.obterPlanoUsuario(loggedUser)
                 .orElseThrow(() -> new EntityNotFoundException("Plano não encontrado"));
         long fornecedoresAtivos = fornecedorRepository.countByOrganizationIdAndAtivoTrue(organizationId);
@@ -159,6 +165,7 @@ public class FornecedorService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         Fornecedor fornecedor = fornecedorRepository.findByIdAndOrganizationId(idFornecedor, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Fornecedor não encontrado"));
         fornecedorRepository.delete(fornecedor);

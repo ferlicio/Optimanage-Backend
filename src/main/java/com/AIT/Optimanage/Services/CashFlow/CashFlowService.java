@@ -19,6 +19,7 @@ import com.AIT.Optimanage.Repositories.Compra.PagamentoCompraRepository;
 import com.AIT.Optimanage.Repositories.FilterBuilder;
 import com.AIT.Optimanage.Repositories.Venda.PagamentoVendaRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -47,6 +48,7 @@ public class CashFlowService {
     private final PagamentoVendaRepository pagamentoVendaRepository;
     private final PagamentoCompraRepository pagamentoCompraRepository;
     private final CashFlowMapper mapper;
+    private final PlanoAccessGuard planoAccessGuard;
 
     @Transactional(readOnly = true)
     public Page<CashFlowEntryResponse> listarLancamentos(CashFlowSearch search) {
@@ -104,7 +106,7 @@ public class CashFlowService {
 
     @Transactional
     public CashFlowEntryResponse criarLancamento(CashFlowEntryRequest request) {
-        Integer organizationId = getOrganizationId();
+        Integer organizationId = getOrganizationIdWithWriteAccess();
         CashFlowEntry entry = mapper.toEntity(request);
         entry.setStatus(resolveStatus(entry.getMovementDate()));
         entry.setCancelledAt(null);
@@ -115,7 +117,7 @@ public class CashFlowService {
 
     @Transactional
     public CashFlowEntryResponse atualizarLancamento(Integer id, CashFlowEntryRequest request) {
-        CashFlowEntry entry = getEntry(id);
+        CashFlowEntry entry = getEntryForWrite(id);
         if (entry.getStatus() == CashFlowStatus.CANCELLED) {
             throw new IllegalStateException("Não é possível editar um lançamento cancelado.");
         }
@@ -128,7 +130,7 @@ public class CashFlowService {
 
     @Transactional
     public CashFlowEntryResponse cancelarLancamento(Integer id) {
-        CashFlowEntry entry = getEntry(id);
+        CashFlowEntry entry = getEntryForWrite(id);
         if (entry.getStatus() == CashFlowStatus.CANCELLED) {
             return mapper.toResponse(entry);
         }
@@ -140,6 +142,12 @@ public class CashFlowService {
 
     private CashFlowEntry getEntry(Integer id) {
         Integer organizationId = getOrganizationId();
+        return repository.findByIdAndOrganizationId(id, organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("Lançamento de fluxo de caixa não encontrado"));
+    }
+
+    private CashFlowEntry getEntryForWrite(Integer id) {
+        Integer organizationId = getOrganizationIdWithWriteAccess();
         return repository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("Lançamento de fluxo de caixa não encontrado"));
     }
@@ -388,6 +396,12 @@ public class CashFlowService {
         if (organizationId == null) {
             throw new EntityNotFoundException("Organização não encontrada");
         }
+        return organizationId;
+    }
+
+    private Integer getOrganizationIdWithWriteAccess() {
+        Integer organizationId = getOrganizationId();
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         return organizationId;
     }
 }

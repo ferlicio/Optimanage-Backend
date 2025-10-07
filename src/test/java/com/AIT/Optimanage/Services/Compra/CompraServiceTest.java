@@ -30,6 +30,7 @@ import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
 import com.AIT.Optimanage.Services.ProdutoService;
 import com.AIT.Optimanage.Services.ServicoService;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.User.ContadorService;
 import com.AIT.Optimanage.Services.Compra.PagamentoCompraService;
 import com.AIT.Optimanage.Validation.AgendaValidator;
@@ -82,6 +83,7 @@ class CompraServiceTest {
     @Mock private PlanoService planoService;
     @Mock private AgendaValidator agendaValidator;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private PlanoAccessGuard planoAccessGuard;
 
     @InjectMocks
     private CompraService compraService;

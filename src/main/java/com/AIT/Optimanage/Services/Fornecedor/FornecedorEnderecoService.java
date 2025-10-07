@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Models.Fornecedor.Fornecedor;
 import com.AIT.Optimanage.Models.Fornecedor.FornecedorEndereco;
 import com.AIT.Optimanage.Repositories.Fornecedor.FornecedorEnderecoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class FornecedorEnderecoService {
 
     private final FornecedorEnderecoRepository fornecedorEnderecoRepository;
     private final FornecedorService fornecedorService;
+    private final PlanoAccessGuard planoAccessGuard;
 
     public List<FornecedorEndereco> listarEnderecos(Integer idFornecedor) {
         Integer organizationId = CurrentUser.getOrganizationId();
@@ -39,6 +41,8 @@ public class FornecedorEnderecoService {
     public FornecedorEndereco cadastrarEndereco(Integer idFornecedor, FornecedorEndereco endereco) {
         Fornecedor fornecedor = fornecedorService.listarUmFornecedor(idFornecedor);
 
+        planoAccessGuard.garantirPermissaoDeEscrita(fornecedor.getOrganizationId());
+
         endereco.setId(null);
         endereco.setFornecedor(fornecedor);
         endereco.setTenantId(fornecedor.getOrganizationId());
@@ -48,6 +52,8 @@ public class FornecedorEnderecoService {
     public FornecedorEndereco editarEndereco(Integer idFornecedor, Integer idEndereco, FornecedorEndereco endereco) {
         FornecedorEndereco enderecoExistente = listarUmEndereco(idFornecedor, idEndereco);
 
+        planoAccessGuard.garantirPermissaoDeEscrita(enderecoExistente.getOrganizationId());
+
         endereco.setId(enderecoExistente.getId());
         endereco.setFornecedor(enderecoExistente.getFornecedor());
         endereco.setTenantId(enderecoExistente.getOrganizationId());
@@ -56,6 +62,7 @@ public class FornecedorEnderecoService {
 
     public void excluirEndereco(Integer idFornecedor, Integer idEndereco) {
         FornecedorEndereco endereco = listarUmEndereco(idFornecedor, idEndereco);
+        planoAccessGuard.garantirPermissaoDeEscrita(endereco.getOrganizationId());
         fornecedorEnderecoRepository.delete(endereco);
     }
 }

@@ -9,6 +9,7 @@ import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Organization.OrganizationRepository;
 import com.AIT.Optimanage.Repositories.Organization.UserInviteRepository;
 import com.AIT.Optimanage.Repositories.UserRepository;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -25,6 +26,7 @@ public class UserInviteService {
     private final OrganizationRepository organizationRepository;
     private final UserInviteRepository inviteRepository;
     private final UserRepository userRepository;
+    private final PlanoAccessGuard planoAccessGuard;
 
     @Transactional
     public UserInviteResponse gerarConvite(Integer organizationId, UserInviteRequest request, Integer creatorId) {
@@ -34,6 +36,7 @@ public class UserInviteService {
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
         validarPermissoesConvite(organizationId, creator, request.getRole());
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
 
         UserInvite invite = UserInvite.builder()
                 .code(UUID.randomUUID().toString())
@@ -62,6 +65,7 @@ public class UserInviteService {
         if (!invite.getOrganizationId().equals(organizationId)) {
             throw new IllegalArgumentException("Convite não pertence à organização");
         }
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         inviteRepository.delete(invite);
     }
 
@@ -80,6 +84,7 @@ public class UserInviteService {
 
     @Transactional
     public void marcarComoUsado(UserInvite invite, User user) {
+        planoAccessGuard.garantirPermissaoDeEscrita(invite.getOrganizationId());
         invite.setUsedAt(Instant.now());
         invite.setUsedBy(user);
         inviteRepository.save(invite);

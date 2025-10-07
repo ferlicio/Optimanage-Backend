@@ -8,6 +8,7 @@ import com.AIT.Optimanage.Models.Plano;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Repositories.Marketplace.MarketplaceIntegrationRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
+import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.PlanoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class MarketplaceIntegrationService {
 
     private final MarketplaceIntegrationRepository integrationRepository;
     private final PlanoService planoService;
+    private final PlanoAccessGuard planoAccessGuard;
     private final Clock clock;
 
     @Transactional
@@ -36,6 +38,7 @@ public class MarketplaceIntegrationService {
         garantirMarketplaceHabilitada(plano);
 
         Integer organizationId = resolvedOrganizationId(loggedUser);
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         MarketplaceIntegration integration = integrationRepository.findByOrganizationId(organizationId)
                 .orElseGet(() -> MarketplaceIntegration.builder().build());
 
@@ -59,6 +62,7 @@ public class MarketplaceIntegrationService {
         garantirMarketplaceHabilitada(plano);
 
         Integer organizationId = resolvedOrganizationId(loggedUser);
+        planoAccessGuard.garantirPermissaoDeEscrita(organizationId);
         MarketplaceIntegration integration = integrationRepository.findByOrganizationId(organizationId)
                 .filter(MarketplaceIntegration::getAtivo)
                 .orElseThrow(() -> new EntityNotFoundException("Integração com marketplace não configurada"));
