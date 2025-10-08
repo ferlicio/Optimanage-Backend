@@ -42,6 +42,7 @@ public class Servico extends AuditableEntity implements OwnableEntity {
     @Column(nullable = false)
     private Integer tempoExecucao;
     private Boolean terceirizado;
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
 

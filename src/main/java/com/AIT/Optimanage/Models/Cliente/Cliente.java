@@ -41,6 +41,7 @@ public class Cliente extends AuditableEntity implements OwnableEntity {
     @Column(nullable = false, length = 64)
     private String origem;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
     @Column(name = "lifetime_value", nullable = false, precision = 12, scale = 2)

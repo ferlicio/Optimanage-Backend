@@ -56,12 +56,14 @@ public class Venda extends AuditableEntity implements OwnableEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valorFinal;
     private String condicaoPagamento;
+    @Builder.Default
     @Min(0)
     @Column(nullable = false)
     private Integer alteracoesPermitidas = 0;
     @DecimalMin(value = "0.0")
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valorPendente;
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusVenda status = StatusVenda.PENDENTE;

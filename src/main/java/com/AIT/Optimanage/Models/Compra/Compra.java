@@ -50,6 +50,7 @@ public class Compra extends AuditableEntity implements OwnableEntity {
     @DecimalMin(value = "0.0")
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valorPendente;
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusCompra status = StatusCompra.ORCAMENTO;

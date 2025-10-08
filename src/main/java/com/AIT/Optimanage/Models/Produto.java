@@ -52,6 +52,7 @@ public class Produto extends AuditableEntity implements OwnableEntity {
     @Column(nullable = false)
     private Integer prazoReposicaoDias = 0;
     private Boolean terceirizado;
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
 

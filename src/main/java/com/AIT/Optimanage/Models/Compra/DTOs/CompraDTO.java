@@ -21,15 +21,19 @@ import java.util.List;
 public class CompraDTO {
     @NotNull
     private Integer fornecedorId;
+    @Builder.Default
     @NotNull
     private LocalDate dataEfetuacao = LocalDate.now();
+    @Builder.Default
     private LocalDate dataAgendada = null;
     private LocalTime horaAgendada;
+    @Builder.Default
     private Duration duracaoEstimada = Duration.ofHours(1);
     private LocalDate dataCobranca;
     @DecimalMin(value = "0.0")
     private BigDecimal valorFinal;
     private String condicaoPagamento;
+    @Builder.Default
     @NotNull
     private StatusCompra status = StatusCompra.ORCAMENTO;
     private String observacoes;

@@ -42,6 +42,7 @@ public class Fornecedor extends AuditableEntity implements OwnableEntity {
     @Column(nullable = false, length = 64)
     private String origem;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
     @Column(length = 64)

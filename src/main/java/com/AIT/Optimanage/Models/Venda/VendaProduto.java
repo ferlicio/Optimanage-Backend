@@ -41,6 +41,7 @@ public class VendaProduto extends AuditableEntity {
     @Column(nullable = false)
     private Integer quantidade;
 
+    @Builder.Default
     @Column(length = 3)
     private BigDecimal desconto = BigDecimal.ZERO;
 
