@@ -382,6 +382,11 @@ public class CompraService {
         CompraPagamento pagamento = pagamentoCompraService.listarUmPagamento(idPagamento);
         if (compra.getPagamentos().contains(pagamento) && pagamento.getStatusPagamento() == StatusPagamento.PAGO) {
             pagamentoCompraService.estornarPagamento(pagamento);
+            pagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
+            Optional.ofNullable(compra.getPagamentos())
+                    .ifPresent(pagamentos -> pagamentos.stream()
+                            .filter(pagamentoCompra -> Objects.equals(pagamentoCompra.getId(), pagamento.getId()))
+                            .forEach(pagamentoCompra -> pagamentoCompra.setStatusPagamento(StatusPagamento.ESTORNADO)));
         } else {
             throw new IllegalArgumentException("O pagamento informado não pode ser estornado");
         }
@@ -396,6 +401,12 @@ public class CompraService {
             }
         } else if (valorPago.compareTo(BigDecimal.ZERO) > 0) {
             atualizarStatus(compra, StatusCompra.PARCIALMENTE_PAGO);
+        } else {
+            if (compra.getStatus() == StatusCompra.CONCRETIZADO) {
+                compra.setStatus(StatusCompra.AGUARDANDO_PAG);
+            } else if (compra.getStatus() != StatusCompra.AGUARDANDO_PAG) {
+                atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
+            }
         }
         Compra salvo = compraRepository.save(compra);
         atualizarMetricasFornecedor(salvo);
