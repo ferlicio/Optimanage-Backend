@@ -215,7 +215,9 @@ public class CashFlowService {
                 .filter(entry -> matchesStatusFilter(entry, search.getStatus()))
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        return new InstallmentResults(entries, pagamentos.getTotalElements());
+        long adjustedTotal = adjustTotalElements(pagamentos.getTotalElements(), pagamentos.getContent().size(), entries.size());
+
+        return new InstallmentResults(entries, adjustedTotal);
     }
 
     private InstallmentResults listarParcelasCompras(Integer organizationId, CashFlowSearch search,
@@ -245,7 +247,9 @@ public class CashFlowService {
                 .filter(entry -> matchesStatusFilter(entry, search.getStatus()))
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        return new InstallmentResults(entries, pagamentos.getTotalElements());
+        long adjustedTotal = adjustTotalElements(pagamentos.getTotalElements(), pagamentos.getContent().size(), entries.size());
+
+        return new InstallmentResults(entries, adjustedTotal);
     }
 
     private record InstallmentResults(ArrayList<CashFlowEntryResponse> entries, long totalElements) {
@@ -345,6 +349,12 @@ public class CashFlowService {
             return entry.getStatus() != CashFlowStatus.CANCELLED;
         }
         return entry.getStatus() == filter;
+    }
+
+    private long adjustTotalElements(long reportedTotal, int fetchedCount, int keptCount) {
+        long removed = Math.max(0, fetchedCount - keptCount);
+        long adjusted = reportedTotal - removed;
+        return adjusted < 0 ? 0 : adjusted;
     }
 
     private String buildSaleInstallmentDescription(VendaPagamento pagamento) {
