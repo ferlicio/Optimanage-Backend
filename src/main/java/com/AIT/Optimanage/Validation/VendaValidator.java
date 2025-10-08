@@ -17,13 +17,6 @@ public class VendaValidator {
         if (vendaDTO.getDataAgendada() == null && vendaDTO.getStatus() == StatusVenda.AGENDADA) {
             throw new IllegalArgumentException("Data agendada não informada para venda agendada");
         }
-        if (vendaDTO.getDataCobranca() == null) {
-            if (vendaDTO.getStatus() == StatusVenda.AGUARDANDO_PAG) {
-                throw new IllegalArgumentException("Data de cobrança não informada para venda aguardando pagamento");
-            } else if (vendaDTO.getStatus() == StatusVenda.CONCRETIZADA) {
-                throw new IllegalArgumentException("Data de cobrança não informada para venda concretizada");
-            }
-        }
         boolean permiteOrcamento = loggedUser != null
                 && loggedUser.getOrganization() != null
                 && Boolean.TRUE.equals(loggedUser.getOrganization().getPermiteOrcamento());
