@@ -77,4 +77,32 @@ class VendaValidatorTest {
 
         assertThrows(IllegalArgumentException.class, () -> validator.validarVenda(dto, new User()));
     }
+
+    @Test
+    void validarVendaNaoExigeDataCobrancaParaStatusAguardandoPagamento() {
+        VendaDTO dto = VendaDTO.builder()
+                .clienteId(1)
+                .dataEfetuacao(LocalDate.now())
+                .status(StatusVenda.AGUARDANDO_PAG)
+                .descontoGeral(BigDecimal.ZERO)
+                .produtos(List.of(new VendaProdutoDTO(1, 1, BigDecimal.ZERO)))
+                .servicos(List.of(new VendaServicoDTO(1, 1, BigDecimal.ZERO)))
+                .build();
+
+        assertDoesNotThrow(() -> validator.validarVenda(dto, new User()));
+    }
+
+    @Test
+    void validarVendaNaoExigeDataCobrancaParaStatusConcretizada() {
+        VendaDTO dto = VendaDTO.builder()
+                .clienteId(1)
+                .dataEfetuacao(LocalDate.now())
+                .status(StatusVenda.CONCRETIZADA)
+                .descontoGeral(BigDecimal.ZERO)
+                .produtos(List.of(new VendaProdutoDTO(1, 1, BigDecimal.ZERO)))
+                .servicos(List.of(new VendaServicoDTO(1, 1, BigDecimal.ZERO)))
+                .build();
+
+        assertDoesNotThrow(() -> validator.validarVenda(dto, new User()));
+    }
 }
