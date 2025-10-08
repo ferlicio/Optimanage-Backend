@@ -3,6 +3,7 @@ package com.AIT.Optimanage.Models.Audit;
 import com.AIT.Optimanage.Models.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,6 +30,7 @@ public class AuditTrail extends AuditableEntity {
     @Column(name = "action", nullable = false, length = 150)
     private String action;
 
-    @Column(name = "details", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "details")
     private String details;
 }
