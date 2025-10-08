@@ -42,15 +42,16 @@ public class TrialExpirationScheduler {
             LocalDate today = LocalDate.now(clock);
             List<Organization> organizations = organizationRepository.findAllByTrialTipoIsNotNull();
             for (Organization organization : organizations) {
+                TrialType trialType = organization.getTrialTipo();
                 Integer currentPlanId = organization.getPlanoAtivoId();
                 Plano currentPlan = currentPlanId != null
                         ? planoRepository.findById(currentPlanId).orElse(null)
                         : null;
-                if (!isTrialPlan(currentPlan)) {
+                if (!isTrialPlan(trialType, currentPlan)) {
                     continue;
                 }
 
-                LocalDate trialEndDate = resolveTrialEndDate(organization, currentPlan);
+                LocalDate trialEndDate = resolveTrialEndDate(organization, currentPlan, trialType);
                 if (trialEndDate == null || trialEndDate.isAfter(today)) {
                     continue;
                 }
@@ -58,6 +59,7 @@ public class TrialExpirationScheduler {
                 Plano tenantViewOnlyPlan = resolveTenantViewOnlyPlan(organization, platformBasePlan);
                 boolean planChanged = currentPlan == null || !currentPlan.getId().equals(tenantViewOnlyPlan.getId());
                 Plano previousPlan = currentPlan;
+                TrialType previousTrialType = trialType;
                 organization.setPlanoAtivoId(tenantViewOnlyPlan);
                 organization.setTrialInicio(null);
                 organization.setTrialFim(null);
@@ -66,7 +68,7 @@ public class TrialExpirationScheduler {
 
                 evictPlanoCache(organization.getId());
                 if (planChanged) {
-                    recordAudit(organization, previousPlan, tenantViewOnlyPlan);
+                    recordAudit(organization, previousPlan, tenantViewOnlyPlan, previousTrialType);
                 }
             }
         } finally {
@@ -117,13 +119,13 @@ public class TrialExpirationScheduler {
         return planoRepository.save(tenantPlan);
     }
 
-    private LocalDate resolveTrialEndDate(Organization organization, Plano currentPlan) {
+    private LocalDate resolveTrialEndDate(Organization organization, Plano currentPlan, TrialType trialType) {
         LocalDate trialEnd = organization.getTrialFim();
         if (trialEnd != null) {
             return trialEnd;
         }
 
-        if (organization.getTrialTipo() == TrialType.PLAN_DEFAULT && currentPlan != null) {
+        if (trialType == TrialType.PLAN_DEFAULT && currentPlan != null) {
             Integer duration = currentPlan.getDuracaoDias();
             LocalDate trialStart = organization.getTrialInicio();
             if (trialStart != null && duration != null && duration > 0) {
@@ -134,7 +136,10 @@ public class TrialExpirationScheduler {
         return null;
     }
 
-    private boolean isTrialPlan(Plano plan) {
+    private boolean isTrialPlan(TrialType trialType, Plano plan) {
+        if (trialType != null) {
+            return true;
+        }
         if (plan == null) {
             return false;
         }
@@ -162,7 +167,7 @@ public class TrialExpirationScheduler {
         }
     }
 
-    private void recordAudit(Organization organization, Plano previousPlan, Plano newPlan) {
+    private void recordAudit(Organization organization, Plano previousPlan, Plano newPlan, TrialType previousTrialType) {
         Integer previousTenant = TenantContext.getTenantId();
         try {
             TenantContext.setTenantId(organization.getId());
@@ -170,8 +175,8 @@ public class TrialExpirationScheduler {
                     organization,
                     previousPlan,
                     newPlan,
-                    isTrialPlan(previousPlan),
-                    isTrialPlan(newPlan)
+                    isTrialPlan(previousTrialType, previousPlan),
+                    isTrialPlan(null, newPlan)
             );
         } finally {
             if (previousTenant != null) {
