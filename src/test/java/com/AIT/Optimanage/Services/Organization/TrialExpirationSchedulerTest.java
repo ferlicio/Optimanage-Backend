@@ -172,6 +172,55 @@ class TrialExpirationSchedulerTest {
         assertThat(entries).hasSize(1);
     }
 
+    @Test
+    void shouldDowngradePromotionalTrialsForPaidPlans() {
+        Plano basePlan = this.basePlan;
+        Plano paidTrialPlan = createTrialPlan("Premium Promo", 14, 199f);
+        paidTrialPlan.setPagamentosHabilitados(true);
+        paidTrialPlan = planoRepository.save(paidTrialPlan);
+
+        User owner = createOwnerUser();
+        Organization organization = Organization.builder()
+                .ownerUser(owner)
+                .planoAtivoId(paidTrialPlan)
+                .cnpj("78901234567890")
+                .razaoSocial("Promo Corp")
+                .nomeFantasia("Promo Corp")
+                .permiteOrcamento(true)
+                .dataAssinatura(LocalDate.now().minusDays(20))
+                .trialInicio(LocalDate.now().minusDays(18))
+                .trialFim(LocalDate.now().minusDays(1))
+                .trialTipo(TrialType.CUSTOM)
+                .build();
+        organization = organizationRepository.save(organization);
+        Integer organizationId = organization.getId();
+        jdbcTemplate.update("UPDATE \"organization\" SET \"organization_id\"=? WHERE \"id\"=?", organizationId, organizationId);
+
+        owner.setOrganization(organization);
+        owner.setTenantId(organizationId);
+        userRepository.save(owner);
+
+        scheduler.downgradeExpiredTrials();
+
+        Organization updated = organizationRepository.findById(organizationId).orElseThrow();
+        Plano assignedPlan = planoRepository.findById(updated.getPlanoAtivoId()).orElseThrow();
+        assertThat(assignedPlan.getNome()).isEqualTo(PlatformConstants.VIEW_ONLY_PLAN_NAME);
+        assertThat(assignedPlan.getTenantId()).isEqualTo(organizationId);
+        assertThat(assignedPlan.getValor()).isEqualTo(basePlan.getValor());
+        assertThat(assignedPlan.getDuracaoDias()).isEqualTo(basePlan.getDuracaoDias());
+        assertThat(updated.getTrialInicio()).isNull();
+        assertThat(updated.getTrialFim()).isNull();
+        assertThat(updated.getTrialTipo()).isNull();
+
+        List<AuditTrail> entries = auditTrailRepository.findAll().stream()
+                .filter(entry -> organizationId.equals(entry.getTenantId()))
+                .toList();
+        assertThat(entries).hasSize(1);
+        AuditTrail entry = entries.get(0);
+        assertThat(entry.getDetails()).contains("Premium Promo");
+        assertThat(entry.getDetails()).contains(PlatformConstants.VIEW_ONLY_PLAN_NAME);
+    }
+
     private void primePlanCache(Integer organizationId) {
         Integer previousTenant = TenantContext.getTenantId();
         try {
