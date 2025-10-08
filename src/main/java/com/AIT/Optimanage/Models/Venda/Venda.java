@@ -44,7 +44,7 @@ public class Venda extends AuditableEntity implements OwnableEntity {
     private LocalTime horaAgendada;
     @Column(name = "duracao_estimada")
     private Duration duracaoEstimada;
-    @Column(nullable = false)
+    @Column(nullable = true)
     private LocalDate dataCobranca;
     @DecimalMin(value = "0.0")
     @Column(nullable = false, precision = 10, scale = 2)
