@@ -21,18 +21,24 @@ import java.util.List;
 public class VendaDTO {
     @NotNull
     private Integer clienteId;
+    @Builder.Default
     @NotNull
     private LocalDate dataEfetuacao = LocalDate.now();
+    @Builder.Default
     private LocalDate dataAgendada = null;
     private LocalTime horaAgendada;
+    @Builder.Default
     private Duration duracaoEstimada = Duration.ofHours(1);
     private LocalDate dataCobranca;
+    @Builder.Default
     @DecimalMin(value = "0.0")
     @DecimalMax(value = "100.0")
     private BigDecimal descontoGeral = BigDecimal.ZERO;
     private String condicaoPagamento;
+    @Builder.Default
     @Min(0)
     private Integer alteracoesPermitidas = 0;
+    @Builder.Default
     @NotNull
     private StatusVenda status = StatusVenda.PENDENTE;
     private String observacoes;

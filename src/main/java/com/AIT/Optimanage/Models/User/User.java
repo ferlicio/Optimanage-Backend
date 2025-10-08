@@ -32,6 +32,7 @@ public class User extends AuditableEntity implements UserDetails {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String senha;
+    @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Column(nullable = false)
     private Boolean ativo = true;

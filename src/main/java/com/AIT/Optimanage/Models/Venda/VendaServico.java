@@ -41,6 +41,7 @@ public class VendaServico extends AuditableEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valorUnitario;
 
+    @Builder.Default
     @Column(length = 3)
     private BigDecimal desconto = BigDecimal.ZERO;
 
