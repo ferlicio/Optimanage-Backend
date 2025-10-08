@@ -228,6 +228,47 @@ class VendaServiceTest {
     }
 
     @Test
+    void agendarVendaPermiteStatusAguardandoPagamento() {
+        User loggedUser = new User();
+        loggedUser.setTenantId(42);
+
+        Plano plano = new Plano();
+        plano.setAgendaHabilitada(true);
+
+        Venda venda = new Venda();
+        venda.setId(100);
+        venda.setTenantId(42);
+        venda.setStatus(StatusVenda.AGUARDANDO_PAG);
+        venda.setVendaServicos(List.of(new VendaServico()));
+
+        LocalDate dataEsperada = LocalDate.of(2025, 1, 15);
+        LocalTime horaEsperada = LocalTime.of(14, 30);
+        Duration duracaoEsperada = Duration.ofMinutes(90);
+
+        when(planoService.obterPlanoUsuario(loggedUser)).thenReturn(Optional.of(plano));
+        when(vendaRepository.findDetailedByIdAndOrganizationId(venda.getId(), loggedUser.getTenantId()))
+                .thenReturn(Optional.of(venda));
+        when(agendaValidator.validarDataAgendamento("2025-01-15")).thenReturn(dataEsperada);
+        when(agendaValidator.validarHoraAgendada("14:30")).thenReturn(horaEsperada);
+        when(agendaValidator.validarDuracao(90)).thenReturn(duracaoEsperada);
+        doNothing().when(agendaValidator).validarConflitosAgendamentoVenda(loggedUser, venda, dataEsperada, horaEsperada,
+                duracaoEsperada);
+        when(vendaRepository.save(venda)).thenReturn(venda);
+        VendaResponseDTO respostaEsperada = new VendaResponseDTO();
+        when(vendaMapper.toResponse(venda)).thenReturn(respostaEsperada);
+
+        VendaResponseDTO resposta = vendaService.agendarVenda(loggedUser, venda.getId(), "2025-01-15", "14:30", 90);
+
+        assertSame(respostaEsperada, resposta);
+        assertEquals(StatusVenda.AGENDADA, venda.getStatus());
+        assertEquals(dataEsperada, venda.getDataAgendada());
+        assertEquals(horaEsperada, venda.getHoraAgendada());
+        assertEquals(duracaoEsperada, venda.getDuracaoEstimada());
+        verify(agendaValidator).validarConflitosAgendamentoVenda(loggedUser, venda, dataEsperada, horaEsperada,
+                duracaoEsperada);
+    }
+
+    @Test
     void atualizarVendaComPagamentosSuperioresAoTotalNaoGeraSaldoNegativo() {
         LocalDate hoje = LocalDate.now();
 

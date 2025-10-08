@@ -67,6 +67,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.math.BigDecimal;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -479,7 +480,12 @@ public class VendaService {
         if (venda.getVendaServicos().isEmpty()){
             throw new IllegalArgumentException("Não é possível agendar uma venda sem serviços.");
         }
-        if (venda.getStatus() != StatusVenda.PENDENTE && venda.getStatus() != StatusVenda.PAGA) {
+        EnumSet<StatusVenda> statusElegiveis = EnumSet.of(
+                StatusVenda.PENDENTE,
+                StatusVenda.AGUARDANDO_PAG,
+                StatusVenda.PAGA
+        );
+        if (!statusElegiveis.contains(venda.getStatus())) {
             throw new IllegalStateException(
                     "Não é possível agendar uma venda com status " + venda.getStatus() + ".");
         }
