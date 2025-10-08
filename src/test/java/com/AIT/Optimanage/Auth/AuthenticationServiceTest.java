@@ -44,6 +44,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -289,5 +290,15 @@ class AuthenticationServiceTest {
         assertThat(refreshed.getRefreshToken()).isNotEqualTo(initial.getRefreshToken());
         assertThat(refreshTokensByValue.get(initial.getRefreshToken()).isRevoked()).isTrue();
         assertThat(refreshTokensByValue).containsKey(refreshed.getRefreshToken());
+    }
+
+    @Test
+    void logoutWithInvalidTokenDoesNotThrowAndStillBlacklists() {
+        doThrow(new io.jsonwebtoken.JwtException("invalid"))
+                .when(jwtService).extractEmail("invalid-token");
+
+        authenticationService.logout("invalid-token");
+
+        verify(tokenBlacklistService).blacklistToken("invalid-token");
     }
 }

@@ -252,10 +252,14 @@ public class AuthenticationService {
 
     @Transactional
     public void logout(String token) {
-        var userEmail = jwtService.extractEmail(token);
-        if (userEmail != null) {
-            userRepository.findByEmail(userEmail)
-                    .ifPresent(refreshTokenRepository::deleteByUser);
+        try {
+            var userEmail = jwtService.extractEmail(token);
+            if (userEmail != null) {
+                userRepository.findByEmail(userEmail)
+                        .ifPresent(refreshTokenRepository::deleteByUser);
+            }
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ex) {
+            log.warn("Invalid token provided during logout: {}", ex.getMessage());
         }
         tokenBlacklistService.blacklistToken(token);
     }
