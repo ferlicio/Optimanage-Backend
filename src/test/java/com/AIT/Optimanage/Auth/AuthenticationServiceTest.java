@@ -294,11 +294,12 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    void logoutWithInvalidTokenDoesNotBlacklist() {
+    void logoutWithInvalidTokenThrowsAndDoesNotBlacklist() {
         doThrow(new io.jsonwebtoken.JwtException("invalid"))
                 .when(jwtService).extractEmail("invalid-token");
 
-        authenticationService.logout("invalid-token");
+        assertThatThrownBy(() -> authenticationService.logout("invalid-token"))
+                .isInstanceOf(InvalidJwtException.class);
 
         verify(tokenBlacklistService, never()).blacklistToken("invalid-token");
     }
