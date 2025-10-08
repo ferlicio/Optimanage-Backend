@@ -495,9 +495,13 @@ public class ImportacaoExcelService {
                         );
                         compra.dto.getProdutos().add(produto);
                     } else {
-                        CompraServicoDTO servico = new CompraServicoDTO(
-                                reader.getRequiredInteger(row, "servicoId"),
-                                reader.getRequiredInteger(row, "quantidade"));
+                        Integer servicoId = reader.getRequiredInteger(row, "servicoId");
+                        Integer quantidade = reader.getRequiredInteger(row, "quantidade");
+                        BigDecimal valorUnitario = reader.getNullableBigDecimal(row, "valorUnitario");
+
+                        CompraServicoDTO servico = valorUnitario == null
+                                ? new CompraServicoDTO(servicoId, quantidade)
+                                : new CompraServicoDTO(servicoId, quantidade, valorUnitario);
                         compra.dto.getServicos().add(servico);
                     }
                 } catch (Exception e) {
@@ -609,15 +613,35 @@ public class ImportacaoExcelService {
         }
 
         String getString(Row row, String coluna) {
+            String valor = getStringOrNull(row, coluna);
+            if (valor == null) {
+                throw new IllegalArgumentException("Coluna '" + coluna + "' não encontrada");
+            }
+            return valor;
+        }
+
+        private String getStringOrNull(Row row, String coluna) {
             Integer index = colunas.get(normalizar(coluna));
             if (index == null) {
-                throw new IllegalArgumentException("Coluna '" + coluna + "' não encontrada");
+                return null;
             }
             Cell cell = row.getCell(index);
             if (cell == null) {
                 return "";
             }
             return DATA_FORMATTER.formatCellValue(cell).trim();
+        }
+
+        BigDecimal getNullableBigDecimal(Row row, String coluna) {
+            String valor = getStringOrNull(row, coluna);
+            if (valor == null || valor.isBlank()) {
+                return null;
+            }
+            try {
+                return new BigDecimal(valor.replace(" ", "").replace(',', '.'));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Valor numérico inválido na coluna '" + coluna + "': " + valor);
+            }
         }
 
         Boolean getBoolean(Row row, String coluna) {

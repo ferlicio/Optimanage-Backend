@@ -607,9 +607,14 @@ public class CompraService {
         return servicosDTO.stream()
                 .map(servicoDTO -> {
                     Servico servico = servicoService.buscarServicoAtivo(servicoDTO.getServicoId());
-                    BigDecimal valorUnitario = Optional.ofNullable(servico.getCusto())
-                            .orElse(servico.getValorVenda());
-                    BigDecimal valorTotal = valorUnitario.multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
+
+                    BigDecimal valorUnitario = Optional.ofNullable(servicoDTO.getValorUnitario())
+                            .orElseGet(() -> Optional.ofNullable(servico.getCusto())
+                                    .orElse(Optional.ofNullable(servico.getValorVenda())
+                                            .orElse(BigDecimal.ZERO)));
+
+                    BigDecimal valorTotal = valorUnitario
+                            .multiply(BigDecimal.valueOf(servicoDTO.getQuantidade()));
 
                     return CompraServico.builder()
                             .compra(compra)
