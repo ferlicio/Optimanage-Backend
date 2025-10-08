@@ -495,9 +495,13 @@ public class ImportacaoExcelService {
                         );
                         compra.dto.getProdutos().add(produto);
                     } else {
-                        CompraServicoDTO servico = new CompraServicoDTO(
-                                reader.getRequiredInteger(row, "servicoId"),
-                                reader.getRequiredInteger(row, "quantidade"));
+                        Integer servicoId = reader.getRequiredInteger(row, "servicoId");
+                        Integer quantidade = reader.getRequiredInteger(row, "quantidade");
+                        BigDecimal valorUnitario = reader.getBigDecimal(row, "valorUnitario");
+
+                        CompraServicoDTO servico = valorUnitario == null
+                                ? new CompraServicoDTO(servicoId, quantidade)
+                                : new CompraServicoDTO(servicoId, quantidade, valorUnitario);
                         compra.dto.getServicos().add(servico);
                     }
                 } catch (Exception e) {
