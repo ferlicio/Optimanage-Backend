@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowStatus;
 import com.AIT.Optimanage.Models.CashFlow.Enums.CashFlowType;
 import com.AIT.Optimanage.Models.CashFlow.Search.CashFlowSearch;
 import com.AIT.Optimanage.Services.CashFlow.CashFlowService;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,8 +46,11 @@ public class CashFlowController extends V1BaseController {
             @RequestParam(value = "data_final", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(value = "sort", required = false) String sort,
             @RequestParam(value = "order", required = false) Sort.Direction order,
-            @RequestParam(value = "page") Integer page,
-            @RequestParam(value = "pagesize") Integer pageSize) {
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "pageSize", required = false) Integer pageSize,
+            @RequestParam(value = "pagesize", required = false) Integer legacyPageSize) {
+        int resolvedPage = PaginationUtils.resolvePage(page);
+        int resolvedPageSize = PaginationUtils.resolvePageSize(pageSize, legacyPageSize);
         CashFlowSearch search = CashFlowSearch.builder()
                 .type(type)
                 .status(status)
@@ -54,8 +58,8 @@ public class CashFlowController extends V1BaseController {
                 .endDate(dataFinal)
                 .sort(sort)
                 .order(order)
-                .page(page)
-                .pageSize(pageSize)
+                .page(resolvedPage)
+                .pageSize(resolvedPageSize)
                 .build();
         return ok(cashFlowService.listarLancamentos(search));
     }

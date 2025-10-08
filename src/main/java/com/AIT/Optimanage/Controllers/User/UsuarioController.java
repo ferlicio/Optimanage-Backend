@@ -4,6 +4,7 @@ import com.AIT.Optimanage.Controllers.BaseController.V1BaseController;
 import com.AIT.Optimanage.Controllers.User.dto.UserRequest;
 import com.AIT.Optimanage.Controllers.User.dto.UserResponse;
 import com.AIT.Optimanage.Services.User.UsuarioService;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,11 +41,14 @@ public class UsuarioController extends V1BaseController {
     public ResponseEntity<Page<UserResponse>> listarUsuarios(
             @RequestParam(value = "sort", required = false) String sort,
             @RequestParam(value = "order", required = false) Sort.Direction order,
-            @RequestParam(value = "page", required = true) Integer page,
-            @RequestParam(value = "pagesize", required = true) Integer pagesize) {
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "pageSize", required = false) Integer pageSize,
+            @RequestParam(value = "pagesize", required = false) Integer legacyPageSize) {
         Sort.Direction direction = order != null ? order : Sort.Direction.ASC;
         String sortBy = sort != null ? sort : "id";
-        Pageable pageable = PageRequest.of(page, pagesize, Sort.by(direction, sortBy));
+        int resolvedPage = PaginationUtils.resolvePage(page);
+        int resolvedPageSize = PaginationUtils.resolvePageSize(pageSize, legacyPageSize);
+        Pageable pageable = PageRequest.of(resolvedPage, resolvedPageSize, Sort.by(direction, sortBy));
         Page<UserResponse> usuarios = usuarioService.listarUsuarios(pageable);
         return ok(usuarios);
     }

@@ -7,6 +7,7 @@ import com.AIT.Optimanage.Models.Cliente.Search.ClienteSearch;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 
 import com.AIT.Optimanage.Services.Cliente.ClienteService;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -45,8 +46,11 @@ public class ClienteController extends V1BaseController {
                                         @RequestParam(value = "ativo", required = false) Boolean ativo,
                                         @RequestParam(value = "sort", required = false) String sort,
                                         @RequestParam(value = "order", required = false) Sort.Direction order,
-                                        @RequestParam(value = "page", required = true) Integer page,
-                                        @RequestParam(value = "pagesize", required = true) Integer pagesize) {
+                                        @RequestParam(value = "page", required = false) Integer page,
+                                        @RequestParam(value = "pageSize", required = false) Integer pageSize,
+                                        @RequestParam(value = "pagesize", required = false) Integer legacyPageSize) {
+        int resolvedPage = PaginationUtils.resolvePage(page);
+        int resolvedPageSize = PaginationUtils.resolvePageSize(pageSize, legacyPageSize);
         var pesquisa = ClienteSearch.builder()
                 .id(id)
                 .nome(nome)
@@ -55,8 +59,8 @@ public class ClienteController extends V1BaseController {
                 .atividade(atividade)
                 .tipoPessoa(tipoPessoa)
                 .ativo(ativo)
-                .page(page)
-                .pageSize(pagesize)
+                .page(resolvedPage)
+                .pageSize(resolvedPageSize)
                 .sort(sort)
                 .order(order)
                 .build();

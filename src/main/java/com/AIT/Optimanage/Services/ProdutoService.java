@@ -11,6 +11,7 @@ import com.AIT.Optimanage.Repositories.ProdutoRepository;
 import com.AIT.Optimanage.Security.CurrentUser;
 import com.AIT.Optimanage.Services.PlanoAccessGuard;
 import com.AIT.Optimanage.Services.PlanoService;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -46,7 +47,10 @@ public class ProdutoService {
 
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
 
-        Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
+        int page = PaginationUtils.resolvePage(pesquisa.getPage());
+        int pageSize = PaginationUtils.resolvePageSize(pesquisa.getPageSize(), null);
+
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy));
 
         return produtoRepository.findAllByOrganizationIdAndAtivoTrue(organizationId, pageable)
                 .map(produtoMapper::toResponse);

@@ -8,6 +8,7 @@ import com.AIT.Optimanage.Models.Compra.Search.CompraSearch;
 import com.AIT.Optimanage.Models.PagamentoDTO;
 import com.AIT.Optimanage.Models.Enums.FormaPagamento;
 import com.AIT.Optimanage.Services.Compra.CompraService;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -40,8 +41,11 @@ public class CompraController extends V1BaseController {
                                       @RequestParam(value = "forma_pagamento", required = false) FormaPagamento forma_pagamento,
                                       @RequestParam(value = "sort", required = false) String sort,
                                       @RequestParam(value = "order", required = false) Sort.Direction order,
-                                      @RequestParam(value = "page", required = true) Integer page,
-                                      @RequestParam(value = "pagesize", required = true) Integer pagesize) {
+                                      @RequestParam(value = "page", required = false) Integer page,
+                                      @RequestParam(value = "pageSize", required = false) Integer pageSize,
+                                      @RequestParam(value = "pagesize", required = false) Integer legacyPageSize) {
+        int resolvedPage = PaginationUtils.resolvePage(page);
+        int resolvedPageSize = PaginationUtils.resolvePageSize(pageSize, legacyPageSize);
         CompraSearch pesquisa = CompraSearch.builder()
                 .id(id)
                 .fornecedorId(fornecedorId)
@@ -50,8 +54,8 @@ public class CompraController extends V1BaseController {
                 .formaPagamento(forma_pagamento)
                 .pago(pago)
                 .status(status)
-                .page(page)
-                .pageSize(pagesize)
+                .page(resolvedPage)
+                .pageSize(resolvedPageSize)
                 .sort(sort)
                 .order(order)
                 .build();

@@ -40,10 +40,10 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `DELETE /api/v1/servicos/{idServico}`
 
 ### Agenda
-- `GET /api/v1/agenda` &ndash; listar eventos com filtros `data_inicial`, `data_final`, `sort`, `order`, `page`, `pagesize`.
+- `GET /api/v1/agenda` &ndash; listar eventos com filtros `data_inicial`, `data_final`, `sort`, `order`, `page`, `pageSize` (`pagesize` legado).
 
 ### Clientes
-- `GET /api/v1/clientes` &ndash; listar clientes (`id`, `nome`, `estado`, `cpfOuCnpj`, `atividade`, `tipoPessoa`, `ativo`, `sort`, `order`, `page`, `pagesize`).
+- `GET /api/v1/clientes` &ndash; listar clientes (`id`, `nome`, `estado`, `cpfOuCnpj`, `atividade`, `tipoPessoa`, `ativo`, `sort`, `order`, `page`, `pageSize`/`pagesize`).
 - `GET /api/v1/clientes/{idCliente}` &ndash; obter cliente.
 - `POST /api/v1/clientes` &ndash; criar cliente.
 - `PUT /api/v1/clientes/{idCliente}` &ndash; atualizar cliente.
@@ -58,7 +58,7 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `DELETE /api/v1/clientes/{idCliente}/endereços/{idEndereco}` &ndash; remover endereço.
 
 ### Fornecedores
-- `GET /api/v1/fornecedores` &ndash; listar fornecedores (`id`, `nome`, `cpfOuCnpj`, `atividade`, `estado`, `tipoPessoa`, `ativo`, `sort`, `order`, `page`, `pagesize`).
+- `GET /api/v1/fornecedores` &ndash; listar fornecedores (`id`, `nome`, `cpfOuCnpj`, `atividade`, `estado`, `tipoPessoa`, `ativo`, `sort`, `order`, `page`, `pageSize`/`pagesize`).
 - `GET /api/v1/fornecedores/{idFornecedor}` &ndash; obter fornecedor.
 - `POST /api/v1/fornecedores` &ndash; criar fornecedor.
 - `PUT /api/v1/fornecedores/{idFornecedor}` &ndash; atualizar fornecedor.
@@ -73,7 +73,7 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - `DELETE /api/v1/fornecedor/{idFornecedor}/enderecos/{idEndereco}` &ndash; remover endereço.
 
 ### Compras
-- `GET /api/v1/compras` &ndash; listar compras (`id`, `fornecedor_id`, `data_inicial`, `data_final`, `pago`, `status`, `forma_pagamento`, `sort`, `order`, `page`, `pagesize`).
+- `GET /api/v1/compras` &ndash; listar compras (`id`, `fornecedor_id`, `data_inicial`, `data_final`, `pago`, `status`, `forma_pagamento`, `sort`, `order`, `page`, `pageSize`/`pagesize`).
 - `GET /api/v1/compras/{idCompra}` &ndash; obter compra.
 - `POST /api/v1/compras` &ndash; criar compra.
 - `PUT /api/v1/compras/{idCompra}` &ndash; editar compra.
@@ -92,7 +92,7 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 > - O payload de criação/edição não aceita mais `dataCobranca`; utilize os endpoints de pagamento para definir vencimentos.
 
 ### Vendas
-- `GET /api/v1/vendas` &ndash; listar vendas (`id`, `cliente_id`, `data_inicial`, `data_final`, `pago`, `status`, `forma_pagamento`, `sort`, `order`, `page`, `pagesize`).
+- `GET /api/v1/vendas` &ndash; listar vendas (`id`, `cliente_id`, `data_inicial`, `data_final`, `pago`, `status`, `forma_pagamento`, `sort`, `order`, `page`, `pageSize`/`pagesize`).
 - `GET /api/v1/vendas/{idVenda}` &ndash; obter venda.
 - `POST /api/v1/vendas` &ndash; registrar venda.
 - `PUT /api/v1/vendas/{idVenda}` &ndash; editar venda.

@@ -72,6 +72,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.math.RoundingMode;
 
+import com.AIT.Optimanage.Support.PaginationUtils;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -112,7 +114,10 @@ public class VendaService {
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
 
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
-        Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
+        int page = PaginationUtils.resolvePage(pesquisa.getPage());
+        int pageSize = PaginationUtils.resolvePageSize(pesquisa.getPageSize(), null);
+
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy));
 
         // Realiza a busca no repositório com os filtros definidos e associando o usuario logado
         return vendaRepository.buscarVendas(

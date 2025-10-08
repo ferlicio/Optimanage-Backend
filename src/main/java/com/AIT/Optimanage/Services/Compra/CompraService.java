@@ -43,6 +43,7 @@ import com.AIT.Optimanage.Services.common.StatusTransitionPolicy;
 import com.AIT.Optimanage.Services.common.StatusTransitionPolicies;
 import com.AIT.Optimanage.Validation.AgendaValidator;
 import com.AIT.Optimanage.Validation.CompraValidator;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -108,7 +109,10 @@ public class CompraService {
                 .map(order -> Sort.Direction.DESC).orElse(Sort.Direction.ASC);
 
         String sortBy = Optional.ofNullable(pesquisa.getSort()).orElse("id");
-        Pageable pageable = PageRequest.of(pesquisa.getPage(), pesquisa.getPageSize(), Sort.by(direction, sortBy));
+        int page = PaginationUtils.resolvePage(pesquisa.getPage());
+        int pageSize = PaginationUtils.resolvePageSize(pesquisa.getPageSize(), null);
+
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy));
 
         Specification<Compra> spec = FilterBuilder
                 .of(CompraFilters.hasOrganization(organizationId))

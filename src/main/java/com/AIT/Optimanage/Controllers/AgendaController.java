@@ -5,6 +5,7 @@ import com.AIT.Optimanage.Models.Agenda.AgendaSearch;
 import com.AIT.Optimanage.Models.Agenda.EventoAgenda;
 import com.AIT.Optimanage.Models.User.User;
 import com.AIT.Optimanage.Services.AgendaService;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -36,13 +37,16 @@ public class AgendaController extends V1BaseController {
                                                             @RequestParam(value = "data_final", required = false) LocalDate data_final,
                                                             @RequestParam(value = "sort", required = false) String sort,
                                                             @RequestParam(value = "order", required = false) Sort.Direction order,
-                                                            @RequestParam(value = "page", required = true) Integer page,
-                                                            @RequestParam(value = "pagesize", required = true) Integer pagesize) {
+                                                            @RequestParam(value = "page", required = false) Integer page,
+                                                            @RequestParam(value = "pageSize", required = false) Integer pageSize,
+                                                            @RequestParam(value = "pagesize", required = false) Integer legacyPageSize) {
+        int resolvedPage = PaginationUtils.resolvePage(page);
+        int resolvedPageSize = PaginationUtils.resolvePageSize(pageSize, legacyPageSize);
         AgendaSearch pesquisa = AgendaSearch.builder()
                 .dataInicial(data_inicial)
                 .dataFinal(data_final)
-                .page(page)
-                .pageSize(pagesize)
+                .page(resolvedPage)
+                .pageSize(resolvedPageSize)
                 .sort(sort)
                 .order(order)
                 .build();

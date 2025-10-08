@@ -14,6 +14,7 @@ import com.AIT.Optimanage.Services.Venda.VendaService;
 import com.AIT.Optimanage.Payments.PaymentConfirmationDTO;
 import com.AIT.Optimanage.Payments.PaymentRequestDTO;
 import com.AIT.Optimanage.Payments.PaymentResponseDTO;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -53,8 +54,11 @@ public class VendaController extends V1BaseController {
                                                     @RequestParam(value = "forma_pagamento", required = false) FormaPagamento forma_pagamento,
                                                     @RequestParam(value = "sort", required = false) String sort,
                                                     @RequestParam(value = "order", required = false) Sort.Direction order,
-                                                    @RequestParam(value = "page", required = true) Integer page,
-                                                    @RequestParam(value = "pagesize", required = true) Integer pagesize) {
+                                                    @RequestParam(value = "page", required = false) Integer page,
+                                                    @RequestParam(value = "pageSize", required = false) Integer pageSize,
+                                                    @RequestParam(value = "pagesize", required = false) Integer legacyPageSize) {
+        int resolvedPage = PaginationUtils.resolvePage(page);
+        int resolvedPageSize = PaginationUtils.resolvePageSize(pageSize, legacyPageSize);
         var pesquisa = VendaSearch.builder()
                 .id(id)
                 .clienteId(clienteId)
@@ -63,8 +67,8 @@ public class VendaController extends V1BaseController {
                 .formaPagamento(forma_pagamento)
                 .pago(pago)
                 .status(status)
-                .page(page)
-                .pageSize(pagesize)
+                .page(resolvedPage)
+                .pageSize(resolvedPageSize)
                 .sort(sort)
                 .order(order)
                 .build();

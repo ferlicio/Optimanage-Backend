@@ -6,6 +6,7 @@ import com.AIT.Optimanage.Controllers.dto.FornecedorResponse;
 import com.AIT.Optimanage.Models.Enums.TipoPessoa;
 import com.AIT.Optimanage.Models.Fornecedor.Search.FornecedorSearch;
 import com.AIT.Optimanage.Services.Fornecedor.FornecedorService;
+import com.AIT.Optimanage.Support.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +39,11 @@ public class FornecedorController extends V1BaseController {
                                                @RequestParam(value = "ativo", required = false) Boolean ativo,
                                                @RequestParam(value = "sort", required = false) String sort,
                                                @RequestParam(value = "order", required = false) Sort.Direction order,
-                                               @RequestParam(value = "page", required = true) Integer page,
-                                               @RequestParam(value = "pagesize", required = true) Integer pagesize) {
+                                               @RequestParam(value = "page", required = false) Integer page,
+                                               @RequestParam(value = "pageSize", required = false) Integer pageSize,
+                                               @RequestParam(value = "pagesize", required = false) Integer legacyPageSize) {
+        int resolvedPage = PaginationUtils.resolvePage(page);
+        int resolvedPageSize = PaginationUtils.resolvePageSize(pageSize, legacyPageSize);
         var pesquisa = FornecedorSearch.builder()
                 .id(id)
                 .nome(nome)
@@ -48,8 +52,8 @@ public class FornecedorController extends V1BaseController {
                 .atividade(atividade)
                 .tipoPessoa(tipoPessoa)
                 .ativo(ativo)
-                .page(page)
-                .pageSize(pagesize)
+                .page(resolvedPage)
+                .pageSize(resolvedPageSize)
                 .sort(sort)
                 .order(order)
                 .build();
