@@ -396,6 +396,12 @@ public class CompraService {
             }
         } else if (valorPago.compareTo(BigDecimal.ZERO) > 0) {
             atualizarStatus(compra, StatusCompra.PARCIALMENTE_PAGO);
+        } else {
+            if (compra.getStatus() == StatusCompra.CONCRETIZADO) {
+                compra.setStatus(StatusCompra.AGUARDANDO_PAG);
+            } else if (compra.getStatus() != StatusCompra.AGUARDANDO_PAG) {
+                atualizarStatus(compra, StatusCompra.AGUARDANDO_PAG);
+            }
         }
         Compra salvo = compraRepository.save(compra);
         atualizarMetricasFornecedor(salvo);

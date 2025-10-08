@@ -26,7 +26,7 @@ public final class StatusTransitionPolicies {
                                     "Não é possivel agendar uma compra cancelada ou concretizada."))
                     .forTarget(StatusCompra.AGUARDANDO_PAG,
                             allowFrom(EnumSet.of(StatusCompra.AGUARDANDO_EXECUCAO, StatusCompra.ORCAMENTO,
-                                            StatusCompra.AGENDADA),
+                                            StatusCompra.AGENDADA, StatusCompra.PARCIALMENTE_PAGO, StatusCompra.PAGO),
                                     "A compra só pode aguardar pagamento se o pedido já foi realizado."))
                     .forTarget(StatusCompra.PARCIALMENTE_PAGO,
                             allowFrom(EnumSet.of(StatusCompra.AGUARDANDO_PAG, StatusCompra.AGUARDANDO_EXECUCAO),

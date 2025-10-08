@@ -50,12 +50,15 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -188,6 +191,45 @@ class CompraServiceTest {
         compraService.finalizarAgendamentoCompra(12);
 
         assertEquals(StatusCompra.CONCRETIZADO, compra.getStatus());
+    }
+
+    @Test
+    void estornarPagamentoIntegralReabreSaldoEAtualizaStatusParaAguardandoPagamento() {
+        CompraPagamento pagamento = CompraPagamento.builder()
+                .valorPago(BigDecimal.valueOf(100))
+                .dataPagamento(LocalDate.now())
+                .dataVencimento(LocalDate.now())
+                .formaPagamento(FormaPagamento.BOLETO)
+                .statusPagamento(StatusPagamento.PAGO)
+                .build();
+        pagamento.setId(30);
+
+        Compra compra = Compra.builder()
+                .sequencialUsuario(1)
+                .dataEfetuacao(LocalDate.now())
+                .valorFinal(BigDecimal.valueOf(100))
+                .valorPendente(BigDecimal.ZERO)
+                .status(StatusCompra.PAGO)
+                .compraProdutos(Collections.singletonList(new CompraProduto()))
+                .pagamentos(new ArrayList<>(List.of(pagamento)))
+                .build();
+        compra.setId(13);
+        compra.setTenantId(1);
+        pagamento.setCompra(compra);
+
+        when(compraRepository.findByIdAndOrganizationId(13, 1)).thenReturn(Optional.of(compra));
+        when(pagamentoCompraService.listarUmPagamento(40)).thenReturn(pagamento);
+        doAnswer(invocation -> {
+            pagamento.setStatusPagamento(StatusPagamento.ESTORNADO);
+            return null;
+        }).when(pagamentoCompraService).estornarPagamento(pagamento);
+        when(compraRepository.save(compra)).thenReturn(compra);
+        when(compraMapper.toResponse(compra)).thenReturn(new CompraResponseDTO());
+
+        compraService.estornarPagamentoCompra(13, 40);
+
+        assertEquals(StatusCompra.AGUARDANDO_PAG, compra.getStatus());
+        assertEquals(BigDecimal.valueOf(100), compra.getValorPendente());
     }
 
     @Test
