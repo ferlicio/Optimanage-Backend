@@ -37,7 +37,8 @@ O repositório concentra toda a API REST do Optimanage, responsável por orquest
 | `SPRING_DATASOURCE_URL` | Sobrescreve a URL do banco. |
 | `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | Credenciais do banco. |
 | `SPRING_PROFILES_ACTIVE` | Define os perfis ativos (`dev`, `test`, etc.). |
-| `JWT_SECRET` | Segredo utilizado para assinar tokens. |
+| `JWT_PRIMARY_KEY` / `JWT_ROTATION_KEY` | Chaves primária e de rotação utilizadas pelo `app.jwt.keys.*` em `application.properties`. |
+| `JWT_EXPIRATION` / `JWT_REFRESH_EXPIRATION` | Tempo (em milissegundos) de expiração dos tokens de acesso e refresh. |
 | `RATE_LIMITING_PROTECTED_PATTERNS` | Padrões de URL protegidos (pode sobrescrever o `application.yml`). |
 
 Caso esteja usando Docker Compose, exporte essas variáveis antes de iniciar a aplicação.
