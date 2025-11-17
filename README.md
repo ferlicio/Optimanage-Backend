@@ -2,6 +2,46 @@
 
 Backend do sistema Optimanage desenvolvido em Spring Boot para a gestão de produtos, serviços, clientes, fornecedores, vendas, compras e agenda.
 
+O repositório concentra toda a API REST do Optimanage, responsável por orquestrar os fluxos de cadastro, relacionamento com clientes/fornecedores, pipeline de vendas e o módulo de inteligência que auxilia na tomada de decisão sobre estoque e recomendações. A seguir estão descritos os principais recursos, como executar o projeto localmente e detalhes de integração.
+
+## Tecnologias principais
+
+- **Java 17** com **Spring Boot 3** como base da aplicação.
+- **Spring Security** com autenticação JWT e filtros de limitação de taxa.
+- **Flyway** para versionamento das migrações de banco.
+- **Maven Wrapper (`mvnw`)** para build e execução.
+- **MariaDB/MySQL** (ou qualquer banco compatível com JDBC) como persistência.
+- Observabilidade via **Spring Actuator** + **OpenTelemetry** com exportação OTLP.
+
+## Estrutura do repositório
+
+| Caminho | Descrição |
+| --- | --- |
+| `src/main/java` | Código-fonte principal (controllers, services, configs, domínios). |
+| `src/main/resources` | Configurações (`application*.yml`) e templates Flyway. |
+| `src/test/java` | Testes automatizados (unidade e integração). |
+| `dashboard/` | Protótipo do dashboard e contratos JSON para o front-end. |
+| `pipeline/` | Pipelines e scripts de automação (CI/CD). |
+
+## Pré-requisitos
+
+1. Java 17+ instalado e configurado no `JAVA_HOME`.
+2. Docker opcional para subir serviços auxiliares (MariaDB, etc.).
+3. Maven não é obrigatório, pois o wrapper `./mvnw` já é versionado.
+4. Uma instância de banco de dados compatível com JDBC (a configuração padrão assume `optimanage` em `localhost:3307`).
+
+### Variáveis de ambiente úteis
+
+| Variável | Uso |
+| --- | --- |
+| `SPRING_DATASOURCE_URL` | Sobrescreve a URL do banco. |
+| `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | Credenciais do banco. |
+| `SPRING_PROFILES_ACTIVE` | Define os perfis ativos (`dev`, `test`, etc.). |
+| `JWT_SECRET` | Segredo utilizado para assinar tokens. |
+| `RATE_LIMITING_PROTECTED_PATTERNS` | Padrões de URL protegidos (pode sobrescrever o `application.yml`). |
+
+Caso esteja usando Docker Compose, exporte essas variáveis antes de iniciar a aplicação.
+
 ## Funcionalidades
 - Autenticação JWT para registro e login.
 - Gerenciamento de produtos e serviços.
@@ -146,10 +186,22 @@ Todos os recursos (exceto autenticação) usam o prefixo `/api/v1` e exigem um t
 - Para cada produto ativo, o serviço calcula os dias restantes considerando o estoque atual, o consumo médio e o prazo de reposição configurado.
 - Alertas críticos ou de atenção são persistidos na tabela `inventory_alert` e expostos pelo endpoint de analytics quando o plano atual possuir a permissão de monitoramento de estoque.
 
-## Execução
-1. Requisitos: Java 17+ e Maven.
-2. Rodar testes: `./mvnw test`
-3. Executar aplicação: `./mvnw spring-boot:run`
+## Como executar
+
+1. Instale os pré-requisitos listados acima.
+2. Copie o arquivo de configuração padrão se precisar customizar localmente: `cp src/main/resources/application.yml src/main/resources/application-local.yml` e ajuste as propriedades.
+3. Configure a base de dados (ex.: crie o schema `optimanage`).
+4. Rode as migrações e testes:
+   ```bash
+   ./mvnw flyway:migrate
+   ./mvnw test
+   ```
+5. Execute a aplicação:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+
+> **Dica:** utilize `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` para habilitar ferramentas adicionais de debug, collection do Postman automática e logs mais verbosos.
 
 ### Perfil de desenvolvimento
 Para habilitar o perfil `dev` e gerar a coleção Postman automaticamente na inicialização, execute a aplicação com o perfil de desenvolvimento:
@@ -198,4 +250,20 @@ Com essa configuração, as rotas de redefinição de senha e criação de conta
 - Contadores de autenticação:
   - `auth.register.success` e `auth.register.failure` – registros bem-sucedidos e falhos.
   - `auth.authenticate.success` e `auth.authenticate.failure` – logins bem-sucedidos e falhos.
+
+## Testes e qualidade
+
+- Testes unitários e de integração: `./mvnw test`.
+- Checagem de formatação (Spotless/Checkstyle, se configurado no `pom.xml`): `./mvnw spotless:apply` / `./mvnw checkstyle:check`.
+- Para cenários de carga utilize ferramentas externas (ex.: k6 ou JMeter) apontando para os endpoints documentados acima.
+
+## Deploy e CI/CD
+
+- O diretório `pipeline/` contém exemplos de scripts para integração contínua (GitHub Actions/GitLab CI). Ajuste as variáveis de ambiente conforme a infraestrutura utilizada.
+- Utilize `./mvnw package -DskipTests` para gerar o JAR final antes de publicar.
+- Para empacotar a aplicação em contêiner, crie uma imagem baseada em `eclipse-temurin:17-jre` e copie o arquivo gerado em `target/optimanage-*.jar`.
+
+## Suporte
+
+Em caso de dúvidas ou sugestões, abra uma issue descrevendo o problema, logs relevantes e como reproduzir. Pull requests são bem-vindos e devem incluir testes cobrindo a alteração proposta.
 
